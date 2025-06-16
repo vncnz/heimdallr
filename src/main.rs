@@ -1,226 +1,458 @@
-// src/main.rs
+//! This example is horrible. Please make a better one soon.
 
-use std::fs;
-use std::path::Path;
-use std::thread;
-use std::time::Duration;
+use std::{convert::TryInto, num::NonZeroU32};
 
-use image::{ImageBuffer, Rgba};
-use serde::Deserialize;
-use serde_json::Value;
-use tiny_skia::*;
-use fontdue::Font;
-
-#[derive(Default, Deserialize, Debug)]
-pub struct RamStats {
-    pub total_memory: u64,
-    pub used_memory: u64,
-    pub total_swap: u64,
-    pub used_swap: u64,
-    pub mem_percent: u64,
-    pub swap_percent: u64,
-    pub mem_color: String,
-    pub swap_color: String
-}
-
-#[derive(Default, Deserialize, Debug)]
-pub struct DiskStats {
-    pub total_size: u64,
-    pub used_size: u64,
-    pub used_percent: u64,
-    pub color: String
-}
-
-#[derive(Default, Deserialize, Debug)]
-pub struct TempStats {
-    pub sensor: String,
-    pub value: f32,
-    pub color: String,
-    pub icon: String
-}
-
-#[derive(Default, Deserialize, Debug)]
-pub struct WeatherStats {
-    pub icon: String,
-    pub icon_name: String,
-    pub temp: i8,
-    pub temp_real: i8,
-    pub temp_unit: String,
-    pub text: String,
-    pub day: String,
-    pub sunrise: String,
-    pub sunset: String,
-    pub sunrise_mins: u64,
-    pub sunset_mins: u64,
-    pub daylight: f64,
-    pub locality: String,
-    pub humidity: u8
-}
-
-#[derive(Default, Deserialize, Debug)]
-pub struct AvgLoadStats {
-    pub m1: f64,
-    pub m5: f64,
-    pub m15: f64,
-    pub ncpu: usize,
-    pub critical_factor: f64,
-    pub color: String
-}
-
-#[derive(Default, Deserialize, Debug)]
-pub struct VolumeStats {
-    pub value: i64,
-    pub icon: String,
-    pub color: String,
-    pub clazz: String
-}
-
-#[derive(Default, Deserialize, Debug)]
-struct SystemStats {
-    ram: RamStats,
-    disk: DiskStats,
-    temperature: TempStats,
-    weather: WeatherStats,
-    loadavg: AvgLoadStats,
-    volume: VolumeStats,
-    written_at: u64,
-    metronome: bool
-}
-
-macro_rules! extract_json {
-    ($data:expr => { $($path:literal => $method:ident),+ $(,)? }) => {
-        (
-            $(
-                {
-                    fn get_nested<'a>(data: &'a serde_json::Value, path: &str) -> Option<&'a serde_json::Value> {
-                        path.split('.').fold(Some(data), |acc, key| acc?.get(key))
-                    }
-                    get_nested($data, $path).and_then(|v| v.$method())
-                }
-            ),+
-        )
-    };
-}
-
-fn hex_to_color(hex: &str) -> Option<Vec<u8>> {
-    let hex = hex.trim_start_matches('#');
-    if hex.len() != 6 {
-        return None;
-    }
-
-    let r = u8::from_str_radix(&hex[0..2], 16).ok()?;
-    let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
-    let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
-
-    Some(vec![r, g, b])
-}
-
-fn read_json<P: AsRef<Path>>(path: P) -> Option<SystemStats> {
-    let json = fs::read_to_string(path).ok()?;
-    serde_json::from_str(&json).ok()
-}
-
-fn draw_text(canvas: &mut Pixmap, font: &Font, text: &str, x: f32, y: f32) {
-    let font_size = 28.0;
-    let mut cursor_x = x;
-
-    for ch in text.chars() {
-        let (metrics, bitmap) = font.rasterize(ch, font_size);
-        let width = metrics.width as u32;
-        let height = metrics.height as u32;
-
-        // println!("{} {} {}", ch, width, height);
-        if width > 0 {
-            let mut img = Pixmap::new(width, height).unwrap();
-            for (i, pixel) in img.pixels_mut().into_iter().enumerate() {
-                let alpha = bitmap.get(i).copied().unwrap_or(0);
-                if let Some(c) = PremultipliedColorU8::from_rgba(255, 255, 255, alpha) {
-                    *pixel = c;
-                }
-            }
-
-            canvas.draw_pixmap(
-                cursor_x as i32 + metrics.xmin,
-                y as i32 + metrics.ymin,
-                img.as_ref(),
-                &PixmapPaint::default(),
-                Transform::identity(),
-                None,
-            );
-        }
-
-        cursor_x += metrics.advance_width;
-    }
-}
-
-fn draw_image(status: &SystemStats, width: u32, height: u32) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
-    let mut pixmap = Pixmap::new(width, height).unwrap();
-    pixmap.fill(Color::from_rgba8(0, 0, 0, 255));
-
-    let font_data = include_bytes!("/usr/share/fonts/noto/NotoSans-Regular.ttf") as &[u8];
-    let font = Font::from_bytes(font_data, fontdue::FontSettings::default()).unwrap();
-
-    let messages = vec![
-        format!("Time: {}", status.written_at),
-        format!("CPU: {:.1}%", status.loadavg.m1),
-        format!("RAM: {:.1} GB", status.ram.total_memory),
-        format!("Temp: {:.1} °C", status.temperature.sensor)
-    ];
-
-    for (i, msg) in messages.iter().enumerate() {
-        draw_text(&mut pixmap, &font, msg, 50.0, 80.0 + i as f32 * 50.0);
-    }
-
-    // let raw = pixmap.data();
-    // ImageBuffer::from_raw(width, height, raw.to_vec()).expect("Buffer conversion failed")
-    let mut img = ImageBuffer::new(width, height);
-    for (i, pixel) in pixmap.pixels().into_iter().enumerate() {
-        let x = (i as u32) % width;
-        let y = (i as u32) / width;
-        img.put_pixel(x, y, Rgba([pixel.red(), pixel.green(), pixel.blue(), pixel.alpha()]));
-    }
-    img
-}
+use smithay_client_toolkit::{
+    compositor::{CompositorHandler, CompositorState},
+    delegate_compositor, delegate_keyboard, delegate_layer, delegate_output, delegate_pointer,
+    delegate_registry, delegate_seat, delegate_shm,
+    output::{OutputHandler, OutputState},
+    registry::{ProvidesRegistryState, RegistryState},
+    registry_handlers,
+    seat::{
+        keyboard::{KeyEvent, KeyboardHandler, Keysym, Modifiers},
+        pointer::{PointerEvent, PointerEventKind, PointerHandler},
+        Capability, SeatHandler, SeatState,
+    },
+    shell::{
+        wlr_layer::{
+            Anchor, KeyboardInteractivity, Layer, LayerShell, LayerShellHandler, LayerSurface,
+            LayerSurfaceConfigure,
+        },
+        WaylandSurface,
+    },
+    shm::{slot::SlotPool, Shm, ShmHandler},
+};
+use wayland_client::{
+    globals::registry_queue_init,
+    protocol::{wl_keyboard, wl_output, wl_pointer, wl_seat, wl_shm, wl_surface},
+    Connection, QueueHandle,
+};
 
 fn main() {
-    let json_path = "/tmp/ratatoskr.json";
-    let output_path = "/tmp/dynamic-wallpaper.png";
-    let (width, height) = (1920, 1080);
+    env_logger::init();
 
+    // All Wayland apps start by connecting the compositor (server).
+    let conn = Connection::connect_to_env().unwrap();
+
+    // Enumerate the list of globals to get the protocols the server implements.
+    let (globals, mut event_queue) = registry_queue_init(&conn).unwrap();
+    let qh = event_queue.handle();
+
+    // The compositor (not to be confused with the server which is commonly called the compositor) allows
+    // configuring surfaces to be presented.
+    let compositor = CompositorState::bind(&globals, &qh).expect("wl_compositor is not available");
+    // This app uses the wlr layer shell, which may not be available with every compositor.
+    let layer_shell = LayerShell::bind(&globals, &qh).expect("layer shell is not available");
+    // Since we are not using the GPU in this example, we use wl_shm to allow software rendering to a buffer
+    // we share with the compositor process.
+    let shm = Shm::bind(&globals, &qh).expect("wl_shm is not available");
+
+    // A layer surface is created from a surface.
+    let surface = compositor.create_surface(&qh);
+
+    // And then we create the layer shell.
+    let layer =
+        layer_shell.create_layer_surface(&qh, surface, Layer::Top, Some("simple_layer"), None);
+    // Configure the layer surface, providing things like the anchor on screen, desired size and the keyboard
+    // interactivity
+    layer.set_anchor(Anchor::BOTTOM);
+    layer.set_keyboard_interactivity(KeyboardInteractivity::OnDemand);
+    layer.set_size(256, 256);
+
+    // In order for the layer surface to be mapped, we need to perform an initial commit with no attached\
+    // buffer. For more info, see WaylandSurface::commit
+    //
+    // The compositor will respond with an initial configure that we can then use to present to the layer
+    // surface with the correct options.
+    layer.commit();
+
+    // We don't know how large the window will be yet, so lets assume the minimum size we suggested for the
+    // initial memory allocation.
+    let pool = SlotPool::new(256 * 256 * 4, &shm).expect("Failed to create pool");
+
+    let mut simple_layer = SimpleLayer {
+        // Seats and outputs may be hotplugged at runtime, therefore we need to setup a registry state to
+        // listen for seats and outputs.
+        registry_state: RegistryState::new(&globals),
+        seat_state: SeatState::new(&globals, &qh),
+        output_state: OutputState::new(&globals, &qh),
+        shm,
+
+        exit: false,
+        first_configure: true,
+        pool,
+        width: 256,
+        height: 256,
+        shift: None,
+        layer,
+        keyboard: None,
+        keyboard_focus: false,
+        pointer: None,
+    };
+
+    // We don't draw immediately, the configure will notify us when to first draw.
     loop {
-        println!("Looping");
+        event_queue.blocking_dispatch(&mut simple_layer).unwrap();
 
-        let mut ss = SystemStats::default();
+        if simple_layer.exit {
+            println!("exiting example");
+            break;
+        }
+    }
+}
 
-        if let Ok(contents) = fs::read_to_string("/tmp/ratatoskr.json") {
-            let res: Result<Value, serde_json::Error> = serde_json::from_str(&contents);
-            if let Ok(data) = res {
+struct SimpleLayer {
+    registry_state: RegistryState,
+    seat_state: SeatState,
+    output_state: OutputState,
+    shm: Shm,
 
-                if let (Some(avg_m1), Some(avg_m5), Some(avg_m15), Some(avg_color)) = extract_json!(&data => {
-                    "loadavg.m1" => as_f64,
-                    "loadavg.m5" => as_f64,
-                    "loadavg.m15" => as_f64,
-                    "loadavg.color" => as_str
-                }) {
-                    // spans.push(Span::styled(format!("[AVG {avg_m1} {avg_m5} {avg_m15}]"), Style::default().fg(hex_to_color(avg_color).unwrap())));
-                    ss.loadavg.m1 = avg_m1;
-                    ss.loadavg.m5 = avg_m5;
-                    ss.loadavg.m15 = avg_m15;
-                    ss.loadavg.color = avg_color.into();
+    exit: bool,
+    first_configure: bool,
+    pool: SlotPool,
+    width: u32,
+    height: u32,
+    shift: Option<u32>,
+    layer: LayerSurface,
+    keyboard: Option<wl_keyboard::WlKeyboard>,
+    keyboard_focus: bool,
+    pointer: Option<wl_pointer::WlPointer>,
+}
+
+impl CompositorHandler for SimpleLayer {
+    fn scale_factor_changed(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _surface: &wl_surface::WlSurface,
+        _new_factor: i32,
+    ) {
+        // Not needed for this example.
+    }
+
+    fn transform_changed(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _surface: &wl_surface::WlSurface,
+        _new_transform: wl_output::Transform,
+    ) {
+        // Not needed for this example.
+    }
+
+    fn frame(
+        &mut self,
+        _conn: &Connection,
+        qh: &QueueHandle<Self>,
+        _surface: &wl_surface::WlSurface,
+        _time: u32,
+    ) {
+        self.draw(qh);
+    }
+
+    fn surface_enter(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _surface: &wl_surface::WlSurface,
+        _output: &wl_output::WlOutput,
+    ) {
+        // Not needed for this example.
+    }
+
+    fn surface_leave(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _surface: &wl_surface::WlSurface,
+        _output: &wl_output::WlOutput,
+    ) {
+        // Not needed for this example.
+    }
+}
+
+impl OutputHandler for SimpleLayer {
+    fn output_state(&mut self) -> &mut OutputState {
+        &mut self.output_state
+    }
+
+    fn new_output(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _output: wl_output::WlOutput,
+    ) {
+    }
+
+    fn update_output(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _output: wl_output::WlOutput,
+    ) {
+    }
+
+    fn output_destroyed(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _output: wl_output::WlOutput,
+    ) {
+    }
+}
+
+impl LayerShellHandler for SimpleLayer {
+    fn closed(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, _layer: &LayerSurface) {
+        self.exit = true;
+    }
+
+    fn configure(
+        &mut self,
+        _conn: &Connection,
+        qh: &QueueHandle<Self>,
+        _layer: &LayerSurface,
+        configure: LayerSurfaceConfigure,
+        _serial: u32,
+    ) {
+        self.width = NonZeroU32::new(configure.new_size.0).map_or(256, NonZeroU32::get);
+        self.height = NonZeroU32::new(configure.new_size.1).map_or(256, NonZeroU32::get);
+
+        // Initiate the first draw.
+        if self.first_configure {
+            self.first_configure = false;
+            self.draw(qh);
+        }
+    }
+}
+
+impl SeatHandler for SimpleLayer {
+    fn seat_state(&mut self) -> &mut SeatState {
+        &mut self.seat_state
+    }
+
+    fn new_seat(&mut self, _: &Connection, _: &QueueHandle<Self>, _: wl_seat::WlSeat) {}
+
+    fn new_capability(
+        &mut self,
+        _conn: &Connection,
+        qh: &QueueHandle<Self>,
+        seat: wl_seat::WlSeat,
+        capability: Capability,
+    ) {
+        if capability == Capability::Keyboard && self.keyboard.is_none() {
+            println!("Set keyboard capability");
+            let keyboard =
+                self.seat_state.get_keyboard(qh, &seat, None).expect("Failed to create keyboard");
+            self.keyboard = Some(keyboard);
+        }
+
+        if capability == Capability::Pointer && self.pointer.is_none() {
+            println!("Set pointer capability");
+            let pointer = self.seat_state.get_pointer(qh, &seat).expect("Failed to create pointer");
+            self.pointer = Some(pointer);
+        }
+    }
+
+    fn remove_capability(
+        &mut self,
+        _conn: &Connection,
+        _: &QueueHandle<Self>,
+        _: wl_seat::WlSeat,
+        capability: Capability,
+    ) {
+        if capability == Capability::Keyboard && self.keyboard.is_some() {
+            println!("Unset keyboard capability");
+            self.keyboard.take().unwrap().release();
+        }
+
+        if capability == Capability::Pointer && self.pointer.is_some() {
+            println!("Unset pointer capability");
+            self.pointer.take().unwrap().release();
+        }
+    }
+
+    fn remove_seat(&mut self, _: &Connection, _: &QueueHandle<Self>, _: wl_seat::WlSeat) {}
+}
+
+impl KeyboardHandler for SimpleLayer {
+    fn enter(
+        &mut self,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        _: &wl_keyboard::WlKeyboard,
+        surface: &wl_surface::WlSurface,
+        _: u32,
+        _: &[u32],
+        keysyms: &[Keysym],
+    ) {
+        if self.layer.wl_surface() == surface {
+            println!("Keyboard focus on window with pressed syms: {keysyms:?}");
+            self.keyboard_focus = true;
+        }
+    }
+
+    fn leave(
+        &mut self,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        _: &wl_keyboard::WlKeyboard,
+        surface: &wl_surface::WlSurface,
+        _: u32,
+    ) {
+        if self.layer.wl_surface() == surface {
+            println!("Release keyboard focus on window");
+            self.keyboard_focus = false;
+        }
+    }
+
+    fn press_key(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _: &wl_keyboard::WlKeyboard,
+        _: u32,
+        event: KeyEvent,
+    ) {
+        println!("Key press: {event:?}");
+        // press 'esc' to exit
+        if event.keysym == Keysym::Escape {
+            self.exit = true;
+        }
+    }
+
+    fn release_key(
+        &mut self,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        _: &wl_keyboard::WlKeyboard,
+        _: u32,
+        event: KeyEvent,
+    ) {
+        println!("Key release: {event:?}");
+    }
+
+    fn update_modifiers(
+        &mut self,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        _: &wl_keyboard::WlKeyboard,
+        _serial: u32,
+        modifiers: Modifiers,
+        // _raw_modifiers: RawModifiers,
+        _layout: u32,
+    ) {
+        println!("Update modifiers: {modifiers:?}");
+    }
+}
+
+impl PointerHandler for SimpleLayer {
+    fn pointer_frame(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _pointer: &wl_pointer::WlPointer,
+        events: &[PointerEvent],
+    ) {
+        use PointerEventKind::*;
+        for event in events {
+            // Ignore events for other surfaces
+            if &event.surface != self.layer.wl_surface() {
+                continue;
+            }
+            match event.kind {
+                Enter { .. } => {
+                    println!("Pointer entered @{:?}", event.position);
                 }
-
-                /* if let Some(status) = read_json(json_path) {
-                    let img = draw_image(&ss, width, height);
-                    img.save(output_path).expect("Could not save wallpaper image");
-                    println!("Image saved");
-                } else {
-                    println!("Missing data");
-                } */
-               let img = draw_image(&ss, width, height);
-                img.save(output_path).expect("Could not save wallpaper image");
-                println!("Image saved");
+                Leave { .. } => {
+                    println!("Pointer left");
+                }
+                Motion { .. } => {}
+                Press { button, .. } => {
+                    println!("Press {:x} @ {:?}", button, event.position);
+                    self.shift = self.shift.xor(Some(0));
+                }
+                Release { button, .. } => {
+                    println!("Release {:x} @ {:?}", button, event.position);
+                }
+                Axis { horizontal, vertical, .. } => {
+                    println!("Scroll H:{horizontal:?}, V:{vertical:?}");
+                }
             }
         }
-        thread::sleep(Duration::from_secs(2));
     }
+}
+
+impl ShmHandler for SimpleLayer {
+    fn shm_state(&mut self) -> &mut Shm {
+        &mut self.shm
+    }
+}
+
+impl SimpleLayer {
+    pub fn draw(&mut self, qh: &QueueHandle<Self>) {
+        let width = self.width;
+        let height = self.height;
+        let stride = self.width as i32 * 4;
+
+        let (buffer, canvas) = self
+            .pool
+            .create_buffer(width as i32, height as i32, stride, wl_shm::Format::Argb8888)
+            .expect("create buffer");
+
+        // Draw to the window:
+        {
+            let shift = self.shift.unwrap_or(0);
+            canvas.chunks_exact_mut(4).enumerate().for_each(|(index, chunk)| {
+                let x = ((index + shift as usize) % width as usize) as u32;
+                let y = (index / width as usize) as u32;
+
+                let a = 0xFF;
+                let r = u32::min(((width - x) * 0xFF) / width, ((height - y) * 0xFF) / height);
+                let g = u32::min((x * 0xFF) / width, ((height - y) * 0xFF) / height);
+                let b = u32::min(((width - x) * 0xFF) / width, (y * 0xFF) / height);
+                let color = (a << 24) + (r << 16) + (g << 8) + b;
+
+                let array: &mut [u8; 4] = chunk.try_into().unwrap();
+                *array = color.to_le_bytes();
+            });
+
+            if let Some(shift) = &mut self.shift {
+                *shift = (*shift + 1) % width;
+            }
+        }
+
+        // Damage the entire window
+        self.layer.wl_surface().damage_buffer(0, 0, width as i32, height as i32);
+
+        // Request our next frame
+        self.layer.wl_surface().frame(qh, self.layer.wl_surface().clone());
+
+        // Attach and commit to present.
+        buffer.attach_to(self.layer.wl_surface()).expect("buffer attach");
+        self.layer.commit();
+
+        // TODO save and reuse buffer when the window size is unchanged.  This is especially
+        // useful if you do damage tracking, since you don't need to redraw the undamaged parts
+        // of the canvas.
+    }
+}
+
+delegate_compositor!(SimpleLayer);
+delegate_output!(SimpleLayer);
+delegate_shm!(SimpleLayer);
+
+delegate_seat!(SimpleLayer);
+delegate_keyboard!(SimpleLayer);
+delegate_pointer!(SimpleLayer);
+
+delegate_layer!(SimpleLayer);
+
+delegate_registry!(SimpleLayer);
+
+impl ProvidesRegistryState for SimpleLayer {
+    fn registry(&mut self) -> &mut RegistryState {
+        &mut self.registry_state
+    }
+    registry_handlers![OutputState, SeatState];
 }
