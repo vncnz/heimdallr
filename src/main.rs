@@ -30,6 +30,7 @@ use wayland_client::{
 };
 
 use fontdue::Font;
+use image::{GenericImageView, Pixel};
 
 fn main() {
     env_logger::init();
@@ -60,7 +61,7 @@ fn main() {
     // interactivity
     layer.set_anchor(Anchor::BOTTOM);
     layer.set_keyboard_interactivity(KeyboardInteractivity::OnDemand);
-    layer.set_size(256, 256);
+    layer.set_size(512, 512);
 
     // In order for the layer surface to be mapped, we need to perform an initial commit with no attached\
     // buffer. For more info, see WaylandSurface::commit
@@ -71,7 +72,7 @@ fn main() {
 
     // We don't know how large the window will be yet, so lets assume the minimum size we suggested for the
     // initial memory allocation.
-    let pool = SlotPool::new(256 * 256 * 4, &shm).expect("Failed to create pool");
+    let pool = SlotPool::new(512 * 512 * 4, &shm).expect("Failed to create pool");
 
     let font_data = include_bytes!("/usr/share/fonts/noto/NotoSans-Regular.ttf") as &[u8];
     let font = Font::from_bytes(font_data, fontdue::FontSettings::default()).unwrap();
@@ -86,8 +87,8 @@ fn main() {
         exit: false,
         first_configure: true,
         pool,
-        width: 256,
-        height: 256,
+        width: 512,
+        height: 512,
         shift: None,
         layer,
         keyboard: None,
@@ -221,8 +222,8 @@ impl LayerShellHandler for SimpleLayer {
         configure: LayerSurfaceConfigure,
         _serial: u32,
     ) {
-        self.width = NonZeroU32::new(configure.new_size.0).map_or(256, NonZeroU32::get);
-        self.height = NonZeroU32::new(configure.new_size.1).map_or(256, NonZeroU32::get);
+        self.width = NonZeroU32::new(configure.new_size.0).map_or(512, NonZeroU32::get);
+        self.height = NonZeroU32::new(configure.new_size.1).map_or(512, NonZeroU32::get);
 
         // Initiate the first draw.
         if self.first_configure {
@@ -410,7 +411,7 @@ impl SimpleLayer {
 
         // Draw to the window:
         {
-            let shift = self.shift.unwrap_or(0);
+            /* let shift = self.shift.unwrap_or(0);
             canvas.chunks_exact_mut(4).enumerate().for_each(|(index, chunk)| {
                 let x = ((index + shift as usize) % width as usize) as u32;
                 let y = (index / width as usize) as u32;
@@ -423,7 +424,9 @@ impl SimpleLayer {
 
                 let array: &mut [u8; 4] = chunk.try_into().unwrap();
                 *array = color.to_le_bytes();
-            });
+            }); */
+
+            load_image(canvas, width as usize, height as usize);
 
             if let Some(shift) = &mut self.shift {
                 *shift = (*shift + 1) % width;
@@ -481,6 +484,44 @@ fn draw_text(canvas: &mut [u8], canvas_width: usize, text: &str, x: usize, y: us
     }
 }
 
+fn load_image (canvas: &mut [u8], width: usize, height: usize) {
+    let bg_img = image::open(&*expand_user("~/Repositories/heimdallr/blackboard.png"))
+    .expect("Impossibile caricare immagine")
+    .to_rgba8(); // oppure .to_rgba8() se vuoi trattarla come tale
+
+    let (img_w, img_h) = bg_img.dimensions();
+    let canvas_width = width as usize;
+    let canvas_height = height as usize;
+
+    for y in 0..canvas_height.min(img_h as usize) {
+        for x in 0..canvas_width.min(img_w as usize) {
+            let pixel = bg_img.get_pixel(x as u32, y as u32).to_rgba();
+            let i = (y * canvas_width + x) * 4;
+
+            // Wayland expects ARGB8888
+            canvas[i]     = pixel[2]; // B
+            canvas[i + 1] = pixel[1]; // G
+            canvas[i + 2] = pixel[0]; // R
+            canvas[i + 3] = pixel[3]; // A
+        }
+    }
+    // bg_img
+}
+
+// use std::env;
+// use std::path::PathBuf;
+use std::borrow::Cow;
+
+// use std::borrow::Cow;
+
+fn expand_user(path: &str) -> Cow<str> {
+    if path.starts_with("~") {
+        if let Ok(home) = std::env::var("HOME") {
+            return Cow::Owned(path.replacen("~", &home, 1));
+        }
+    }
+    Cow::Borrowed(path)
+}
 
 delegate_compositor!(SimpleLayer);
 delegate_output!(SimpleLayer);
