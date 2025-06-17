@@ -30,7 +30,7 @@ use wayland_client::{
 };
 
 use fontdue::Font;
-use image::{GenericImageView, Pixel};
+use image::{GenericImageView, Pixel, RgbaImage};
 
 fn main() {
     env_logger::init();
@@ -95,6 +95,9 @@ fn main() {
         keyboard_focus: false,
         pointer: None,
         font: font,
+        bg_img: image::open(&*expand_user("~/Repositories/heimdallr/blackboard.png"))
+                .expect("Impossibile caricare immagine")
+                .to_rgba8()
     };
 
     // We don't draw immediately, the configure will notify us when to first draw.
@@ -125,6 +128,7 @@ struct SimpleLayer {
     keyboard_focus: bool,
     pointer: Option<wl_pointer::WlPointer>,
     font: Font,
+    bg_img: RgbaImage
 }
 
 impl CompositorHandler for SimpleLayer {
@@ -426,7 +430,7 @@ impl SimpleLayer {
                 *array = color.to_le_bytes();
             }); */
 
-            load_image(canvas, width as usize, height as usize);
+            load_image(canvas, width as usize, height as usize, &self.bg_img);
 
             if let Some(shift) = &mut self.shift {
                 *shift = (*shift + 1) % width;
@@ -501,10 +505,7 @@ fn draw_text(canvas: &mut [u8], canvas_width: usize, text: &str, x: usize, y: us
     }
 }
 
-fn load_image (canvas: &mut [u8], width: usize, height: usize) {
-    let bg_img = image::open(&*expand_user("~/Repositories/heimdallr/blackboard.png"))
-    .expect("Impossibile caricare immagine")
-    .to_rgba8();
+fn load_image (canvas: &mut [u8], width: usize, height: usize, bg_img: &RgbaImage) {
 
     let (img_w, img_h) = bg_img.dimensions();
     let canvas_width = width as usize;
