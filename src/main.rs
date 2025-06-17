@@ -74,7 +74,7 @@ fn main() {
     // initial memory allocation.
     let pool = SlotPool::new(512 * 512 * 4, &shm).expect("Failed to create pool");
 
-    let font_data = include_bytes!("/usr/share/fonts/noto/NotoSans-Regular.ttf") as &[u8];
+    let font_data = include_bytes!("/usr/share/fonts/TTF/RobotoMonoNerdFont-Regular.ttf") as &[u8];
     let font = Font::from_bytes(font_data, fontdue::FontSettings::default()).unwrap();
     let mut simple_layer = SimpleLayer {
         // Seats and outputs may be hotplugged at runtime, therefore we need to setup a registry state to
@@ -432,7 +432,7 @@ impl SimpleLayer {
                 *shift = (*shift + 1) % width;
             }
 
-            draw_text(canvas, width as usize, "Hello Wayland", 20, 20, &self.font);
+            draw_text(canvas, width as usize, "Hello Wayland 1234567890 󰻠", 20, 20, &self.font);
         }
 
         // Damage the entire window
@@ -451,9 +451,26 @@ impl SimpleLayer {
     }
 }
 
+// use tiny_skia::{PixmapPaint, Transform};
 fn draw_text(canvas: &mut [u8], canvas_width: usize, text: &str, x: usize, y: usize, font: &Font) {
     let font_size = 20.0;
     let mut cursor_x = x;
+
+    /* let transform = Transform::from_rotate_at(
+        angle_in_degrees.to_radians(),
+        x + width as f32 / 2.0,
+        y + height as f32 / 2.0,
+    );
+
+    canvas.draw_pixmap(
+        x as i32 + metrics.xmin,
+        y as i32 + metrics.ymin,
+        img.as_ref(),
+        &PixmapPaint::default(),
+        transform,
+        None,
+    ); */
+
 
     for ch in text.chars() {
         let (metrics, bitmap) = font.rasterize(ch, font_size);
@@ -475,8 +492,8 @@ fn draw_text(canvas: &mut [u8], canvas_width: usize, text: &str, x: usize, y: us
                 let offset = (py * canvas_width + px) * 4;
                 canvas[offset] = alpha; // B
                 canvas[offset + 1] = alpha; // G
-                canvas[offset + 2] = 255; // R
-                canvas[offset + 3] = 255; // A
+                canvas[offset + 2] = alpha; // R
+                canvas[offset + 3] = 0; // A
             }
         }
 
