@@ -487,7 +487,7 @@ fn draw_text(canvas: &mut [u8], canvas_width: usize, text: &str, x: usize, y: us
 fn load_image (canvas: &mut [u8], width: usize, height: usize) {
     let bg_img = image::open(&*expand_user("~/Repositories/heimdallr/blackboard.png"))
     .expect("Impossibile caricare immagine")
-    .to_rgba8(); // oppure .to_rgba8() se vuoi trattarla come tale
+    .to_rgba8();
 
     let (img_w, img_h) = bg_img.dimensions();
     let canvas_width = width as usize;
@@ -508,11 +508,7 @@ fn load_image (canvas: &mut [u8], width: usize, height: usize) {
     // bg_img
 }
 
-// use std::env;
-// use std::path::PathBuf;
 use std::borrow::Cow;
-
-// use std::borrow::Cow;
 
 fn expand_user(path: &str) -> Cow<str> {
     if path.starts_with("~") {
