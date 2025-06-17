@@ -29,6 +29,8 @@ use wayland_client::{
     Connection, QueueHandle,
 };
 
+use fontdue::Font;
+
 fn main() {
     env_logger::init();
 
@@ -71,6 +73,8 @@ fn main() {
     // initial memory allocation.
     let pool = SlotPool::new(256 * 256 * 4, &shm).expect("Failed to create pool");
 
+    let font_data = include_bytes!("/usr/share/fonts/noto/NotoSans-Regular.ttf") as &[u8];
+    let font = Font::from_bytes(font_data, fontdue::FontSettings::default()).unwrap();
     let mut simple_layer = SimpleLayer {
         // Seats and outputs may be hotplugged at runtime, therefore we need to setup a registry state to
         // listen for seats and outputs.
@@ -89,6 +93,7 @@ fn main() {
         keyboard: None,
         keyboard_focus: false,
         pointer: None,
+        font: font,
     };
 
     // We don't draw immediately, the configure will notify us when to first draw.
@@ -118,6 +123,7 @@ struct SimpleLayer {
     keyboard: Option<wl_keyboard::WlKeyboard>,
     keyboard_focus: bool,
     pointer: Option<wl_pointer::WlPointer>,
+    font: Font,
 }
 
 impl CompositorHandler for SimpleLayer {
@@ -390,7 +396,9 @@ impl ShmHandler for SimpleLayer {
 }
 
 impl SimpleLayer {
+
     pub fn draw(&mut self, qh: &QueueHandle<Self>) {
+
         let width = self.width;
         let height = self.height;
         let stride = self.width as i32 * 4;
@@ -407,7 +415,7 @@ impl SimpleLayer {
                 let x = ((index + shift as usize) % width as usize) as u32;
                 let y = (index / width as usize) as u32;
 
-                let a = 0xFF;
+                let a = 0x77;
                 let r = u32::min(((width - x) * 0xFF) / width, ((height - y) * 0xFF) / height);
                 let g = u32::min((x * 0xFF) / width, ((height - y) * 0xFF) / height);
                 let b = u32::min(((width - x) * 0xFF) / width, (y * 0xFF) / height);
@@ -420,6 +428,8 @@ impl SimpleLayer {
             if let Some(shift) = &mut self.shift {
                 *shift = (*shift + 1) % width;
             }
+
+            draw_text(canvas, width as usize, "Hello Wayland", 20, 20, &self.font);
         }
 
         // Damage the entire window
@@ -437,6 +447,40 @@ impl SimpleLayer {
         // of the canvas.
     }
 }
+
+fn draw_text(canvas: &mut [u8], canvas_width: usize, text: &str, x: usize, y: usize, font: &Font) {
+    let font_size = 20.0;
+    let mut cursor_x = x;
+
+    for ch in text.chars() {
+        let (metrics, bitmap) = font.rasterize(ch, font_size);
+        let glyph_w = metrics.width;
+        let glyph_h = metrics.height;
+
+        for glyph_y in 0..glyph_h {
+            for glyph_x in 0..glyph_w {
+                let bitmap_index = glyph_y * glyph_w + glyph_x;
+                let alpha = bitmap[bitmap_index];
+
+                let px = cursor_x + glyph_x;
+                let py = y + glyph_y;
+
+                if px >= canvas_width || py >= canvas.len() / (canvas_width * 4) {
+                    continue;
+                }
+
+                let offset = (py * canvas_width + px) * 4;
+                canvas[offset] = alpha; // B
+                canvas[offset + 1] = alpha; // G
+                canvas[offset + 2] = 255; // R
+                canvas[offset + 3] = 255; // A
+            }
+        }
+
+        cursor_x += (metrics.advance_width + 1.0) as usize;
+    }
+}
+
 
 delegate_compositor!(SimpleLayer);
 delegate_output!(SimpleLayer);
