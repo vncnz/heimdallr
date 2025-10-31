@@ -7,10 +7,10 @@ use smithay_client_toolkit::{
     shell::wlr_layer::{Anchor, KeyboardInteractivity, Layer, LayerShell, LayerShellHandler, LayerSurface, LayerSurfaceConfigure},
     shm::{slot::SlotPool, Shm, ShmHandler},
 };
-use wayland_client::{globals::registry_queue_init, protocol::{wl_shm}, Connection, QueueHandle};
+use wayland_client::{globals::registry_queue_init, protocol::{wl_shm, wl_compositor, wl_region}, Connection, QueueHandle};
 use cairo::{Context, Format, ImageSurface};
 
-use std::num::NonZeroU32;
+use std::{num::NonZeroU32, ops::RangeInclusive};
 
 use smithay_client_toolkit::shell::WaylandSurface;
 
@@ -30,7 +30,14 @@ fn main() {
     let layer = layer_shell.create_layer_surface(&qh, surface, Layer::Overlay, Some("heimdallr"), None);
     layer.set_anchor(Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT);
     layer.set_keyboard_interactivity(KeyboardInteractivity::None);
-    layer.set_input_region(None);
+
+    let raw_compositor: wl_compositor::WlCompositor =
+    globals.bind::<wl_compositor::WlCompositor, _, _>(&qh, 1..=4, ())
+    .expect("failed to bind wl_compositor for region creation");
+
+    let empty_region: wl_region::WlRegion = raw_compositor.create_region(&qh, ());
+    layer.wl_surface().set_input_region(Some(&empty_region));
+    
     layer.set_size(0, 0); // full screen
     layer.commit();
 
@@ -45,6 +52,7 @@ fn main() {
         width: 1920,
         height: 1080,
         first_configure: true,
+        input_region: Some(empty_region),
     };
 
     loop {
@@ -61,6 +69,7 @@ struct HeimdallrLayer {
     width: u32,
     height: u32,
     first_configure: bool,
+    input_region: Option<wl_region::WlRegion>,
 }
 
 impl HeimdallrLayer {
@@ -169,4 +178,32 @@ delegate_registry!(HeimdallrLayer);
 impl ProvidesRegistryState for HeimdallrLayer {
     fn registry(&mut self) -> &mut RegistryState { &mut self.registry_state }
     registry_handlers![OutputState];
+}
+
+use wayland_client::{Dispatch};
+
+impl Dispatch<wl_compositor::WlCompositor, ()> for HeimdallrLayer {
+    fn event(
+        _state: &mut Self,
+        _proxy: &wl_compositor::WlCompositor,
+        _event: wl_compositor::Event,
+        _data: &(),
+        _conn: &wayland_client::Connection,
+        _qh: &wayland_client::QueueHandle<Self>,
+    ) {
+        // wl_compositor non genera eventi interessanti per noi → no-op
+    }
+}
+
+impl Dispatch<wl_region::WlRegion, ()> for HeimdallrLayer {
+    fn event(
+        _state: &mut Self,
+        _proxy: &wl_region::WlRegion,
+        _event: wl_region::Event,
+        _data: &(),
+        _conn: &wayland_client::Connection,
+        _qh: &wayland_client::QueueHandle<Self>,
+    ) {
+        // wl_region non genera eventi interessanti → no-op
+    }
 }
