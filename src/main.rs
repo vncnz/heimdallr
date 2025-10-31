@@ -10,9 +10,18 @@ use smithay_client_toolkit::{
 use wayland_client::{globals::registry_queue_init, protocol::{wl_shm, wl_compositor, wl_region}, Connection, QueueHandle};
 use cairo::{Context, Format, ImageSurface};
 
-use std::{num::NonZeroU32, ops::RangeInclusive};
+use std::{num::NonZeroU32};
 
 use smithay_client_toolkit::shell::WaylandSurface;
+
+use std::collections::HashMap;
+use cairo::FontSlant;
+
+struct AlarmIcon {
+    symbol: String,
+    color: (f64, f64, f64, f64), // RGBA
+}
+
 
 
 fn main() {
@@ -53,12 +62,19 @@ fn main() {
         height: 1080,
         first_configure: true,
         input_region: Some(empty_region),
+        icons: HashMap::new(),
     };
+    app.add_icon("avg", "󰬢", (1.0, 0.2, 0.2, 1.0)); // example
+    app.add_icon("ram", "󰘚", (1.0, 1.0, 0.2, 1.0)); // example
 
     loop {
         event_queue.blocking_dispatch(&mut app).unwrap();
     }
 }
+
+/* fn on_icons_changed(&mut self) {
+    self.redraw();
+} */
 
 struct HeimdallrLayer {
     registry_state: RegistryState,
@@ -70,6 +86,7 @@ struct HeimdallrLayer {
     height: u32,
     first_configure: bool,
     input_region: Option<wl_region::WlRegion>,
+    icons: HashMap<String, AlarmIcon>,
 }
 
 impl HeimdallrLayer {
@@ -120,7 +137,36 @@ impl HeimdallrLayer {
         self.layer.wl_surface().damage_buffer(0, 0, self.width as i32, self.height as i32);
         self.layer.wl_surface().frame(qh, self.layer.wl_surface().clone());
         buffer.attach_to(self.layer.wl_surface()).unwrap();
+
+        // === Draw alarm icons ===
+        let mut y_offset = self.height as f64 - 30.0; // parte dal basso
+        for icon in self.icons.values() {
+            cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
+            cr.set_font_size(24.0);
+
+            cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
+            cr.move_to(20.0, y_offset);
+            cr.show_text(&icon.symbol).unwrap();
+            y_offset -= 30.0;
+        }
+
         self.layer.commit();
+    }
+}
+
+impl HeimdallrLayer { // This is for icon management, I like to keep it separated, for now
+    fn add_icon(&mut self, id: &str, symbol: &str, color: (f64, f64, f64, f64)) {
+        self.icons.insert(
+            id.to_string(),
+            AlarmIcon {
+                symbol: symbol.to_string(),
+                color,
+            },
+        );
+    }
+
+    fn remove_icon(&mut self, id: &str) {
+        self.icons.remove(id);
     }
 }
 
