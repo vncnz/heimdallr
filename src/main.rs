@@ -114,23 +114,35 @@ impl HeimdallrLayer {
         cr.set_source_rgba(0.0, 0.0, 0.0, 0.0);
         cr.paint().unwrap();
 
+        // icons space reserved
+        let mut y_offset = self.height as f64 - 12.0; // parte dal basso
+        let res_w = 30.0;
+        let res_h = (self.icons.len() as f64) * 30.0 + 6.0;
+
         // Draw rounded rectangle frame
-        let thickness = 8.0;
-        let radius = 30.0;
+        let thickness = 1.0;
+        let radius = 25.0;
+        let radius2 = 10.0;
 
         let w = self.width as f64;
         let h = self.height as f64;
 
         // Outer black border (semi-transparent)
-        cr.set_line_width(thickness);
-        cr.set_source_rgba(0.0, 0.0, 0.0, 0.8);
-        rounded_rect(&cr, thickness / 2.0, thickness / 2.0, w - thickness, h - thickness, radius);
-        cr.stroke().unwrap();
+        cr.rectangle(0.0, 0.0, w, h);
+        cr.set_fill_rule(cairo::FillRule::EvenOdd);
+        rounded_rect(&cr, thickness / 2.0, thickness / 2.0, w - thickness, h - thickness, radius, radius2, res_w, res_h);
+        cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
+        cr.fill().unwrap();
+
+        //cr.set_line_width(thickness);
+        //cr.set_source_rgba(0.0, 0.0, 0.0, 0.8);
+        //rounded_rect(&cr, thickness / 2.0, thickness / 2.0, w - thickness, h - thickness, radius);
+        //cr.stroke().unwrap();
 
         // Inner colored frame (for future dynamic border)
-        cr.set_line_width(3.0);
+        cr.set_line_width(1.0);
         cr.set_source_rgba(0.2, 0.6, 1.0, 0.9);
-        rounded_rect(&cr, thickness + 1.0, thickness + 1.0, w - 2.0 * (thickness + 1.0), h - 2.0 * (thickness + 1.0), radius - 6.0);
+        rounded_rect(&cr, thickness / 2.0, thickness / 2.0, w - thickness, h - thickness, radius, radius2, res_w, res_h);
         cr.stroke().unwrap();
 
         // Damage + commit
@@ -139,13 +151,13 @@ impl HeimdallrLayer {
         buffer.attach_to(self.layer.wl_surface()).unwrap();
 
         // === Draw alarm icons ===
-        let mut y_offset = self.height as f64 - 30.0; // parte dal basso
+        
         for icon in self.icons.values() {
             cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
-            cr.set_font_size(24.0);
+            cr.set_font_size(20.0);
 
             cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
-            cr.move_to(20.0, y_offset);
+            cr.move_to(4.0, y_offset);
             cr.show_text(&icon.symbol).unwrap();
             y_offset -= 30.0;
         }
@@ -170,11 +182,19 @@ impl HeimdallrLayer { // This is for icon management, I like to keep it separate
     }
 }
 
-fn rounded_rect(cr: &Context, x: f64, y: f64, w: f64, h: f64, r: f64) {
+fn rounded_rect(cr: &Context, x: f64, y: f64, w: f64, h: f64, r: f64, r2: f64, reserved_w: f64, reserved_h: f64) {
     cr.new_sub_path();
     cr.arc(x + w - r, y + r, r, -90f64.to_radians(), 0.0);
     cr.arc(x + w - r, y + h - r, r, 0.0, 90f64.to_radians());
-    cr.arc(x + r, y + h - r, r, 90f64.to_radians(), 180f64.to_radians());
+    
+    if reserved_h > 0.0 {
+        cr.arc(x + r + reserved_w, y + h - r, r, 90f64.to_radians(), 180f64.to_radians());
+        cr.arc_negative(x - r2 + reserved_w, y + h + r2 - reserved_h, r2, 0f64.to_radians(), 270f64.to_radians());
+        cr.arc(x + r2, y + h - r2 - reserved_h, r2, 90f64.to_radians(), 180f64.to_radians());
+    } else {
+        cr.arc(x + r, y + h - r, r, 90f64.to_radians(), 180f64.to_radians());
+    }
+    
     cr.arc(x + r, y + r, r, 180f64.to_radians(), 270f64.to_radians());
     cr.close_path();
 }
