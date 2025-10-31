@@ -30,6 +30,7 @@ fn main() {
     let layer = layer_shell.create_layer_surface(&qh, surface, Layer::Overlay, Some("heimdallr"), None);
     layer.set_anchor(Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT);
     layer.set_keyboard_interactivity(KeyboardInteractivity::None);
+    layer.set_input_region(None);
     layer.set_size(0, 0); // full screen
     layer.commit();
 
