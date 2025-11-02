@@ -19,3 +19,5 @@ cairo-rs = { version = "0.18", features = ["use_glib"] }
 log = "0.4"
 pango = "0.14"
 pangocairo = "0.14"
+
+notify = "8"

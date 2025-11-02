@@ -10,7 +10,8 @@ use smithay_client_toolkit::{
 use wayland_client::{globals::registry_queue_init, protocol::{wl_shm, wl_compositor, wl_region}, Connection, QueueHandle};
 use cairo::{Context, Format, ImageSurface};
 
-use std::{num::NonZeroU32};
+use std::{num::NonZeroU32, sync::{Arc, Mutex}, time::Duration};
+use std::os::unix::net::UnixDatagram;
 
 use smithay_client_toolkit::shell::WaylandSurface;
 
@@ -23,9 +24,17 @@ struct AlarmIcon {
 }
 
 
+mod data;
+mod config;
+
+use config::Config;
+
 
 fn main() {
     env_logger::init();
+
+    let config = Config::load_from_file("~/.config/heimdallr/config.json");
+    println!("Configurazione caricata: {:?}", config);
 
     let conn = Connection::connect_to_env().unwrap();
     let (globals, mut event_queue) = registry_queue_init(&conn).unwrap();
@@ -52,6 +61,11 @@ fn main() {
 
     let pool = SlotPool::new(1920 * 1080 * 4, &shm).expect("pool creation failed");
 
+    //let resources = Arc::new(Mutex::new(ResourceData::default()));
+    //let receiver = start_resource_watcher("/tmp/ratatoskr.json", resources.clone());
+
+    // let rx = data::start_socket_watcher("/tmp/ratatoskr.sock");
+
     let mut app = HeimdallrLayer {
         registry_state: RegistryState::new(&globals),
         output_state: OutputState::new(&globals, &qh),
@@ -63,13 +77,49 @@ fn main() {
         first_configure: true,
         input_region: Some(empty_region),
         icons: HashMap::new(),
+        needs_redraw: false,
     };
+    
     app.add_icon("avg", "󰬢", (1.0, 0.2, 0.2, 1.0)); // example
     app.add_icon("ram", "󰘚", (1.0, 1.0, 0.2, 1.0)); // example
 
+    // socket creation
+    //let _ = std::fs::remove_file("/tmp/ratatoskr.sock");
+    //let sock = UnixDatagram::bind("/tmp/ratatoskr.sock").expect("Impossible to create the socket in /tmp/ratatoskr.sock");
+    //let mut buf = [0u8; 2048];
+    let state = Arc::new(Mutex::new(SharedState {
+        volume: 50,
+        muted: false,
+    }));
+
+    start_socket_listener(Arc::clone(&state));
+
     loop {
         event_queue.blocking_dispatch(&mut app).unwrap();
+
+
+        // Locking read from socket
+        //let len = sock.recv(&mut buf).unwrap();
+        //let msg = String::from_utf8_lossy(&buf[..len]);
+        //println!("Ricevuto: {}", msg);
+
+        app.maybe_redraw(&qh);
     }
+
+/*
+use std::os::unix::net::UnixDatagram;
+
+fn main() {
+    let sock = UnixDatagram::unbound().unwrap();
+    sock.connect("/tmp/ratatoskr.sock").unwrap();
+
+    let mut buf = [0u8; 2048];
+    loop {
+        let len = sock.recv(&mut buf).unwrap();
+        let msg = String::from_utf8_lossy(&buf[..len]);
+        println!("Ricevuto: {}", msg);
+    }
+} */
 }
 
 /* fn on_icons_changed(&mut self) {
@@ -87,9 +137,25 @@ struct HeimdallrLayer {
     first_configure: bool,
     input_region: Option<wl_region::WlRegion>,
     icons: HashMap<String, AlarmIcon>,
+    needs_redraw: bool,
 }
 
 impl HeimdallrLayer {
+    pub fn request_redraw(&mut self) {
+        self.needs_redraw = true;
+    }
+
+    pub fn maybe_redraw(&mut self, qh: &QueueHandle<Self>) {
+        if !self.needs_redraw {
+            return;
+        }
+
+        self.needs_redraw = false;
+
+        // qui fai il rendering vero e proprio:
+        self.draw(qh);
+    }
+
     fn draw(&mut self, qh: &QueueHandle<Self>) {
         let stride = self.width as i32 * 4;
         let (buffer, mut canvas) = self
@@ -188,7 +254,7 @@ fn rounded_rect(cr: &Context, x: f64, y: f64, w: f64, h: f64, r: f64, r2: f64, r
     cr.arc(x + w - r, y + h - r, r, 0.0, 90f64.to_radians());
     
     if reserved_h > 0.0 {
-        cr.arc(x + r + reserved_w, y + h - r, r, 90f64.to_radians(), 180f64.to_radians());
+        cr.arc(x + r2 + reserved_w, y + h - r2, r2, 90f64.to_radians(), 180f64.to_radians());
         cr.arc_negative(x - r2 + reserved_w, y + h + r2 - reserved_h, r2, 0f64.to_radians(), 270f64.to_radians());
         cr.arc(x + r2, y + h - r2 - reserved_h, r2, 90f64.to_radians(), 180f64.to_radians());
     } else {
@@ -247,6 +313,8 @@ impl ProvidesRegistryState for HeimdallrLayer {
 }
 
 use wayland_client::{Dispatch};
+
+use crate::data::{SharedState, start_socket_listener};
 
 impl Dispatch<wl_compositor::WlCompositor, ()> for HeimdallrLayer {
     fn event(
