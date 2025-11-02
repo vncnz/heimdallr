@@ -1,20 +1,21 @@
 use std::{
-    net::Shutdown,
     os::unix::net::UnixDatagram,
     sync::{Arc, Mutex},
+    sync::mpsc::{Sender},
     thread,
     time::Duration,
 };
 
 use serde::Deserialize;
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct SharedState {
-    pub volume: u8,
-    pub muted: bool,
+#[derive(Default, Deserialize)]
+pub struct PartialMsg {
+    pub resource: String,
+    pub warning: f64,
+    pub data: Option<serde_json::Value>,
 }
 
-pub fn start_socket_listener(state: Arc<Mutex<SharedState>>) {
+pub fn start_socket_listener(state: Arc<Mutex<PartialMsg>>, tx: Sender<PartialMsg>) {
     thread::spawn(move || {
         let sock_path = "/tmp/ratatoskr.sock";
         let _ = std::fs::remove_file(sock_path); // evita Address in use
@@ -31,12 +32,14 @@ pub fn start_socket_listener(state: Arc<Mutex<SharedState>>) {
             match listener.recv(&mut buf) {
                 Ok(size) => {
                     let msg = String::from_utf8_lossy(&buf[..size]);
-                    if let Ok(new_data) = serde_json::from_str::<SharedState>(&msg) {
+                    if let Ok(new_data) = serde_json::from_str::<PartialMsg>(&msg) {
                         if let Ok(mut data) = state.lock() {
+                            tx.send(PartialMsg { resource: new_data.resource.clone(), warning: new_data.warning, data: None }).ok();
                             *data = new_data;
+                            // println!("Updated! {}", msg);
                         }
                     } else {
-                        eprintln!("Messaggio JSON non valido: {msg}");
+                        // eprintln!("Messaggio JSON non valido: {msg}");
                     }
                 }
                 Err(e) => {
@@ -46,23 +49,4 @@ pub fn start_socket_listener(state: Arc<Mutex<SharedState>>) {
             }
         }
     });
-}
-
-fn main() {
-    let state = Arc::new(Mutex::new(SharedState {
-        volume: 50,
-        muted: false,
-    }));
-
-    // Avvia listener in background
-    start_socket_listener(Arc::clone(&state));
-
-    // Simuliamo il rendering loop
-    loop {
-        {
-            let data = state.lock().unwrap();
-            println!("Rendering con volume={} muted={}", data.volume, data.muted);
-        }
-        thread::sleep(Duration::from_secs(2));
-    }
 }

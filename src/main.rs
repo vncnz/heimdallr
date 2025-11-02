@@ -10,7 +10,7 @@ use smithay_client_toolkit::{
 use wayland_client::{globals::registry_queue_init, protocol::{wl_shm, wl_compositor, wl_region}, Connection, QueueHandle};
 use cairo::{Context, Format, ImageSurface};
 
-use std::{num::NonZeroU32, sync::{Arc, Mutex}, time::Duration};
+use std::{num::NonZeroU32, sync::{Arc, Mutex, mpsc::{self, Receiver, Sender}}, time::{Duration, Instant}};
 use std::os::unix::net::UnixDatagram;
 
 use smithay_client_toolkit::shell::WaylandSurface;
@@ -18,16 +18,15 @@ use smithay_client_toolkit::shell::WaylandSurface;
 use std::collections::HashMap;
 use cairo::FontSlant;
 
-struct AlarmIcon {
-    symbol: String,
-    color: (f64, f64, f64, f64), // RGBA
-}
-
+use crate::data::{PartialMsg, start_socket_listener};
 
 mod data;
 mod config;
+mod heimdallr_layer;
 
 use config::Config;
+
+use crate::heimdallr_layer::HeimdallrLayer;
 
 
 fn main() {
@@ -55,7 +54,7 @@ fn main() {
 
     let empty_region: wl_region::WlRegion = raw_compositor.create_region(&qh, ());
     layer.wl_surface().set_input_region(Some(&empty_region));
-    
+
     layer.set_size(0, 0); // full screen
     layer.commit();
 
@@ -78,21 +77,21 @@ fn main() {
         input_region: Some(empty_region),
         icons: HashMap::new(),
         needs_redraw: false,
+        last_redraw: Instant::now(),
+        redraw_interval: Duration::from_millis(500)
     };
     
-    app.add_icon("avg", "󰬢", (1.0, 0.2, 0.2, 1.0)); // example
-    app.add_icon("ram", "󰘚", (1.0, 1.0, 0.2, 1.0)); // example
+    // app.add_icon("avg", "󰬢", (1.0, 0.2, 0.2, 1.0)); // example
+    // app.add_icon("ram", "󰘚", (1.0, 1.0, 0.2, 1.0)); // example
 
     // socket creation
     //let _ = std::fs::remove_file("/tmp/ratatoskr.sock");
     //let sock = UnixDatagram::bind("/tmp/ratatoskr.sock").expect("Impossible to create the socket in /tmp/ratatoskr.sock");
     //let mut buf = [0u8; 2048];
-    let state = Arc::new(Mutex::new(SharedState {
-        volume: 50,
-        muted: false,
-    }));
+    let state = Arc::new(Mutex::new(PartialMsg::default()));
 
-    start_socket_listener(Arc::clone(&state));
+    let (tx, rx) = mpsc::channel();
+    start_socket_listener(Arc::clone(&state), tx);
 
     loop {
         event_queue.blocking_dispatch(&mut app).unwrap();
@@ -102,6 +101,24 @@ fn main() {
         //let len = sock.recv(&mut buf).unwrap();
         //let msg = String::from_utf8_lossy(&buf[..len]);
         //println!("Ricevuto: {}", msg);
+        if let Ok(data) = rx.try_recv() {
+            if data.warning < 0.3 {
+                if app.remove_icon(&data.resource) {
+                    app.request_redraw();
+                }
+            }
+            else {
+                let mut icon = "";
+                if data.resource == "loadavg" { icon = "󰬢"; }
+                else if data.resource == "memory" { icon = "󰘚"; }
+
+                if icon != "" {
+                    app.remove_icon(&data.resource);
+                    app.add_icon(&data.resource, icon, get_color_gradient(data.warning));
+                    app.request_redraw();
+                }
+            }
+        }
 
         app.maybe_redraw(&qh);
     }
@@ -126,218 +143,51 @@ fn main() {
     self.redraw();
 } */
 
-struct HeimdallrLayer {
-    registry_state: RegistryState,
-    output_state: OutputState,
-    shm: Shm,
-    pool: SlotPool,
-    layer: LayerSurface,
-    width: u32,
-    height: u32,
-    first_configure: bool,
-    input_region: Option<wl_region::WlRegion>,
-    icons: HashMap<String, AlarmIcon>,
-    needs_redraw: bool,
+const DEFAULT_WHITE: bool = false;
+pub fn get_color_gradient(value: f64) -> (f64, f64, f64, f64) {
+    get_color_gradient_full(0.0, 1.0, value, false)
 }
-
-impl HeimdallrLayer {
-    pub fn request_redraw(&mut self) {
-        self.needs_redraw = true;
-    }
-
-    pub fn maybe_redraw(&mut self, qh: &QueueHandle<Self>) {
-        if !self.needs_redraw {
-            return;
-        }
-
-        self.needs_redraw = false;
-
-        // qui fai il rendering vero e proprio:
-        self.draw(qh);
-    }
-
-    fn draw(&mut self, qh: &QueueHandle<Self>) {
-        let stride = self.width as i32 * 4;
-        let (buffer, mut canvas) = self
-            .pool
-            .create_buffer(self.width as i32, self.height as i32, stride, wl_shm::Format::Argb8888)
-            .expect("buffer creation failed");
-
-        // Cairo surface on the shared memory buffer
-        let surface = unsafe {
-            ImageSurface::create_for_data_unsafe(
-                canvas.as_mut_ptr(),
-                Format::ARgb32,
-                self.width as i32,
-                self.height as i32,
-                stride,
-            )
-            .unwrap()
-        };
-        let cr = Context::new(&surface).unwrap();
-
-        // Clear with full transparency
-        cr.set_source_rgba(0.0, 0.0, 0.0, 0.0);
-        cr.paint().unwrap();
-
-        // icons space reserved
-        let mut y_offset = self.height as f64 - 12.0; // parte dal basso
-        let res_w = 30.0;
-        let res_h = (self.icons.len() as f64) * 30.0 + 6.0;
-
-        // Draw rounded rectangle frame
-        let thickness = 1.0;
-        let radius = 25.0;
-        let radius2 = 10.0;
-
-        let w = self.width as f64;
-        let h = self.height as f64;
-
-        // Outer black border (semi-transparent)
-        cr.rectangle(0.0, 0.0, w, h);
-        cr.set_fill_rule(cairo::FillRule::EvenOdd);
-        rounded_rect(&cr, thickness / 2.0, thickness / 2.0, w - thickness, h - thickness, radius, radius2, res_w, res_h);
-        cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
-        cr.fill().unwrap();
-
-        //cr.set_line_width(thickness);
-        //cr.set_source_rgba(0.0, 0.0, 0.0, 0.8);
-        //rounded_rect(&cr, thickness / 2.0, thickness / 2.0, w - thickness, h - thickness, radius);
-        //cr.stroke().unwrap();
-
-        // Inner colored frame (for future dynamic border)
-        cr.set_line_width(1.0);
-        cr.set_source_rgba(0.2, 0.6, 1.0, 0.9);
-        rounded_rect(&cr, thickness / 2.0, thickness / 2.0, w - thickness, h - thickness, radius, radius2, res_w, res_h);
-        cr.stroke().unwrap();
-
-        // Damage + commit
-        self.layer.wl_surface().damage_buffer(0, 0, self.width as i32, self.height as i32);
-        self.layer.wl_surface().frame(qh, self.layer.wl_surface().clone());
-        buffer.attach_to(self.layer.wl_surface()).unwrap();
-
-        // === Draw alarm icons ===
-        
-        for icon in self.icons.values() {
-            cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
-            cr.set_font_size(20.0);
-
-            cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
-            cr.move_to(4.0, y_offset);
-            cr.show_text(&icon.symbol).unwrap();
-            y_offset -= 30.0;
-        }
-
-        self.layer.commit();
-    }
-}
-
-impl HeimdallrLayer { // This is for icon management, I like to keep it separated, for now
-    fn add_icon(&mut self, id: &str, symbol: &str, color: (f64, f64, f64, f64)) {
-        self.icons.insert(
-            id.to_string(),
-            AlarmIcon {
-                symbol: symbol.to_string(),
-                color,
-            },
-        );
-    }
-
-    fn remove_icon(&mut self, id: &str) {
-        self.icons.remove(id);
-    }
-}
-
-fn rounded_rect(cr: &Context, x: f64, y: f64, w: f64, h: f64, r: f64, r2: f64, reserved_w: f64, reserved_h: f64) {
-    cr.new_sub_path();
-    cr.arc(x + w - r, y + r, r, -90f64.to_radians(), 0.0);
-    cr.arc(x + w - r, y + h - r, r, 0.0, 90f64.to_radians());
-    
-    if reserved_h > 0.0 {
-        cr.arc(x + r2 + reserved_w, y + h - r2, r2, 90f64.to_radians(), 180f64.to_radians());
-        cr.arc_negative(x - r2 + reserved_w, y + h + r2 - reserved_h, r2, 0f64.to_radians(), 270f64.to_radians());
-        cr.arc(x + r2, y + h - r2 - reserved_h, r2, 90f64.to_radians(), 180f64.to_radians());
+pub fn get_color_gradient_full(min: f64, max: f64, value: f64, reversed: bool) -> (f64, f64, f64, f64) {
+    let clamped = value.clamp(min, max);
+    let mut ratio = if (max - min).abs() < f64::EPSILON {
+        0.5
     } else {
-        cr.arc(x + r, y + h - r, r, 90f64.to_radians(), 180f64.to_radians());
+        (clamped - min) / (max - min)
+    };
+
+    if !reversed { ratio = 1.0 - ratio; }
+    let sat;
+    let hue;
+    if DEFAULT_WHITE {
+        sat = f64::max(1.0 - (ratio * ratio * ratio), 0.0);
+        hue = 60.0 * ratio; // 60 -> 0
+    } else {
+        sat = 1.0;
+        hue = 100.0 * ratio; // 100 -> 0
     }
-    
-    cr.arc(x + r, y + r, r, 180f64.to_radians(), 270f64.to_radians());
-    cr.close_path();
+    let (r, g, b) = hsv_to_rgb(hue, sat, 1.0);
+
+    // format!("#{:02X}{:02X}{:02X}", r, g, b)
+    ((r as f64) / 255.0, (g as f64) / 255.0, (b as f64) / 255.0, 1.0)
 }
 
-impl CompositorHandler for HeimdallrLayer {
-    fn scale_factor_changed(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wayland_client::protocol::wl_surface::WlSurface, _: i32) {}
-    fn transform_changed(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wayland_client::protocol::wl_surface::WlSurface, _: wayland_client::protocol::wl_output::Transform) {}
-    fn frame(&mut self, _: &Connection, qh: &QueueHandle<Self>, _: &wayland_client::protocol::wl_surface::WlSurface, _: u32) {
-        self.draw(qh);
-    }
-    fn surface_enter(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wayland_client::protocol::wl_surface::WlSurface, _: &wayland_client::protocol::wl_output::WlOutput) {}
-    fn surface_leave(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wayland_client::protocol::wl_surface::WlSurface, _: &wayland_client::protocol::wl_output::WlOutput) {}
-}
+fn hsv_to_rgb(h: f64, s: f64, v: f64) -> (u8, u8, u8) {
+    let c = v * s;
+    let x = c * (1.0 - ((h / 60.0) % 2.0 - 1.0).abs());
+    let m = v - c;
 
-impl OutputHandler for HeimdallrLayer {
-    fn output_state(&mut self) -> &mut OutputState { &mut self.output_state }
-    fn new_output(&mut self, _: &Connection, _: &QueueHandle<Self>, _: wayland_client::protocol::wl_output::WlOutput) {}
-    fn update_output(&mut self, _: &Connection, _: &QueueHandle<Self>, _: wayland_client::protocol::wl_output::WlOutput) {}
-    fn output_destroyed(&mut self, _: &Connection, _: &QueueHandle<Self>, _: wayland_client::protocol::wl_output::WlOutput) {}
-}
+    let (r1, g1, b1) = match h {
+        h if h < 60.0 => (c, x, 0.0),
+        h if h < 120.0 => (x, c, 0.0),
+        h if h < 180.0 => (0.0, c, x),
+        h if h < 240.0 => (0.0, x, c),
+        h if h < 300.0 => (x, 0.0, c),
+        _ => (c, 0.0, x),
+    };
 
-impl LayerShellHandler for HeimdallrLayer {
-    fn closed(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &LayerSurface) {
-        std::process::exit(0);
-    }
+    let r = ((r1 + m) * 255.0).round() as u8;
+    let g = ((g1 + m) * 255.0).round() as u8;
+    let b = ((b1 + m) * 255.0).round() as u8;
 
-    fn configure(&mut self, _: &Connection, qh: &QueueHandle<Self>, _: &LayerSurface, configure: LayerSurfaceConfigure, _: u32) {
-        self.width = NonZeroU32::new(configure.new_size.0).map_or(1920, NonZeroU32::get);
-        self.height = NonZeroU32::new(configure.new_size.1).map_or(1080, NonZeroU32::get);
-        if self.first_configure {
-            self.first_configure = false;
-            self.draw(qh);
-        }
-    }
-}
-
-impl ShmHandler for HeimdallrLayer {
-    fn shm_state(&mut self) -> &mut Shm { &mut self.shm }
-}
-
-delegate_compositor!(HeimdallrLayer);
-delegate_output!(HeimdallrLayer);
-delegate_shm!(HeimdallrLayer);
-delegate_layer!(HeimdallrLayer);
-delegate_registry!(HeimdallrLayer);
-
-impl ProvidesRegistryState for HeimdallrLayer {
-    fn registry(&mut self) -> &mut RegistryState { &mut self.registry_state }
-    registry_handlers![OutputState];
-}
-
-use wayland_client::{Dispatch};
-
-use crate::data::{SharedState, start_socket_listener};
-
-impl Dispatch<wl_compositor::WlCompositor, ()> for HeimdallrLayer {
-    fn event(
-        _state: &mut Self,
-        _proxy: &wl_compositor::WlCompositor,
-        _event: wl_compositor::Event,
-        _data: &(),
-        _conn: &wayland_client::Connection,
-        _qh: &wayland_client::QueueHandle<Self>,
-    ) {
-        // wl_compositor non genera eventi interessanti per noi → no-op
-    }
-}
-
-impl Dispatch<wl_region::WlRegion, ()> for HeimdallrLayer {
-    fn event(
-        _state: &mut Self,
-        _proxy: &wl_region::WlRegion,
-        _event: wl_region::Event,
-        _data: &(),
-        _conn: &wayland_client::Connection,
-        _qh: &wayland_client::QueueHandle<Self>,
-    ) {
-        // wl_region non genera eventi interessanti → no-op
-    }
+    (r, g, b)
 }
