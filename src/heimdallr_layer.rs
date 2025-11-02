@@ -79,6 +79,10 @@ impl HeimdallrLayer {
         };
         let cr = Context::new(&surface).unwrap();
 
+        cr.set_operator(cairo::Operator::Source);
+        cr.set_source_rgba(0.0, 0.0, 0.0, 0.0); // trasparente
+        cr.paint();
+
         // Clear with full transparency
         cr.set_source_rgba(0.0, 0.0, 0.0, 0.0);
         cr.paint().unwrap();
