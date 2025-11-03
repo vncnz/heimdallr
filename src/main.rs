@@ -7,16 +7,13 @@ use smithay_client_toolkit::{
     shell::wlr_layer::{Anchor, KeyboardInteractivity, Layer, LayerShell, LayerShellHandler, LayerSurface, LayerSurfaceConfigure},
     shm::{slot::SlotPool, Shm, ShmHandler},
 };
-use wayland_client::{globals::registry_queue_init, protocol::{wl_shm, wl_compositor, wl_region}, Connection, QueueHandle};
-use cairo::{Context, Format, ImageSurface};
+use wayland_client::{globals::registry_queue_init, protocol::{wl_compositor, wl_region}, Connection};
 
-use std::{num::NonZeroU32, sync::{Arc, Mutex, mpsc::{self, Receiver, Sender}}, time::{Duration, Instant}};
-use std::os::unix::net::UnixDatagram;
+use std::{time::{Duration, Instant}};
 
 use smithay_client_toolkit::shell::WaylandSurface;
 
 use std::collections::HashMap;
-use cairo::FontSlant;
 
 use crate::{data::{PartialMsg, HeimdallrSocket}, heimdallr_layer::screen_height};
 
@@ -76,6 +73,8 @@ fn main() {
         first_configure: true,
         input_region: Some(empty_region),
         icons: HashMap::new(),
+        battery_eta: None,
+        battery_recharging: None,
         needs_redraw: true,
         last_redraw: Instant::now(),
         redraw_interval: Duration::from_millis(1000),
@@ -132,6 +131,23 @@ fn main() {
         //println!("Ricevuto: {}", msg);
         if let Ok(data) = sock.rx.try_recv() {
             //println!("Ricevuto: {:?}", data);
+            if data.resource == "battery" {
+                if let Some(bat) = &data.data {
+                    // {"capacity": Number(177228.0), "color": String("#55FF00"), "eta": Number(380.0978088378906), "icon": String("\u{f0079}"), "percentage": Number(100), "state": String("Discharging"), "warn": Number(0.0), "watt": Number(7.76800012588501)}
+                    // let old_eta = app.battery_eta;
+                    // let old_state = app.battery_recharging;
+                    app.battery_eta = bat["eta"].as_f64();
+                    app.battery_recharging = match bat["state"].as_str().unwrap() {
+                        "Discharging" => Some(false),
+                        "Charging" => Some(true),
+                        _ => None
+                    };
+                    app.request_redraw();
+                    // eprintln!("{:?}", bat);
+                    eprintln!("{:?} {:?}", app.battery_recharging, app.battery_eta);
+                }
+            }
+
             if data.warning < 0.3 {
                 if app.remove_icon(&data.resource) {
                     app.request_redraw();

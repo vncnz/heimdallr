@@ -25,10 +25,24 @@ use chrono::Local;
 use chrono::Timelike;
 
 pub const screen_height: u32 = 900;
+const DRAW_CLOCK: bool = true;
 
 pub struct AlarmIcon {
     symbol: String,
     color: (f64, f64, f64, f64), // RGBA
+}
+
+fn cr_text_aligned (cr: Context, text: String, x: f64, y: f64, dx: f64, dy: f64) {
+    // if v != 0.0 || h != 0.0 {
+        let mut x1 = x;
+        let mut y1 = y;
+        let extents = cr.text_extents(&text).unwrap();
+        x1 -= extents.width() * dx;
+        y1 -= extents.height() * dy + extents.y_bearing();
+        cr.move_to(x1, y1);
+        // eprintln!("({},{}) -> ({},{})   {:?}", &x, &y, &x1, &y1, extents);
+    // }
+    cr.show_text(&text).ok();
 }
 
 pub struct HeimdallrLayer {
@@ -42,6 +56,8 @@ pub struct HeimdallrLayer {
     pub(crate) first_configure: bool,
     pub(crate) input_region: Option<wl_region::WlRegion>,
     pub(crate) icons: HashMap<String, AlarmIcon>,
+    pub(crate) battery_eta: Option<f64>,
+    pub(crate) battery_recharging: Option<bool>,
     pub(crate) needs_redraw: bool,
     pub(crate) last_redraw: Instant,
     pub(crate) redraw_interval: Duration,
@@ -99,7 +115,7 @@ impl HeimdallrLayer {
         let cr = Context::new(&surface).unwrap();
 
         self.cairoDraw(cr.clone());
-        self.drawClock(cr.clone());
+        if DRAW_CLOCK { self.drawClock(cr.clone()); }
 
         // Damage + commit
         buffer.attach_to(self.layer.wl_surface()).unwrap();
@@ -120,13 +136,13 @@ impl HeimdallrLayer {
     }
 
     fn cairoDraw(&mut self, cr: Context) {
-        cr.set_operator(cairo::Operator::Source);
-        cr.set_source_rgba(0.0, 0.0, 0.0, 0.0); // trasparente
-        cr.paint();
+        // cr.set_operator(cairo::Operator::Source);
 
         // Clear with full transparency
-        cr.set_source_rgba(0.0, 0.0, 0.0, 0.0);
+        // cr.set_source_rgba(0.0, 0.0, 0.0, 0.0);
+        cr.set_operator(cairo::Operator::Clear);
         cr.paint().unwrap();
+        cr.set_operator(cairo::Operator::Over);
 
         // icons space reserved
         let mut y_offset = self.height as f64 - 12.0; // parte dal basso
@@ -140,11 +156,12 @@ impl HeimdallrLayer {
 
         let w = self.width as f64;
         let h = self.height as f64;
+        let w_hole = w - thickness - (if DRAW_CLOCK { 8.0 } else { 0.0 });
 
         // Outer black border (semi-transparent)
         cr.rectangle(0.0, 0.0, w, h);
         cr.set_fill_rule(cairo::FillRule::EvenOdd);
-        rounded_rect(&cr, thickness / 2.0, thickness / 2.0, w - thickness, h - thickness, radius, radius2, res_w, res_h);
+        rounded_rect(&cr, thickness / 2.0, thickness / 2.0, w_hole, h - thickness, radius, radius2, res_w, res_h);
         cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
         cr.fill().unwrap();
 
@@ -156,7 +173,7 @@ impl HeimdallrLayer {
         // Inner colored frame (for future dynamic border)
         cr.set_line_width(1.0);
         cr.set_source_rgba(0.2, 0.6, 1.0, 0.9);
-        rounded_rect(&cr, thickness / 2.0, thickness / 2.0, w - thickness, h - thickness, radius, radius2, res_w, res_h);
+        rounded_rect(&cr, thickness / 2.0, thickness / 2.0, w_hole, h - thickness, radius, radius2, res_w, res_h);
         cr.stroke().unwrap();
 
         // === Draw alarm icons ===
@@ -185,13 +202,37 @@ impl HeimdallrLayer {
         let seconds_today =
         now.num_seconds_from_midnight() as f64 + f64::from(now.nanosecond()) / 1_000_000_000.0;
         let y = seconds_today / 86_400.0;
-        eprintln!("{} {}", y, (1.0 - y) * (self.height as f64));
+        let ypos = (1.0 - y) * (self.height as f64);
+        eprintln!("{} {}", y, ypos);
 
         cr.set_source_rgba(1.0, 0.1, 0.2, 1.0);
         cr.move_to((self.width - 24u32) as f64, (1.0 - y) * (self.height as f64));
         cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
         cr.set_font_size(18.0);
-        cr.show_text("").unwrap();
+        // cr.show_text("");
+        cr_text_aligned(cr.clone(), "".into(), self.width as f64, ypos, 1.0, 0.0);
+
+        if let Some(rec) = self.battery_recharging {
+            // eprintln!("Battery moving");
+            let bat_symb = if rec { "󱐋".into() } else { "󰯆".into() };
+            if rec {
+                cr.set_source_rgba(0.1, 1.0, 0.2, 1.0);
+            } else {
+                cr.set_source_rgba(1.0, 0.1, 0.2, 1.0);
+            };
+            if let Some(eta) = self.battery_eta {
+                let bpos = (ypos - (eta / 1440.0 * self.height as f64) + self.height as f64) % self.height as f64;
+                // eprintln!("eta available {:?}", bpos);
+                // let bpos = 10.0;
+                cr_text_aligned(cr.clone(), bat_symb, self.width as f64, bpos, 1.0, 0.5);
+            } else {
+                cr_text_aligned(cr.clone(), bat_symb, self.width as f64, 0.0, 1.0, 0.5);
+            }
+            
+            // let extents = cr.text_extents(text).unwrap();
+        } else {
+            // eprintln!("No battery info/moving");
+        }
     }
 
     fn draw_clock_background(&mut self) {
@@ -200,20 +241,26 @@ impl HeimdallrLayer {
         let surface = cairo::ImageSurface::create(cairo::Format::ARgb32, width, height).unwrap();
         let cr = cairo::Context::new(&surface).unwrap();
 
-        // sfondo trasparente o nero
         cr.set_source_rgba(0.0, 0.0, 0.0, 0.0);
         cr.paint().unwrap();
 
-        // disegna i 24 triangolini fissi
-        for h in 0..24 {
-            let y = (h as f64 / 24.0) * height as f64;
-            let intensity = if h % 6 == 0 { 1.0 } else if h % 3 == 0 { 0.6 } else { 0.3 };
-            let size = if h % 6 == 0 { 18.0 } else if h % 3 == 0 { 14.0 } else { 10.0 };
-            cr.set_source_rgba(intensity, intensity, intensity, 1.0);
-            cr.move_to(0.0 + 18.0 - size, y);
-            cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
-            cr.set_font_size(size);
-            cr.show_text("").unwrap();
+        // cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
+
+        for h in 1..24 {
+            let y = (1.0 - (h as f64 / 24.0)) * height as f64;
+            let symb = (h % 10).to_string();
+            if h % 6 == 0 {
+                cr.set_source_rgba(0.6, 0.9, 1.0, 1.0);
+                cr.set_font_size(20.0);
+                // symb = "".into();
+            } else if h % 3 == 0 {
+                cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
+                cr.set_font_size(14.0);
+            } else {
+                cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
+                cr.set_font_size(11.0);
+            }
+            cr_text_aligned(cr.clone(), symb, 16.0, y, 0.5, 0.5);
         }
 
         self.background_surface = Some(surface);
