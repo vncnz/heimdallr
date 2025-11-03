@@ -18,7 +18,7 @@ use smithay_client_toolkit::shell::WaylandSurface;
 use std::collections::HashMap;
 use cairo::FontSlant;
 
-use crate::data::{PartialMsg, start_socket_listener};
+use crate::{data::{PartialMsg, HeimdallrSocket}, heimdallr_layer::screen_height};
 
 mod data;
 mod config;
@@ -58,7 +58,7 @@ fn main() {
     layer.set_size(0, 0); // full screen
     layer.commit();
 
-    let pool = SlotPool::new(1920 * 1080 * 4, &shm).expect("pool creation failed");
+    let pool = SlotPool::new(1920 * (screen_height as usize) * 4, &shm).expect("pool creation failed");
 
     //let resources = Arc::new(Mutex::new(ResourceData::default()));
     //let receiver = start_resource_watcher("/tmp/ratatoskr.json", resources.clone());
@@ -72,13 +72,14 @@ fn main() {
         pool,
         layer,
         width: 1920,
-        height: 1080,
+        height: screen_height,
         first_configure: true,
         input_region: Some(empty_region),
         icons: HashMap::new(),
-        needs_redraw: false,
+        needs_redraw: true,
         last_redraw: Instant::now(),
-        redraw_interval: Duration::from_millis(500)
+        redraw_interval: Duration::from_millis(1000),
+        buffers: HashMap::new()
     };
     
     // app.add_icon("avg", "󰬢", (1.0, 0.2, 0.2, 1.0)); // example
@@ -90,18 +91,46 @@ fn main() {
     //let mut buf = [0u8; 2048];
     let state = Arc::new(Mutex::new(PartialMsg::default()));
 
-    let (tx, rx) = mpsc::channel();
-    start_socket_listener(Arc::clone(&state), tx);
+    // let (tx, rx) = mpsc::channel();
+    // start_socket_listener(Arc::clone(&state), tx);
+
+    let mut sock = HeimdallrSocket::new("/tmp/ratatoskr.sock");
 
     loop {
-        event_queue.blocking_dispatch(&mut app).unwrap();
+        let _ = event_queue.dispatch_pending(&mut app);
+        sock.poll_messages();
+
+        // Prova a leggere nuovi eventi — non blocca
+        match event_queue.prepare_read() {
+            Some(mut guard) => {
+                if let Err(e) = guard.read() {
+                    // Silenzia WouldBlock (nessun evento da leggere)
+                    /* if let Some(raw_err) = e.raw_os_error() {
+                        if raw_err != 11 {
+                            eprintln!("Wayland read() error: {:?}", e);
+                        }
+                    } */
+                }
+            }
+            _ => {
+                // Se non pronto a leggere, prova solo a flushare
+                let _ = conn.flush();
+            }
+        }
+
+        // Processa eventuali eventi appena arrivati
+        let _ = event_queue.dispatch_pending(&mut app);
+
+        // event_queue.blocking_dispatch(&mut app).unwrap();
+        // while event_queue.dispatch_pending(&mut app).unwrap() > 0 {}
 
 
         // Locking read from socket
         //let len = sock.recv(&mut buf).unwrap();
         //let msg = String::from_utf8_lossy(&buf[..len]);
         //println!("Ricevuto: {}", msg);
-        if let Ok(data) = rx.try_recv() {
+        if let Ok(data) = sock.rx.try_recv() {
+            //println!("Ricevuto: {:?}", data);
             if data.warning < 0.3 {
                 if app.remove_icon(&data.resource) {
                     app.request_redraw();
@@ -111,6 +140,8 @@ fn main() {
                 let mut icon = "";
                 if data.resource == "loadavg" { icon = "󰬢"; }
                 else if data.resource == "memory" { icon = "󰘚"; }
+                else if data.resource == "temperature" { icon = &data.icon; }
+                else if data.resource == "network" { icon = &data.icon; }
 
                 if icon != "" {
                     app.remove_icon(&data.resource);
@@ -121,6 +152,8 @@ fn main() {
         }
 
         app.maybe_redraw(&qh);
+        conn.flush().unwrap();
+        std::thread::sleep(Duration::from_millis(10));
     }
 
 /*
