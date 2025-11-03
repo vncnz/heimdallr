@@ -21,6 +21,9 @@ use cairo::FontSlant;
 use wayland_client::protocol::wl_buffer;
 use wayland_client::Dispatch;
 
+use chrono::Local;
+use chrono::Timelike;
+
 pub const screen_height: u32 = 900;
 
 pub struct AlarmIcon {
@@ -42,7 +45,8 @@ pub struct HeimdallrLayer {
     pub(crate) needs_redraw: bool,
     pub(crate) last_redraw: Instant,
     pub(crate) redraw_interval: Duration,
-    pub(crate) buffers: HashMap<ObjectId, wl_buffer::WlBuffer>
+    pub(crate) buffers: HashMap<ObjectId, wl_buffer::WlBuffer>,
+    pub(crate) background_surface: Option<cairo::ImageSurface>
 }
 
 impl HeimdallrLayer {
@@ -94,7 +98,8 @@ impl HeimdallrLayer {
         };
         let cr = Context::new(&surface).unwrap();
 
-        self.cairoDraw(cr);
+        self.cairoDraw(cr.clone());
+        self.drawClock(cr.clone());
 
         // Damage + commit
         buffer.attach_to(self.layer.wl_surface()).unwrap();
@@ -165,6 +170,53 @@ impl HeimdallrLayer {
             cr.show_text(&icon.symbol).unwrap();
             y_offset -= 24.0;
         }
+    }
+
+    fn drawClock (&mut self, cr: Context) {
+        if self.background_surface.is_none() {
+            self.draw_clock_background();
+        }
+        if let Some(bg) = &self.background_surface {
+            cr.set_source_surface(bg, (self.width - 18) as f64, 0.0).unwrap();
+            cr.paint().unwrap();
+        }
+
+        let now = Local::now();
+        let seconds_today =
+        now.num_seconds_from_midnight() as f64 + f64::from(now.nanosecond()) / 1_000_000_000.0;
+        let y = seconds_today / 86_400.0;
+        eprintln!("{} {}", y, (1.0 - y) * (self.height as f64));
+
+        cr.set_source_rgba(1.0, 0.1, 0.2, 1.0);
+        cr.move_to((self.width - 24u32) as f64, (1.0 - y) * (self.height as f64));
+        cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
+        cr.set_font_size(18.0);
+        cr.show_text("").unwrap();
+    }
+
+    fn draw_clock_background(&mut self) {
+        let width = 18;
+        let height = self.height as i32;
+        let surface = cairo::ImageSurface::create(cairo::Format::ARgb32, width, height).unwrap();
+        let cr = cairo::Context::new(&surface).unwrap();
+
+        // sfondo trasparente o nero
+        cr.set_source_rgba(0.0, 0.0, 0.0, 0.0);
+        cr.paint().unwrap();
+
+        // disegna i 24 triangolini fissi
+        for h in 0..24 {
+            let y = (h as f64 / 24.0) * height as f64;
+            let intensity = if h % 6 == 0 { 1.0 } else if h % 3 == 0 { 0.6 } else { 0.3 };
+            let size = if h % 6 == 0 { 18.0 } else if h % 3 == 0 { 14.0 } else { 10.0 };
+            cr.set_source_rgba(intensity, intensity, intensity, 1.0);
+            cr.move_to(0.0 + 18.0 - size, y);
+            cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
+            cr.set_font_size(size);
+            cr.show_text("").unwrap();
+        }
+
+        self.background_surface = Some(surface);
     }
 }
 

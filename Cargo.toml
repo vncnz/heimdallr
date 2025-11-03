@@ -21,3 +21,4 @@ pango = "0.14"
 pangocairo = "0.14"
 
 notify = "8"
+chrono = "0.4"

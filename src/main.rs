@@ -79,7 +79,8 @@ fn main() {
         needs_redraw: true,
         last_redraw: Instant::now(),
         redraw_interval: Duration::from_millis(1000),
-        buffers: HashMap::new()
+        buffers: HashMap::new(),
+        background_surface: None
     };
     
     // app.add_icon("avg", "󰬢", (1.0, 0.2, 0.2, 1.0)); // example
@@ -89,7 +90,7 @@ fn main() {
     //let _ = std::fs::remove_file("/tmp/ratatoskr.sock");
     //let sock = UnixDatagram::bind("/tmp/ratatoskr.sock").expect("Impossible to create the socket in /tmp/ratatoskr.sock");
     //let mut buf = [0u8; 2048];
-    let state = Arc::new(Mutex::new(PartialMsg::default()));
+    //let state = Arc::new(Mutex::new(PartialMsg::default()));
 
     // let (tx, rx) = mpsc::channel();
     // start_socket_listener(Arc::clone(&state), tx);
