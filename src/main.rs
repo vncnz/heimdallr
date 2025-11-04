@@ -144,7 +144,7 @@ fn main() {
                     };
                     app.request_redraw();
                     // eprintln!("{:?}", bat);
-                    eprintln!("{:?} {:?}", app.battery_recharging, app.battery_eta);
+                    // eprintln!("battery {:?} {:?}", app.battery_recharging, app.battery_eta);
                 }
             }
 
