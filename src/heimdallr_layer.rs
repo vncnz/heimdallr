@@ -114,8 +114,8 @@ impl HeimdallrLayer {
         };
         let cr = Context::new(&surface).unwrap();
 
-        self.cairoDraw(cr.clone());
-        if DRAW_CLOCK { self.drawClock(cr.clone()); }
+        self.draw_myframe(cr.clone());
+        if DRAW_CLOCK { self.draw_clock(cr.clone()); }
 
         // Damage + commit
         buffer.attach_to(self.layer.wl_surface()).unwrap();
@@ -135,7 +135,7 @@ impl HeimdallrLayer {
         eprintln!("Draw ended ({}ms)", dur);
     }
 
-    fn cairoDraw(&mut self, cr: Context) {
+    fn draw_myframe(&mut self, cr: Context) {
         // cr.set_operator(cairo::Operator::Source);
 
         // Clear with full transparency
@@ -189,7 +189,7 @@ impl HeimdallrLayer {
         }
     }
 
-    fn drawClock (&mut self, cr: Context) {
+    fn draw_clock (&mut self, cr: Context) {
         if self.background_surface.is_none() {
             self.draw_clock_background();
         }
@@ -203,14 +203,14 @@ impl HeimdallrLayer {
         now.num_seconds_from_midnight() as f64 + f64::from(now.nanosecond()) / 1_000_000_000.0;
         let y = seconds_today / 86_400.0;
         let ypos = (1.0 - y) * (self.height as f64);
-        eprintln!("{} {}", y, ypos);
+        // eprintln!("{} {}", y, ypos);
 
         cr.set_source_rgba(1.0, 0.1, 0.2, 1.0);
         cr.move_to((self.width - 24u32) as f64, (1.0 - y) * (self.height as f64));
         cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
-        cr.set_font_size(18.0);
+        cr.set_font_size(15.0);
         // cr.show_text("");
-        cr_text_aligned(cr.clone(), "".into(), self.width as f64, ypos, 1.0, 0.0);
+        cr_text_aligned(cr.clone(), "".into(), self.width as f64 - 5.0, ypos, 1.0, 0.0);
 
         if let Some(rec) = self.battery_recharging {
             // eprintln!("Battery moving");
@@ -248,19 +248,24 @@ impl HeimdallrLayer {
 
         for h in 1..24 {
             let y = (1.0 - (h as f64 / 24.0)) * height as f64;
-            let symb = (h % 10).to_string();
+            let mut symb = (h % 10).to_string();
+            let mut x = 15.0;
             if h % 6 == 0 {
                 cr.set_source_rgba(0.6, 0.9, 1.0, 1.0);
                 cr.set_font_size(20.0);
-                // symb = "".into();
+                x = 12.0;
+                cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
+                symb = "".into();
             } else if h % 3 == 0 {
                 cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
-                cr.set_font_size(14.0);
+                cr.set_font_size(12.0);
+                cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
             } else {
                 cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
-                cr.set_font_size(11.0);
+                cr.set_font_size(10.0);
+                cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
             }
-            cr_text_aligned(cr.clone(), symb, 16.0, y, 0.5, 0.5);
+            cr_text_aligned(cr.clone(), symb, x, y, 0.5, 0.5);
         }
 
         self.background_surface = Some(surface);
