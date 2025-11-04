@@ -216,15 +216,17 @@ impl HeimdallrLayer {
             // eprintln!("Battery moving");
             let bat_symb = if rec { "󱐋".into() } else { "󰯆".into() };
             if rec {
+                cr.set_font_size(20.0);
                 cr.set_source_rgba(0.1, 1.0, 0.2, 1.0);
             } else {
+                cr.set_font_size(14.0);
                 cr.set_source_rgba(1.0, 0.1, 0.2, 1.0);
             };
             if let Some(eta) = self.battery_eta {
                 let bpos = (ypos - (eta / 1440.0 * self.height as f64) + self.height as f64) % self.height as f64;
                 // eprintln!("eta available {:?}", bpos);
                 // let bpos = 10.0;
-                cr_text_aligned(cr.clone(), bat_symb, self.width as f64, bpos, 1.0, 0.5);
+                cr_text_aligned(cr.clone(), bat_symb, self.width as f64 - 7.0, bpos, 1.0, 0.5);
             } else {
                 cr_text_aligned(cr.clone(), bat_symb, self.width as f64, 0.0, 1.0, 0.5);
             }
