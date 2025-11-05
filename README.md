@@ -4,3 +4,4 @@ Tip: find src | entr -r cargo run for a sorta hotreloading (entr is an external 
 
 ## TODOs
 - Evaluate to use Dunst to manage notifications - get counter, etc.
+- Add a visual indicator for Ratatoskr disconnection
