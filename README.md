@@ -17,7 +17,7 @@ All this information takes virtually no useful space on the screen.
 Resource data is retrieved via a Linux socket from another of my projects, called Ratatoskr, which is also available on GitHub.
 
 Initially, I implemented this system using the Ignis framework (Python + GTK), but it was consuming about 176 MB of RAM. So I rewrote the UI in Rust, communicating directly with Wayland and avoiding the GTK toolkit. With this approach, memory usage dropped to approximately 34 MB on my laptop.
-The impact on average load is around 0.01, so really small. I measured the impact on average load as the ratio between the time spent with the Heimdallr process in "Running" or "disk-sleep" and the total measurement time.
+The impact on average load is around 0.01, so really small. I measured the impact on average load as the ratio between the time spent with the Heimdallr process in "Running" or "disk-sleep" status and the total measurement time.
 
 ---
 
