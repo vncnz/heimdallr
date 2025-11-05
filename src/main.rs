@@ -156,9 +156,14 @@ fn main() {
             else {
                 let mut icon = "";
                 if data.resource == "loadavg" { icon = "󰬢"; }
-                else if data.resource == "memory" { icon = "󰘚"; }
+                else if data.resource == "ram" { icon = "󰘚"; }
                 else if data.resource == "temperature" { icon = &data.icon; }
                 else if data.resource == "network" { icon = &data.icon; }
+                else if data.resource == "disk" { icon = "󰋊"; }
+                // weather
+                // volume
+                // disk
+                // display
 
                 if icon != "" {
                     app.remove_icon(&data.resource);
