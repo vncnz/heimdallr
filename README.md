@@ -21,7 +21,7 @@ The impact on average load is around 0.01, so really small. I measured the impac
 
 ---
 
-Oh, if you are taken aback by the emptyness of the screen: I like minimalism, I don't use a statusbar and I use Niri as my window manager. This is my daily driver computer.
+Oh, if the screen looks too empty, that’s by design: I like minimalism. No status bar, Niri as WM, and this is my daily driver.
 
 ## Screenshots
 
