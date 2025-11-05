@@ -25,6 +25,7 @@ use config::Config;
 
 use crate::heimdallr_layer::HeimdallrLayer;
 
+// Tip: find src | entr -r cargo run for a sorta hotreloading (entr is an external cmd to be installed using pacman)
 
 fn main() {
     env_logger::init();
