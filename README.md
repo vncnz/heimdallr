@@ -19,6 +19,10 @@ Resource data is retrieved via a Linux socket from another of my projects, calle
 Initially, I implemented this system using the Ignis framework (Python + GTK), but it was consuming about 176 MB of RAM. So I rewrote the UI in Rust, communicating directly with Wayland and avoiding the GTK toolkit. With this approach, memory usage dropped to approximately 34 MB on my laptop.
 The impact on average load is around 0.01, so really small. I measured the impact on average load as the ratio between the time spent with the Heimdallr process in "Running" or "disk-sleep" and the total measurement time.
 
+---
+
+Oh, if you are taken aback by the emptyness of the screen: I like minimalism, I don't use a statusbar and I use Niri as my window manager. This is my daily driver computer.
+
 ## Screenshots
 
 Light blue border; battery charging; high RAM, medium load, and light disk usage alarms:
@@ -27,6 +31,9 @@ Light blue border; battery charging; high RAM, medium load, and light disk usage
 
 Light blue border; battery discharging; light disk usage alarm:
 ![With border, disk icon, skull](./screenshots/with_border_and_skull.png)
+
+No battery charging/discharging; no resource alarms:
+![Without border](./screenshots/no_icons.png)
 
 No border; battery charging; light disk usage alarm:
 ![Without border](./screenshots/without_border.png)
