@@ -1,5 +1,6 @@
 use std::fs;
 use serde::{Deserialize, Serialize};
+use shellexpand;
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Config {
@@ -11,7 +12,8 @@ pub struct Config {
 
 impl Config {
     pub fn load_from_file(path: &str) -> Self {
-        match fs::read_to_string(path) {
+        let expanded_path = shellexpand::tilde(path);
+        match fs::read_to_string(expanded_path.as_ref()) {
             Ok(data) => match serde_json::from_str::<Config>(&data) {
                 Ok(cfg) => cfg,
                 Err(e) => {
@@ -19,8 +21,9 @@ impl Config {
                     Self::default()
                 }
             },
-            Err(_) => {
+            Err(err) => {
                 eprintln!("File di configurazione non trovato, uso valori di default");
+                eprintln!("{}", err);
                 Self::default()
             }
         }
