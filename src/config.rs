@@ -6,6 +6,7 @@ pub struct Config {
     // per ora vuota, ma potrai aggiungere:
     // pub colors: IconColors,
     // pub update_interval: u64,
+    frame_color: String
 }
 
 impl Config {
