@@ -80,7 +80,8 @@ fn main() {
         last_redraw: Instant::now(),
         redraw_interval: Duration::from_millis(1000),
         buffers: HashMap::new(),
-        background_surface: None
+        background_surface: None,
+        config
     };
     
     // app.add_icon("avg", "󰬢", (1.0, 0.2, 0.2, 1.0)); // example

@@ -62,7 +62,8 @@ pub struct HeimdallrLayer {
     pub(crate) last_redraw: Instant,
     pub(crate) redraw_interval: Duration,
     pub(crate) buffers: HashMap<ObjectId, wl_buffer::WlBuffer>,
-    pub(crate) background_surface: Option<cairo::ImageSurface>
+    pub(crate) background_surface: Option<cairo::ImageSurface>,
+    pub(crate) config: crate::config::Config
 }
 
 impl HeimdallrLayer {
@@ -124,8 +125,6 @@ impl HeimdallrLayer {
         self.layer.wl_surface().frame(qh, self.layer.wl_surface().clone());
         self.layer.commit();
 
-        // droppa esplicito per non tenere riferimenti a memoria shm
-        // drop(cr);
         drop(surface);
         
         self.last_redraw = Instant::now();
@@ -172,7 +171,8 @@ impl HeimdallrLayer {
 
         // Inner colored frame (for future dynamic border)
         cr.set_line_width(1.0);
-        cr.set_source_rgba(0.2, 0.6, 1.0, 0.9);
+        let (r,g,b,a) = self.config.frame_color.to_rgba();
+        cr.set_source_rgba(r, g, b, a);
         rounded_rect(&cr, thickness / 2.0, thickness / 2.0, w_hole, h - thickness, radius, radius2, res_w, res_h);
         cr.stroke().unwrap();
 
