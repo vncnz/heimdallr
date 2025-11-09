@@ -84,24 +84,14 @@ fn main() {
         redraw_interval: Duration::from_millis(1000),
         buffers: HashMap::new(),
         background_surface: None,
-        config
+        config,
+        notifications: vec![],
+        notification_idx: 0
     };
     
     // app.add_icon("avg", "󰬢", (1.0, 0.2, 0.2, 1.0)); // example
-    // app.add_icon("ram", "󰘚", (1.0, 1.0, 0.2, 1.0)); // example
-
-    // socket creation
-    //let _ = std::fs::remove_file("/tmp/ratatoskr.sock");
-    //let sock = UnixDatagram::bind("/tmp/ratatoskr.sock").expect("Impossible to create the socket in /tmp/ratatoskr.sock");
-    //let mut buf = [0u8; 2048];
-    //let state = Arc::new(Mutex::new(PartialMsg::default()));
-
-    // let (tx, rx) = mpsc::channel();
-    // start_socket_listener(Arc::clone(&state), tx);
 
     let mut sock = HeimdallrSocket::new("/tmp/ratatoskr.sock");
-    // let rx_notif = start_notification_listener();
-
 
     let (tx, rx_notif): (Sender<Vec<Notification>>, Receiver<Vec<Notification>>) = mpsc::channel();
     // let rx_notif: Option<Receiver<Notification>> = None;
@@ -196,6 +186,8 @@ fn main() {
             // draw_notifications(&list);
             // manage redraw
             println!("{:?}", list);
+            app.notifications = list;
+            app.request_redraw();
         }
 
         app.maybe_redraw(&qh);

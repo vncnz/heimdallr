@@ -32,7 +32,7 @@ pub struct AlarmIcon {
     color: (f64, f64, f64, f64), // RGBA
 }
 
-fn cr_text_aligned (cr: Context, text: String, x: f64, y: f64, dx: f64, dy: f64) {
+fn cr_text_aligned (cr: Context, text: String, x: f64, y: f64, dx: f64, dy: f64) -> (f64, f64) {
     // if v != 0.0 || h != 0.0 {
         let mut x1 = x;
         let mut y1 = y;
@@ -43,6 +43,7 @@ fn cr_text_aligned (cr: Context, text: String, x: f64, y: f64, dx: f64, dy: f64)
         // eprintln!("({},{}) -> ({},{})   {:?}", &x, &y, &x1, &y1, extents);
     // }
     cr.show_text(&text).ok();
+    (extents.width(), extents.height())
 }
 
 pub struct HeimdallrLayer {
@@ -63,7 +64,9 @@ pub struct HeimdallrLayer {
     pub(crate) redraw_interval: Duration,
     pub(crate) buffers: HashMap<ObjectId, wl_buffer::WlBuffer>,
     pub(crate) background_surface: Option<cairo::ImageSurface>,
-    pub(crate) config: crate::config::Config
+    pub(crate) config: crate::config::Config,
+    pub(crate) notifications: Vec<crate::notifications::Notification>,
+    pub(crate) notification_idx: i32
 }
 
 impl HeimdallrLayer {
@@ -117,6 +120,7 @@ impl HeimdallrLayer {
 
         self.draw_myframe(cr.clone());
         if DRAW_CLOCK { self.draw_clock(cr.clone()); }
+        if self.notifications.len() > 0 { self.draw_notification(cr.clone()) }
 
         // Damage + commit
         buffer.attach_to(self.layer.wl_surface()).unwrap();
@@ -157,10 +161,12 @@ impl HeimdallrLayer {
         let h = self.height as f64;
         let w_hole = w - thickness - (if DRAW_CLOCK { 8.0 } else { 0.0 });
 
+        let top = thickness / 2.0 + if self.notifications.len() > 0 { 24.0 } else { 0.0 };
+
         // Outer black border (semi-transparent)
         cr.rectangle(0.0, 0.0, w, h);
         cr.set_fill_rule(cairo::FillRule::EvenOdd);
-        rounded_rect(&cr, thickness / 2.0, thickness / 2.0, w_hole, h - thickness, radius, radius2, res_w, res_h);
+        rounded_rect(&cr, thickness / 2.0, top, w_hole, h - thickness, radius, radius2, res_w, res_h);
         cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
         cr.fill().unwrap();
 
@@ -173,7 +179,7 @@ impl HeimdallrLayer {
         cr.set_line_width(1.0);
         let (r,g,b,a) = self.config.frame_color.to_rgba();
         cr.set_source_rgba(r, g, b, a);
-        rounded_rect(&cr, thickness / 2.0, thickness / 2.0, w_hole, h - thickness, radius, radius2, res_w, res_h);
+        rounded_rect(&cr, thickness / 2.0, top, w_hole, h - thickness, radius, radius2, res_w, res_h);
         cr.stroke().unwrap();
 
         // === Draw alarm icons ===
@@ -271,6 +277,40 @@ impl HeimdallrLayer {
         }
 
         self.background_surface = Some(surface);
+    }
+
+    fn draw_notification(&mut self, cr: Context) {
+        // icon example: /home/vncnz/.cache/ignis/notifications/images/64
+        cr.set_operator(cairo::Operator::Over);
+
+        // let top = thickness / 2.0 + if self.notifications.len() > 0 { 24.0 } else { 0.0 };
+        let top = 12.0;
+        let notif_to_show = &self.notifications[0];
+
+        cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
+
+        let mut x = 10.0;
+
+        cr.set_font_size(16.0);
+        let (r,g,b,a) = self.config.frame_color.to_rgba();
+        cr.set_source_rgba(r,g,b,a);
+        let idx = format!("{}/{}", self.notification_idx+1, self.notifications.len());
+        let (idx_width, _) = cr_text_aligned(cr.clone(), idx, x, top, 0.0, 0.5);
+        x += idx_width + 10.0;
+
+        cr.set_font_size(16.0);
+        if notif_to_show.urgency == 2 {
+            cr.set_source_rgba(1.0, 0.3, 0.3, 1.0);
+        } else {
+            cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
+        }
+        let (twidth, _) = cr_text_aligned(cr.clone(), notif_to_show.app_name.clone(), x, top, 0.0, 0.5);
+        x += twidth + 10.0;
+
+        cr.set_font_size(14.0);
+        cr.set_source_rgba(1.0, 1.0, 1.0, 0.9);
+        let msg = format!("{} {} / {}", notif_to_show.app_icon, notif_to_show.summary, notif_to_show.body);
+        cr_text_aligned(cr.clone(), msg, x, top, 0.0, 0.5);
     }
 }
 

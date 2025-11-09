@@ -8,7 +8,8 @@ pub struct Notification {
     pub body: String,
     pub urgency: u8,
     pub arrived_at: Instant,
-    pub expired_at: Instant
+    pub expired_at: Option<Instant>,
+    pub app_icon: String
 }
 
 #[derive(Clone)]
@@ -23,7 +24,7 @@ impl NotificationServer {
         &self,
         app_name: &str,
         _replaces_id: u32,
-        _app_icon: &str,
+        app_icon: &str,
         summary: &str,
         body: &str,
         _actions: Vec<String>,
@@ -34,17 +35,42 @@ impl NotificationServer {
         let msg = format!("app_name:{app_name} summary:{summary} body:{body} timeout:{expire_timeout} hints:{hints:?}");
         println!("🔔 Nuova notifica: {msg}");
 
-        *list = list.iter().filter(|notif| notif.expired_at > Instant::now()).map(|item|item.to_owned()).collect();
+        let urgency = hints.get("urgency").unwrap().clone().downcast().expect("No urgency");
+        let expired_at = if expire_timeout > 1 { Some(Instant::now() + Duration::new(expire_timeout as u64, 0)) } 
+                                else if urgency < 2 { Some(Instant::now() + Duration::new(3, 0)) }
+                                else { None };
+        // *list = list.iter().filter(|notif| notif.expired_at > Instant::now()).map(|item|item.to_owned()).collect();
 
         list.push(Notification {
             app_name: app_name.into(),
             summary: summary.into(),
             body: body.into(),
-            urgency: hints.get("urgency").unwrap().clone().downcast().expect("No urgency"),
+            urgency,
             arrived_at: Instant::now(),
-            expired_at: if expire_timeout > 1 { Instant::now() + Duration::new(expire_timeout as u64, 0) } else { Instant::now() + Duration::new(3, 0) }
+            expired_at: expired_at,
+            app_icon: app_icon.into()
         });
         let _ = self.tx.send(list.clone());
+
+        let list_clone = Arc::clone(&self.notifications);
+        let tx_clone = self.tx.clone();
+
+        if expired_at.is_some() {
+            use std::thread;
+            thread::spawn(move || {
+                let remaining = expired_at.unwrap().saturating_duration_since(Instant::now());
+                thread::sleep(remaining + Duration::from_millis(10)); // un piccolo margine
+                let mut vec = list_clone.lock().unwrap();
+                vec.retain(|n| n.expired_at.is_none() || (n.expired_at.unwrap() > Instant::now()));
+                let _ = tx_clone.send(vec.clone());
+            });
+        }
+
+        /* use std::thread;
+        thread::spawn(|| {
+            std::thread::sleep(Duration::from_millis(3000 + 10));
+            self.tx.send(list.iter().filter(|notif| notif.expired_at > Instant::now()).map(|item|item.to_owned()).collect());
+        }); */
 
         // ID arbitrario della notifica (di solito crescente)
         list.len() as u32
