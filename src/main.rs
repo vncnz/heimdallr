@@ -1,3 +1,4 @@
+
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState},
     delegate_compositor, delegate_layer, delegate_output, delegate_registry, delegate_shm,
@@ -9,21 +10,23 @@ use smithay_client_toolkit::{
 };
 use wayland_client::{globals::registry_queue_init, protocol::{wl_compositor, wl_region}, Connection};
 
-use std::{time::{Duration, Instant}};
+use std::{sync::mpsc::{self, Receiver, Sender}, time::{Duration, Instant}};
 
 use smithay_client_toolkit::shell::WaylandSurface;
 
 use std::collections::HashMap;
 
-use crate::{data::{PartialMsg, HeimdallrSocket}, heimdallr_layer::screen_height};
+use crate::{data::{HeimdallrSocket, PartialMsg}, heimdallr_layer::screen_height, notifications::Notification};
 
 mod data;
 mod config;
 mod heimdallr_layer;
+mod notifications;
 
 use config::Config;
 
 use crate::heimdallr_layer::HeimdallrLayer;
+use crate::notifications::start_notification_listener;
 
 // Tip: find src | entr -r cargo run for a sorta hotreloading (entr is an external cmd to be installed using pacman)
 
@@ -97,6 +100,20 @@ fn main() {
     // start_socket_listener(Arc::clone(&state), tx);
 
     let mut sock = HeimdallrSocket::new("/tmp/ratatoskr.sock");
+    // let rx_notif = start_notification_listener();
+
+
+    let (tx, rx_notif): (Sender<Vec<Notification>>, Receiver<Vec<Notification>>) = mpsc::channel();
+    // let rx_notif: Option<Receiver<Notification>> = None;
+    use std::thread;
+    thread::spawn(|| {
+        futures::executor::block_on(async {
+            if let Err(e) = start_notification_listener(tx).await {
+                eprintln!("Notification listener error: {:?}", e);
+            }
+        });
+    });
+    // let rx_notif = start_notification_listener().await;
 
     loop {
         let _ = event_queue.dispatch_pending(&mut app);
@@ -173,6 +190,12 @@ fn main() {
                     app.request_redraw();
                 }
             }
+        }
+
+        if let Ok(list) = rx_notif.try_recv() {
+            // draw_notifications(&list);
+            // manage redraw
+            println!("{:?}", list);
         }
 
         app.maybe_redraw(&qh);
