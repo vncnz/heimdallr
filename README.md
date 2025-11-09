@@ -41,6 +41,15 @@ No border; battery charging; light disk usage alarm:
 No border; battery charging; medium load and light disk usage alarms, with different wallpaper:
 ![Another wallpaper](./screenshots/another_wallpaper.png)
 
+## Doing
+Adding notifications and commands. Now, Heimdallr can react to commands like these:
+- echo hide_notification > /tmp/heimdallr_cmds
+- echo prev_notification > /tmp/heimdallr_cmds
+- echo next_notification > /tmp/heimdallr_cmds
+
+Normal notifications gets a timeout of 3 seconds, critical notifications lasts until eternity and beyond.
+Notifications are showed in the upper area of the frame, which expands automatically. Only one notification can be shown at any moment. You can browse and remove notifications with previously reported commands.
+
 ## TODOs
 - Evaluate to use Dunst to manage notifications - get counter, etc.
 - Add a visual indicator for Ratatoskr disconnection

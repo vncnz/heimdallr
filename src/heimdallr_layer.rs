@@ -66,7 +66,7 @@ pub struct HeimdallrLayer {
     pub(crate) background_surface: Option<cairo::ImageSurface>,
     pub(crate) config: crate::config::Config,
     pub(crate) notifications: Vec<crate::notifications::Notification>,
-    pub(crate) notification_idx: i32
+    pub(crate) notification_idx: usize
 }
 
 impl HeimdallrLayer {
@@ -280,6 +280,9 @@ impl HeimdallrLayer {
     }
 
     fn draw_notification(&mut self, cr: Context) {
+        if self.notification_idx >= self.notifications.len() {
+            self.notification_idx = self.notifications.len() - 1;
+        }
         // icon example: /home/vncnz/.cache/ignis/notifications/images/64
         cr.set_operator(cairo::Operator::Over);
 
@@ -327,6 +330,23 @@ impl HeimdallrLayer { // This is for icon management, I like to keep it separate
 
     pub fn remove_icon(&mut self, id: &str) -> bool {
         self.icons.remove(id).is_some()
+    }
+
+    pub fn remove_notification(&mut self) -> bool {
+        if self.notifications.len() > self.notification_idx {
+            self.notifications.remove(self.notification_idx);
+            if self.notification_idx > self.notifications.len() { self.notification_idx = 0 }
+            return true
+        }
+        return false
+    }
+    
+    pub fn show_notification(&mut self, new_idx: i32) -> bool {
+        if new_idx >= 0 && new_idx < self.notifications.len() as i32 {
+           self.notification_idx = new_idx as usize;
+           return true
+        }
+        false
     }
 }
 

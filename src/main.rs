@@ -10,18 +10,19 @@ use smithay_client_toolkit::{
 };
 use wayland_client::{globals::registry_queue_init, protocol::{wl_compositor, wl_region}, Connection};
 
-use std::{sync::mpsc::{self, Receiver, Sender}, time::{Duration, Instant}};
+use std::{os::unix::net::UnixDatagram, sync::mpsc::{self, Receiver, Sender}, time::{Duration, Instant}};
 
 use smithay_client_toolkit::shell::WaylandSurface;
 
 use std::collections::HashMap;
 
-use crate::{data::{HeimdallrSocket, PartialMsg}, heimdallr_layer::screen_height, notifications::Notification};
+use crate::{commands::start_command_listener, data::{HeimdallrSocket, PartialMsg}, heimdallr_layer::screen_height, notifications::Notification};
 
 mod data;
 mod config;
 mod heimdallr_layer;
 mod notifications;
+mod commands;
 
 use config::Config;
 
@@ -90,6 +91,8 @@ fn main() {
     };
     
     // app.add_icon("avg", "󰬢", (1.0, 0.2, 0.2, 1.0)); // example
+    let (tx, rx_cmds): (Sender<String>, Receiver<String>) = mpsc::channel();
+    let _ = start_command_listener(tx, "/tmp/heimdallr_cmds");
 
     let mut sock = HeimdallrSocket::new("/tmp/ratatoskr.sock");
 
@@ -133,10 +136,31 @@ fn main() {
         // event_queue.blocking_dispatch(&mut app).unwrap();
         // while event_queue.dispatch_pending(&mut app).unwrap() > 0 {}
 
-
-        // Locking read from socket
-        //let len = sock.recv(&mut buf).unwrap();
-        //let msg = String::from_utf8_lossy(&buf[..len]);
+        if let Ok(cmd) = rx_cmds.try_recv() {
+            match &*cmd {
+                "hide_notification" => {
+                    println!("hide!");
+                    if app.remove_notification() {
+                        app.request_redraw();
+                    }
+                },
+                "prev_notification" => {
+                    println!("prev!");
+                    if app.show_notification(app.notification_idx as i32 - 1) {
+                        app.request_redraw();
+                    }
+                },
+                "next_notification" => {
+                    println!("next!");
+                    if app.show_notification(app.notification_idx as i32 + 1) {
+                        app.request_redraw();
+                    }
+                },
+                _ => println!("{}", cmd)
+            };
+            // app.request_redraw();
+        }
+        
         //println!("Ricevuto: {}", msg);
         if let Ok(data) = sock.rx.try_recv() {
             //println!("Ricevuto: {:?}", data);
