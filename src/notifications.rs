@@ -7,7 +7,7 @@ pub struct Notification {
     pub summary: String,
     pub body: String,
     pub urgency: u8,
-    pub arrived_at: Instant,
+    pub received_at: Instant,
     pub expired_at: Option<Instant>,
     pub app_icon: String
 }
@@ -41,12 +41,12 @@ impl NotificationServer {
                                 else { None };
         // *list = list.iter().filter(|notif| notif.expired_at > Instant::now()).map(|item|item.to_owned()).collect();
 
-        list.push(Notification {
+        list.insert(0, Notification {
             app_name: app_name.into(),
             summary: summary.into(),
             body: body.into(),
             urgency,
-            arrived_at: Instant::now(),
+            received_at: Instant::now(),
             expired_at: expired_at,
             app_icon: app_icon.into()
         });
