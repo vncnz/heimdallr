@@ -13,6 +13,7 @@ The aim of this project is to show several kinds of information:
 - show which resources are in a worrying state
 - show current time
 - show estimated time to full battery charge/discharge
+- show notifications
 
 After several experiments, I came up with this solution. Using a custom SVG shape, I rounded the screen corners. In the bottom-left corner, the frame reserves space for several icons, visible only when needed, indicating which resources are in a warning state (e.g. RAM almost full, low WLAN signal, and so on).
 
