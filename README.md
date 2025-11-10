@@ -41,17 +41,48 @@ No border; battery charging; light disk usage alarm:
 No border; battery charging; medium load and light disk usage alarms, with different wallpaper:
 ![Another wallpaper](./screenshots/another_wallpaper.png)
 
-## Doing
-Adding notifications and commands. Now, Heimdallr can react to commands like these:
+Light blue border; light memory pressure and light disk usage alarms, with different wallpaper and an open window:
+![With window](./screenshots/with_window.png)
+
+## Configuration
+You can configure frame color and clock presence with a json file in ```~/.config/heimdallr/config.json```:
+```
+{
+    "frame_color": "red,green,blue,alpha" | "resources" | "random" | null,
+    "show_clock": true | false
+}
+```
+
+For example:
+```
+{
+    "frame_color": "0.2,0.6,1.0,1.0",
+    "show_clock": true
+}
+```
+
+N.B. "resources" is not implemented yet.
+
+## Notifications
+Now, Heimdallr listen to notifications. When there is a notification, the upper section of the frame become thicker to accomodate the notification.
+Only one notification can be shown at any given moment, on a single line of text, with the following format:
+
+> 1/3 **[app_name]** &nbsp;&nbsp;&nbsp;[summary] / [body]
+
+Normal notifications gets a timeout of 3 seconds, critical notifications lasts until eternity and beyond.
+
+You can browse and remove notifications with following commands:
 - echo hide_notification > /tmp/heimdallr_cmds
 - echo prev_notification > /tmp/heimdallr_cmds
 - echo next_notification > /tmp/heimdallr_cmds
 
-Normal notifications gets a timeout of 3 seconds, critical notifications lasts until eternity and beyond.
-Notifications are showed in the upper area of the frame, which expands automatically. Only one notification can be shown at any moment. You can browse and remove notifications with previously reported commands.
+You don't need to create /tmp/heimdallr_cmds file, it is created automatically by Heimdallr and it is a named pipe (aka a fifo special file): you write in it you command and it's all.
 
-## Doing (2)
-Configurable frame color and clock displaying
+Notification example:
+![Notification example](./screenshots/notif.png)
+
+Another notification example, critical
+![Critical notification example](./screenshots/notif_critical.png)
 
 ## TODOs
 - Add a visual indicator for Ratatoskr disconnection
