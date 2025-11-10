@@ -50,8 +50,9 @@ Adding notifications and commands. Now, Heimdallr can react to commands like the
 Normal notifications gets a timeout of 3 seconds, critical notifications lasts until eternity and beyond.
 Notifications are showed in the upper area of the frame, which expands automatically. Only one notification can be shown at any moment. You can browse and remove notifications with previously reported commands.
 
+## Doing (2)
+Configurable frame color and clock displaying
+
 ## TODOs
-- Evaluate to use Dunst to manage notifications - get counter, etc.
 - Add a visual indicator for Ratatoskr disconnection
-- Configurable frame color
 - Dynamic frame color (depending on resource icons?)

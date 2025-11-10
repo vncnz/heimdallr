@@ -29,6 +29,7 @@ pub fn start_command_listener(tx: Sender<String>, fifo_path: &str) -> std::io::R
 
     // Creiamo la FIFO (named pipe)
     create_fifo(fifo_path)?;
+    println!("Created FIFO for commands receiving, located in {}", fifo_path);
 
     // Lanciamo un thread dedicato alla lettura
     let path_owned = fifo_path.to_string();
@@ -46,7 +47,6 @@ pub fn start_command_listener(tx: Sender<String>, fifo_path: &str) -> std::io::R
 
             let reader = BufReader::new(file);
 
-            // Leggiamo riga per riga e inviamo al channel
             for line in reader.lines() {
                 match line {
                     Ok(cmd) if !cmd.trim().is_empty() => {
@@ -60,7 +60,7 @@ pub fn start_command_listener(tx: Sender<String>, fifo_path: &str) -> std::io::R
                 }
             }
 
-            // Quando la FIFO viene chiusa dal lato scrittore, riapriamo il loop
+            // When FIFO is closed reader-side, loop!
         }
     });
 
