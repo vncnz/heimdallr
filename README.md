@@ -1,5 +1,11 @@
 # heimdallr
 
+## About the name
+
+From wikipedia:
+
+> In Norse mythology, Heimdall (from Old Norse Heimdallr; modern Icelandic Heimdallur) is a god. He is the son of Odin and nine sisters. Heimdall keeps watch for invaders and the onset of Ragnarök from his dwelling Himinbjörg, where the burning rainbow bridge Bifröst meets the sky. He is attested as possessing foreknowledge and keen senses, particularly eyesight and hearing.
+
 ## About this project
 
 The aim of this project is to show several kinds of information:
