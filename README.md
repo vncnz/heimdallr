@@ -85,5 +85,5 @@ Another notification example, critical
 ![Critical notification example](./screenshots/notif_critical.png)
 
 ## TODOs
-- Add a visual indicator for Ratatoskr disconnection
-- Dynamic frame color (depending on resource icons?)
+- ~~Add a visual indicator for Ratatoskr disconnection~~ Done!
+- Dynamic frame color (depending on resource icons)
