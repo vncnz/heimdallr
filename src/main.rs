@@ -181,12 +181,13 @@ fn main() {
                 }
             }
 
-            let new_ratatoskr_status = data.warning < 0.5;
-            if app.ratatoskr_connected != new_ratatoskr_status {
-                app.ratatoskr_connected = new_ratatoskr_status;
-                app.request_redraw();
-            }
-            if data.warning < 0.3 {
+            if data.resource == "ratatoskr" {
+                let new_ratatoskr_status = data.warning < 0.5;
+                if app.ratatoskr_connected != new_ratatoskr_status {
+                    app.ratatoskr_connected = new_ratatoskr_status;
+                    app.request_redraw();
+                }
+            } else if data.warning < 0.3 {
                 if app.remove_icon(&data.resource) {
                     app.request_redraw();
                 }
