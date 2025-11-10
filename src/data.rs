@@ -69,7 +69,7 @@ impl HeimdallrSocket {
 
         match UnixStream::connect(self.path) {
             Ok(mut stream) => {
-                println!("Connesso a Ratatoskr");
+                println!("Ratatoskr connected");
                 stream.set_nonblocking(true).ok();
                 self.stream = Some(stream);
                 let _ = self.tx.send(PartialMsg {
@@ -91,7 +91,7 @@ impl HeimdallrSocket {
             match stream.read(&mut buf) {
                 Ok(0) => {
                     // disconnessione
-                    println!("Ratatoskr disconnesso");
+                    println!("Ratatoskr disconnected");
                     let _ = self.tx.send(PartialMsg {
                         resource: "ratatoskr".to_string(),
                         icon: "".into(),
