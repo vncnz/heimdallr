@@ -16,7 +16,8 @@ pub struct Config {
     // per ora vuota, ma potrai aggiungere:
     // pub colors: IconColors,
     // pub update_interval: u64,
-    pub frame_color: FrameColor
+    pub frame_color: FrameColor,
+    pub show_clock: bool
 }
 
 impl Default for FrameColor {

@@ -24,7 +24,6 @@ use chrono::Local;
 use chrono::Timelike;
 
 pub const screen_height: u32 = 900;
-const DRAW_CLOCK: bool = true;
 
 pub struct AlarmIcon {
     symbol: String,
@@ -118,7 +117,7 @@ impl HeimdallrLayer {
         let cr = Context::new(&surface).unwrap();
 
         self.draw_myframe(cr.clone());
-        if DRAW_CLOCK { self.draw_clock(cr.clone()); }
+        if self.config.show_clock { self.draw_clock(cr.clone()); }
         if self.notifications.len() > 0 { self.draw_notification(cr.clone()) }
 
         // Damage + commit
@@ -158,7 +157,7 @@ impl HeimdallrLayer {
 
         let w = self.width as f64;
         let h = self.height as f64;
-        let w_hole = w - thickness - (if DRAW_CLOCK { 8.0 } else { 0.0 });
+        let w_hole = w - thickness - (if self.config.show_clock { 8.0 } else { 0.0 });
 
         let top = thickness / 2.0 + if self.notifications.len() > 0 { 24.0 } else { 0.0 };
 
