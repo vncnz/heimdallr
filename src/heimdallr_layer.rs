@@ -23,6 +23,8 @@ use wayland_client::Dispatch;
 use chrono::Local;
 use chrono::Timelike;
 
+use crate::utils::get_color_gradient;
+
 pub const screen_height: u32 = 900;
 
 pub struct AlarmIcon {
@@ -64,7 +66,8 @@ pub struct HeimdallrLayer {
     pub(crate) background_surface: Option<cairo::ImageSurface>,
     pub(crate) config: crate::config::Config,
     pub(crate) notifications: Vec<crate::notifications::Notification>,
-    pub(crate) notification_idx: usize
+    pub(crate) notification_idx: usize,
+    pub(crate) ratatoskr_connected: bool
 }
 
 impl HeimdallrLayer {
@@ -148,7 +151,7 @@ impl HeimdallrLayer {
         // icons space reserved
         let mut y_offset = self.height as f64 - 12.0; // parte dal basso
         let res_w = 24.0;
-        let res_h = (self.icons.len() as f64) * 30.0;
+        let res_h = if self.ratatoskr_connected { (self.icons.len() as f64) * 30.0 } else { 30.0 };
 
         // Draw rounded rectangle frame
         let thickness = 1.0;
@@ -182,14 +185,20 @@ impl HeimdallrLayer {
 
         // === Draw alarm icons ===
         
-        for icon in self.icons.values() {
-            cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
-            cr.set_font_size(16.0);
-
-            cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
+        cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
+        cr.set_font_size(16.0);
+        if self.ratatoskr_connected {
+            for icon in self.icons.values() {
+                cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
+                cr.move_to(4.0, y_offset);
+                cr.show_text(&icon.symbol).unwrap();
+                y_offset -= 24.0;
+            }
+        } else {
+            let red = get_color_gradient(1.0);
+            cr.set_source_rgba(red.0, red.1, red.2, red.3);
             cr.move_to(4.0, y_offset);
-            cr.show_text(&icon.symbol).unwrap();
-            y_offset -= 24.0;
+            cr.show_text("󰠗").unwrap();
         }
     }
 

@@ -14,13 +14,14 @@ use smithay_client_toolkit::shell::WaylandSurface;
 
 use std::collections::HashMap;
 
-use crate::{commands::start_command_listener, data::{HeimdallrSocket}, heimdallr_layer::screen_height, notifications::Notification};
+use crate::{commands::start_command_listener, data::HeimdallrSocket, heimdallr_layer::screen_height, notifications::Notification, utils::get_color_gradient};
 
 mod data;
 mod config;
 mod heimdallr_layer;
 mod notifications;
 mod commands;
+mod utils;
 
 use config::Config;
 
@@ -76,6 +77,7 @@ fn main() {
         first_configure: true,
         input_region: Some(empty_region),
         icons: HashMap::new(),
+        ratatoskr_connected: false,
         battery_eta: None,
         battery_recharging: None,
         needs_redraw: true,
@@ -179,6 +181,11 @@ fn main() {
                 }
             }
 
+            let new_ratatoskr_status = data.warning < 0.5;
+            if app.ratatoskr_connected != new_ratatoskr_status {
+                app.ratatoskr_connected = new_ratatoskr_status;
+                app.request_redraw();
+            }
             if data.warning < 0.3 {
                 if app.remove_icon(&data.resource) {
                     app.request_redraw();
@@ -216,72 +223,4 @@ fn main() {
         conn.flush().unwrap();
         std::thread::sleep(Duration::from_millis(10));
     }
-
-/*
-use std::os::unix::net::UnixDatagram;
-
-fn main() {
-    let sock = UnixDatagram::unbound().unwrap();
-    sock.connect("/tmp/ratatoskr.sock").unwrap();
-
-    let mut buf = [0u8; 2048];
-    loop {
-        let len = sock.recv(&mut buf).unwrap();
-        let msg = String::from_utf8_lossy(&buf[..len]);
-        println!("Ricevuto: {}", msg);
-    }
-} */
-}
-
-/* fn on_icons_changed(&mut self) {
-    self.redraw();
-} */
-
-const DEFAULT_WHITE: bool = false;
-pub fn get_color_gradient(value: f64) -> (f64, f64, f64, f64) {
-    get_color_gradient_full(0.0, 1.0, value, false)
-}
-pub fn get_color_gradient_full(min: f64, max: f64, value: f64, reversed: bool) -> (f64, f64, f64, f64) {
-    let clamped = value.clamp(min, max);
-    let mut ratio = if (max - min).abs() < f64::EPSILON {
-        0.5
-    } else {
-        (clamped - min) / (max - min)
-    };
-
-    if !reversed { ratio = 1.0 - ratio; }
-    let sat;
-    let hue;
-    if DEFAULT_WHITE {
-        sat = f64::max(1.0 - (ratio * ratio * ratio), 0.0);
-        hue = 60.0 * ratio; // 60 -> 0
-    } else {
-        sat = 1.0;
-        hue = 100.0 * ratio; // 100 -> 0
-    }
-    let (r, g, b) = hsv_to_rgb(hue, sat, 1.0);
-
-    // format!("#{:02X}{:02X}{:02X}", r, g, b)
-    ((r as f64) / 255.0, (g as f64) / 255.0, (b as f64) / 255.0, 1.0)
-}
-
-fn hsv_to_rgb(h: f64, s: f64, v: f64) -> (u8, u8, u8) {
-    let c = v * s;
-    let x = c * (1.0 - ((h / 60.0) % 2.0 - 1.0).abs());
-    let m = v - c;
-
-    let (r1, g1, b1) = match h {
-        h if h < 60.0 => (c, x, 0.0),
-        h if h < 120.0 => (x, c, 0.0),
-        h if h < 180.0 => (0.0, c, x),
-        h if h < 240.0 => (0.0, x, c),
-        h if h < 300.0 => (x, 0.0, c),
-        _ => (c, 0.0, x),
-    };
-
-    let r = ((r1 + m) * 255.0).round() as u8;
-    let g = ((g1 + m) * 255.0).round() as u8;
-    let b = ((b1 + m) * 255.0).round() as u8;
-
-    (r, g, b)
 }

@@ -72,6 +72,12 @@ impl HeimdallrSocket {
                 println!("Connesso a Ratatoskr");
                 stream.set_nonblocking(true).ok();
                 self.stream = Some(stream);
+                let _ = self.tx.send(PartialMsg {
+                    resource: "ratatoskr".to_string(),
+                    icon: "".into(),
+                    warning: 0.0,
+                    data: None
+                });
             }
             Err(_) => {
                 // non connesso, riproveremo
@@ -86,6 +92,12 @@ impl HeimdallrSocket {
                 Ok(0) => {
                     // disconnessione
                     println!("Ratatoskr disconnesso");
+                    let _ = self.tx.send(PartialMsg {
+                        resource: "ratatoskr".to_string(),
+                        icon: "".into(),
+                        warning: 1.0,
+                        data: None
+                    });
                     self.stream = None;
                 }
                 Ok(n) => {
