@@ -290,11 +290,11 @@ impl HeimdallrLayer {
 
         cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
 
-        let mut x = 10.0;
+        let mut x = 25.0;
 
         cr.set_font_size(16.0);
         let (r,g,b,a) = self.config.frame_color.to_rgba();
-        cr.set_source_rgba(r,g,b,a);
+        cr.set_source_rgba(r,g,b,if self.notifications.len() > 1 { a } else { a/2.0 } );
         let idx = format!("{}/{}", self.notification_idx+1, self.notifications.len());
         let (idx_width, _) = cr_text_aligned(cr.clone(), idx, x, top, 0.0, 0.5);
         x += idx_width + 10.0;
@@ -310,7 +310,11 @@ impl HeimdallrLayer {
 
         cr.set_font_size(14.0);
         cr.set_source_rgba(1.0, 1.0, 1.0, 0.9);
-        let msg = format!("{} {} / {}", notif_to_show.app_icon, notif_to_show.summary, notif_to_show.body);
+        let msg = if notif_to_show.body.is_empty() {
+            notif_to_show.summary.clone()
+        } else {
+            format!("{} / {}", notif_to_show.summary, notif_to_show.body)
+        };
         cr_text_aligned(cr.clone(), msg, x, top, 0.0, 0.5);
     }
 }
