@@ -1,22 +1,20 @@
 
 use smithay_client_toolkit::{
-    compositor::{CompositorHandler, CompositorState},
-    delegate_compositor, delegate_layer, delegate_output, delegate_registry, delegate_shm,
-    output::{OutputHandler, OutputState},
-    registry::{ProvidesRegistryState, RegistryState},
-    registry_handlers,
-    shell::wlr_layer::{Anchor, KeyboardInteractivity, Layer, LayerShell, LayerShellHandler, LayerSurface, LayerSurfaceConfigure},
-    shm::{slot::SlotPool, Shm, ShmHandler},
+    compositor::{CompositorState},
+    output::{OutputState},
+    registry::{RegistryState},
+    shell::wlr_layer::{Anchor, KeyboardInteractivity, Layer, LayerShell},
+    shm::{slot::SlotPool, Shm},
 };
 use wayland_client::{globals::registry_queue_init, protocol::{wl_compositor, wl_region}, Connection};
 
-use std::{os::unix::net::UnixDatagram, sync::mpsc::{self, Receiver, Sender}, time::{Duration, Instant}};
+use std::{sync::mpsc::{self, Receiver, Sender}, time::{Duration, Instant}};
 
 use smithay_client_toolkit::shell::WaylandSurface;
 
 use std::collections::HashMap;
 
-use crate::{commands::start_command_listener, data::{HeimdallrSocket, PartialMsg}, heimdallr_layer::screen_height, notifications::Notification};
+use crate::{commands::start_command_listener, data::{HeimdallrSocket}, heimdallr_layer::screen_height, notifications::Notification};
 
 mod data;
 mod config;

@@ -1,17 +1,16 @@
 use smithay_client_toolkit::{
-    compositor::{CompositorHandler, CompositorState},
+    compositor::{CompositorHandler},
     delegate_compositor, delegate_layer, delegate_output, delegate_registry, delegate_shm,
     output::{OutputHandler, OutputState},
     registry::{ProvidesRegistryState, RegistryState},
     registry_handlers,
-    shell::wlr_layer::{Anchor, KeyboardInteractivity, Layer, LayerShell, LayerShellHandler, LayerSurface, LayerSurfaceConfigure},
+    shell::wlr_layer::{LayerShellHandler, LayerSurface, LayerSurfaceConfigure},
     shm::{slot::SlotPool, Shm, ShmHandler},
 };
-use wayland_client::{Connection, Proxy, QueueHandle, backend::ObjectId, globals::registry_queue_init, protocol::{wl_buffer::WlBuffer, wl_compositor, wl_region, wl_shm}};
+use wayland_client::{Connection, Proxy, QueueHandle, backend::ObjectId, protocol::{wl_buffer::WlBuffer, wl_compositor, wl_region, wl_shm}};
 use cairo::{Context, Format, ImageSurface};
 
-use std::{num::NonZeroU32, sync::{Arc, Mutex}, time::{Duration, Instant}};
-use std::os::unix::net::UnixDatagram;
+use std::{num::NonZeroU32, time::{Duration, Instant}};
 
 use smithay_client_toolkit::shell::WaylandSurface;
 

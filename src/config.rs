@@ -1,6 +1,6 @@
 use std::fs;
 use rand::Rng;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize};
 use shellexpand;
 
 #[derive(Debug, Clone)]

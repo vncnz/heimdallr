@@ -5,7 +5,6 @@ use std::sync::mpsc::Sender;
 use std::thread;
 
 use std::ffi::CString;
-use std::os::raw::c_int;
 
 use libc;
 
