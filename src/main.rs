@@ -114,7 +114,7 @@ fn main() {
 
         // Prova a leggere nuovi eventi — non blocca
         match event_queue.prepare_read() {
-            Some(mut guard) => {
+            Some(guard) => {
                 if let Err(e) = guard.read() {
                     // Silenzia WouldBlock (nessun evento da leggere)
                     /* if let Some(raw_err) = e.raw_os_error() {
@@ -206,7 +206,7 @@ fn main() {
 
                 if icon != "" {
                     app.remove_icon(&data.resource);
-                    app.add_icon(&data.resource, icon, get_color_gradient(data.warning));
+                    app.add_icon(&data.resource, icon, get_color_gradient(data.warning), data.warning);
                     app.request_redraw();
                 }
             }

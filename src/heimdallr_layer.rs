@@ -1,11 +1,5 @@
 use smithay_client_toolkit::{
-    compositor::{CompositorHandler},
-    delegate_compositor, delegate_layer, delegate_output, delegate_registry, delegate_shm,
-    output::{OutputHandler, OutputState},
-    registry::{ProvidesRegistryState, RegistryState},
-    registry_handlers,
-    shell::wlr_layer::{LayerShellHandler, LayerSurface, LayerSurfaceConfigure},
-    shm::{slot::SlotPool, Shm, ShmHandler},
+    compositor::CompositorHandler, delegate_compositor, delegate_layer, delegate_output, delegate_registry, delegate_shm, output::{OutputHandler, OutputState}, reexports::csd_frame::FrameClick, registry::{ProvidesRegistryState, RegistryState}, registry_handlers, shell::wlr_layer::{LayerShellHandler, LayerSurface, LayerSurfaceConfigure}, shm::{Shm, ShmHandler, slot::SlotPool}
 };
 use wayland_client::{Connection, Proxy, QueueHandle, backend::ObjectId, protocol::{wl_buffer::WlBuffer, wl_compositor, wl_region, wl_shm}};
 use cairo::{Context, Format, ImageSurface};
@@ -23,13 +17,14 @@ use wayland_client::Dispatch;
 use chrono::Local;
 use chrono::Timelike;
 
-use crate::utils::get_color_gradient;
+use crate::{config::FrameColor, utils::get_color_gradient};
 
 pub const screen_height: u32 = 900;
 
 pub struct AlarmIcon {
     symbol: String,
     color: (f64, f64, f64, f64), // RGBA
+    warn: f64
 }
 
 fn cr_text_aligned (cr: Context, text: String, x: f64, y: f64, dx: f64, dy: f64) -> (f64, f64) {
@@ -171,18 +166,6 @@ impl HeimdallrLayer {
         cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
         cr.fill().unwrap();
 
-        //cr.set_line_width(thickness);
-        //cr.set_source_rgba(0.0, 0.0, 0.0, 0.8);
-        //rounded_rect(&cr, thickness / 2.0, thickness / 2.0, w - thickness, h - thickness, radius);
-        //cr.stroke().unwrap();
-
-        // Inner colored frame (for future dynamic border)
-        cr.set_line_width(1.0);
-        let (r,g,b,a) = self.config.frame_color.to_rgba();
-        cr.set_source_rgba(r, g, b, a);
-        rounded_rect(&cr, thickness / 2.0, top, w_hole, h - thickness, radius, radius2, res_w, res_h);
-        cr.stroke().unwrap();
-
         // === Draw alarm icons ===
         
         cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
@@ -200,6 +183,25 @@ impl HeimdallrLayer {
             cr.move_to(4.0, y_offset);
             cr.show_text("󰠗").unwrap();
         }
+
+        // === Draw colored border ===
+        if let Some((r, g, b, a)) = match self.config.frame_color {
+            FrameColor::Rgba(r, g, b, a) => Some((r, g, b, a)),
+            FrameColor::WorstResource => self
+                .icons
+                .values()
+                .max_by(|a, b| a.warn.partial_cmp(&b.warn).unwrap_or(std::cmp::Ordering::Equal))
+                .map(|icon| icon.color),
+            FrameColor::None | FrameColor::Random => None,
+        } {
+            cr.set_line_width(1.0);
+            cr.set_source_rgba(r, g, b, a);
+            rounded_rect(&cr, thickness / 2.0, top, w_hole, h - thickness, radius, radius2, res_w, res_h);
+            cr.stroke().unwrap();
+        }
+
+            
+
     }
 
     fn draw_clock (&mut self, cr: Context) {
@@ -302,8 +304,11 @@ impl HeimdallrLayer {
         let mut x = 25.0;
 
         cr.set_font_size(16.0);
-        let (r,g,b,a) = self.config.frame_color.to_rgba();
-        cr.set_source_rgba(r,g,b,if self.notifications.len() > 1 { a } else { a/2.0 } );
+        if let FrameColor::Rgba(r,g,b,a) = self.config.frame_color {
+            cr.set_source_rgba(r,g,b,if self.notifications.len() > 1 { a } else { a/2.0 } );
+        } else {
+            cr.set_source_rgba(1.0,1.0,1.0,if self.notifications.len() > 1 { 1.0 } else { 0.5 } );
+        }
         let idx = format!("{}/{}", self.notification_idx+1, self.notifications.len());
         let (idx_width, _) = cr_text_aligned(cr.clone(), idx, x, top, 0.0, 0.5);
         x += idx_width + 10.0;
@@ -329,12 +334,13 @@ impl HeimdallrLayer {
 }
 
 impl HeimdallrLayer { // This is for icon management, I like to keep it separated, for now
-    pub fn add_icon(&mut self, id: &str, symbol: &str, color: (f64, f64, f64, f64)) {
+    pub fn add_icon(&mut self, id: &str, symbol: &str, color: (f64, f64, f64, f64), warn: f64) {
         self.icons.insert(
             id.to_string(),
             AlarmIcon {
                 symbol: symbol.to_string(),
                 color,
+                warn
             },
         );
     }

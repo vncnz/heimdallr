@@ -1,113 +1,94 @@
 use std::fs;
 use rand::Rng;
-use serde::{Deserialize};
-use shellexpand;
+use serde::Deserialize;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum FrameColor {
     None,
-    Random,
-    Resources,
     Rgba(f64, f64, f64, f64),
+    Random,
+    WorstResource,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug)]
 pub struct Config {
-    // per ora vuota, ma potrai aggiungere:
-    // pub colors: IconColors,
-    // pub update_interval: u64,
     pub frame_color: FrameColor,
-    pub show_clock: bool
+    pub show_clock: bool,
+    // pub border_width: u32,
 }
 
-impl Default for FrameColor {
-    fn default() -> Self {
-        FrameColor::Rgba(0.5, 0.5, 0.5, 1.0)
+#[derive(Debug, Deserialize)]
+struct RawConfig {
+    frame_color: Option<serde_json::Value>,
+    show_clock: Option<bool>,
+    // border_width: Option<u32>,
+}
+
+impl FrameColor {
+    fn from_json(value: Option<serde_json::Value>) -> Self {
+        match value {
+            Some(serde_json::Value::Null) => FrameColor::None,
+
+            Some(serde_json::Value::String(s)) => match s.as_str() {
+                "random" => {
+                    let mut rng = rand::rng();
+                    FrameColor::Rgba(
+                        rng.random(),
+                        rng.random(),
+                        rng.random(),
+                        1.0,
+                    )
+                },
+                "worst-resource" => FrameColor::WorstResource,
+                _ => {
+                    eprintln!("⚠️  Valore frame_color non riconosciuto: {:?}", s);
+                    FrameColor::None
+                }
+            },
+
+            Some(serde_json::Value::Array(arr)) if arr.len() == 4 => {
+                let vals: Vec<f64> = arr
+                    .iter()
+                    .filter_map(|v| v.as_f64().map(|x| x as f64))
+                    .collect();
+                if vals.len() == 4 {
+                    FrameColor::Rgba(vals[0], vals[1], vals[2], vals[3])
+                } else {
+                    eprintln!("frame_color array non valido, uso None");
+                    FrameColor::None
+                }
+            }
+
+            _ => {
+                eprintln!("Tipo di frame_color non valido nel JSON {:?}", value);
+                FrameColor::None
+            }
+        }
     }
 }
 
 impl Config {
     pub fn load_from_file(path: &str) -> Self {
         let expanded_path = shellexpand::tilde(path);
-        match fs::read_to_string(expanded_path.as_ref()) {
-            Ok(data) => match serde_json::from_str::<Config>(&data) {
-                Ok(mut cfg) => {
-                    match &cfg.frame_color {
-                        FrameColor::Random => {
-                            let mut rng = rand::rng();
-                            cfg.frame_color = FrameColor::Rgba(
-                                rng.random(),
-                                rng.random(),
-                                rng.random(),
-                                1.0,
-                            );
-                        }
-                        _ => {}
-                    }
-                    cfg
-                },
-                Err(e) => {
-                    eprintln!("Errore nel parsing del file di configurazione: {e}");
-                    Self::default()
-                }
-            },
-            Err(err) => {
-                eprintln!("File di configurazione non trovato, uso valori di default");
-                eprintln!("{}", err);
-                Self::default()
+        let data = fs::read_to_string(expanded_path.as_ref())
+            .unwrap_or_else(|_| {
+                eprintln!("Impossibile leggere il file di configurazione: {}", path);
+                "{}".to_string()
+            });
+
+        let raw: RawConfig = serde_json::from_str(&data).unwrap_or_else(|_| {
+            eprintln!("Config JSON non valido, uso valori di default");
+            RawConfig {
+                frame_color: None,
+                show_clock: None,
+                // border_width: None,
             }
-        }
-    }
+        });
 
-    /*
-    In the future:
-    - Update configuration on disk with serde_json::to_writer_pretty()
-    - Add a watcher with notify?
-    */
-}
-
-impl<'de> Deserialize<'de> for FrameColor {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        let lower = s.trim().to_ascii_lowercase();
-
-        match lower.as_str() {
-            "none" => Ok(FrameColor::None),
-            "random" => Ok(FrameColor::Random),
-            "resources" => Ok(FrameColor::Resources),
-            _ => {
-                let parts: Vec<f64> = lower
-                    .split(',')
-                    .map(|p| p.trim().parse::<f64>())
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?;
-
-                if parts.len() == 4 {
-                    Ok(FrameColor::Rgba(parts[0], parts[1], parts[2], parts[3]))
-                } else {
-                    Err(serde::de::Error::custom(
-                        "Expected 4 comma-separated values for RGBA, or none, or resources, or random",
-                    ))
-                }
-            }
-        }
-    }
-}
-
-impl FrameColor {
-    pub fn to_rgba(&self) -> (f64, f64, f64, f64) {
-        match self {
-            FrameColor::None => (0.0, 0.0, 0.0, 0.0),
-            FrameColor::Random => {
-                use rand::Rng;
-                let mut rng = rand::rng();
-                (rng.random(), rng.random(), rng.random(), 1.0)
-            }
-            FrameColor::Resources => (0.5, 0.5, 0.5, 1.0), // TODO
-            FrameColor::Rgba(r, g, b, a) => (*r, *g, *b, *a),
+        Config {
+            frame_color: FrameColor::from_json(raw.frame_color),
+            show_clock: raw.show_clock.unwrap_or(true),
+            // border_width: raw.border_width.unwrap_or(2),
         }
     }
 }
