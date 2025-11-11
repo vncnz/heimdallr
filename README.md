@@ -1,4 +1,4 @@
-# heimdallr - ᚱᚨᛏᚨᛏᛟᛊᚲᚱ
+# heimdallr - ᚺᛖᛁᛗᛞᚨᛚᚱ
 
 ## About the name
 
