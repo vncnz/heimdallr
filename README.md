@@ -55,7 +55,7 @@ Light blue border; light memory pressure and light disk usage alarms, with diffe
 You can configure frame color and clock presence with a json file in ```~/.config/heimdallr/config.json```:
 ```
 {
-    "frame_color": "red,green,blue,alpha" | "resources" | "random" | null,
+    "frame_color": [red,green,blue,alpha] | "worst-resource" | "random" | null,
     "show_clock": true | false
 }
 ```
@@ -63,12 +63,12 @@ You can configure frame color and clock presence with a json file in ```~/.confi
 For example:
 ```
 {
-    "frame_color": "0.2,0.6,1.0,1.0",
+    "frame_color": [0.2, 0.6, 1.0, 1.0],
     "show_clock": true
 }
 ```
 
-N.B. "resources" is not implemented yet.
+If you set "worst-resource" as frame_color, in absence of resource warnings the frame will have no border.
 
 ## Notifications
 Now, Heimdallr listen to notifications. When there is a notification, the upper section of the frame become thicker to accomodate the notification.
@@ -93,4 +93,4 @@ Another notification example, critical
 
 ## TODOs
 - ~~Add a visual indicator for Ratatoskr disconnection~~ Done!
-- Dynamic frame color (depending on resource icons)
+- ~~Dynamic frame color (depending on resource icons)~~ Done!
