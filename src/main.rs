@@ -22,8 +22,8 @@ mod heimdallr_layer;
 mod notifications;
 mod commands;
 mod utils;
-
 use config::Config;
+// use chrono;
 
 use crate::heimdallr_layer::HeimdallrLayer;
 use crate::notifications::start_notification_listener;
@@ -163,7 +163,7 @@ fn main() {
         
         //println!("Ricevuto: {}", msg);
         if let Ok(data) = sock.rx.try_recv() {
-            //println!("Ricevuto: {:?}", data);
+            // println!("{} Ricevuto: {:?}", chrono::Local::now().format("%H:%M:%S%.3f"), data.resource);
             if data.resource == "battery" {
                 if let Some(bat) = &data.data {
                     // {"capacity": Number(177228.0), "color": String("#55FF00"), "eta": Number(380.0978088378906), "icon": String("\u{f0079}"), "percentage": Number(100), "state": String("Discharging"), "warn": Number(0.0), "watt": Number(7.76800012588501)}

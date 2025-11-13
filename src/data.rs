@@ -53,13 +53,14 @@ pub struct HeimdallrSocket {
     stream: Option<UnixStream>,
     path: &'static str,
     tx: Sender<PartialMsg>,
-    pub rx: Receiver<PartialMsg>
+    pub rx: Receiver<PartialMsg>,
+    recv_buf: String,
 }
 
 impl HeimdallrSocket {
     pub fn new(path: &'static str) -> Self {
         let (tx, rx) = channel();
-        Self { stream: None, path, tx, rx }
+        Self { stream: None, path, tx, rx, recv_buf: "".to_string() }
     }
 
     pub fn try_connect(&mut self) {
@@ -90,21 +91,32 @@ impl HeimdallrSocket {
             let mut buf = [0u8; 4096];
             match stream.read(&mut buf) {
                 Ok(0) => {
-                    // disconnessione
                     println!("Ratatoskr disconnected");
                     let _ = self.tx.send(PartialMsg {
                         resource: "ratatoskr".to_string(),
                         icon: "".into(),
                         warning: 1.0,
-                        data: None
+                        data: None,
                     });
                     self.stream = None;
                 }
                 Ok(n) => {
-                    if let Ok(msg) = std::str::from_utf8(&buf[..n]) {
-                        if let Ok(data) = serde_json::from_str::<PartialMsg>(&msg) {
-                            // println!("Messaggio ricevuto: {msg}");
-                            let _ = self.tx.send(data);
+                    if let Ok(chunk) = std::str::from_utf8(&buf[..n]) {
+                        // aggiunge al buffer cumulativo
+                        self.recv_buf.push_str(chunk);
+
+                        // finché trovi un newline, estrai un messaggio completo
+                        while let Some(pos) = self.recv_buf.find('\n') {
+                            let msg = self.recv_buf[..pos].trim();
+                            if !msg.is_empty() {
+                                if let Ok(data) = serde_json::from_str::<PartialMsg>(msg) {
+                                    let _ = self.tx.send(data);
+                                } else {
+                                    eprintln!("Invalid JSON fragment: {msg}");
+                                }
+                            }
+                            // rimuove la parte processata
+                            self.recv_buf.drain(..=pos);
                         }
                     }
                 }
@@ -117,8 +129,8 @@ impl HeimdallrSocket {
                 }
             }
         } else {
-            // tenta di riconnettersi periodicamente
             self.try_connect();
         }
     }
+
 }
