@@ -197,7 +197,7 @@ fn main() {
                 if data.resource == "loadavg" { icon = "󰬢"; }
                 else if data.resource == "ram" { icon = "󰘚"; }
                 else if data.resource == "temperature" { icon = &data.icon; }
-                else if data.resource == "network" { icon = &data.icon; }
+                else if data.resource == "network" { icon = if data.icon != "" { &data.icon } else { "󰞃" }; }
                 else if data.resource == "disk" { icon = "󰋊"; }
                 // weather
                 // volume
