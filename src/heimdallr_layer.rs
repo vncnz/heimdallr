@@ -236,18 +236,28 @@ impl HeimdallrLayer {
 
         if let Some(rec) = self.battery_recharging {
             // eprintln!("Battery moving");
-            let bat_symb = if rec { "󱐋".into() } else { "󰯆".into() };
+            let bat_symb: String = if rec { "󱐋".into() } else { "󰯆".into() };
+            let font_size: f64;
+            let color: (f64, f64, f64, f64);
             if rec {
-                cr.set_font_size(20.0);
-                cr.set_source_rgba(0.1, 1.0, 0.2, 1.0);
+                font_size = 20.0;
+                color = (0.1, 1.0, 0.2, 1.0);
             } else {
-                cr.set_font_size(14.0);
-                cr.set_source_rgba(1.0, 0.1, 0.2, 1.0);
+                font_size = 14.0;
+                color = (1.0, 0.1, 0.2, 1.0);
             };
             if let Some(eta) = self.battery_eta {
                 let bpos = (ypos - (eta / 1440.0 * self.height as f64) + self.height as f64) % self.height as f64;
-                // eprintln!("eta available {:?}", bpos);
-                // let bpos = 10.0;
+                
+                /* Border */
+                cr.set_font_size(font_size + 2.0);
+                cr.set_source_rgba(0.1,0.1,0.1,1.0);
+                cr_text_aligned(cr.clone(), bat_symb.clone(), self.width as f64 - 7.0 + 1.0, bpos, 1.0, 0.5);
+                /* end */
+                
+                cr.set_font_size(font_size);
+                let (r,g,b,a) = color;
+                cr.set_source_rgba(r,g,b,a);
                 cr_text_aligned(cr.clone(), bat_symb, self.width as f64 - 7.0, bpos, 1.0, 0.5);
             } else {
                 cr_text_aligned(cr.clone(), bat_symb, self.width as f64, 0.0, 1.0, 0.5);
