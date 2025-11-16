@@ -220,11 +220,18 @@ impl HeimdallrLayer {
         let ypos = (1.0 - y) * (self.height as f64);
         // eprintln!("{} {}", y, ypos);
 
+        /* Border */
+        cr.set_source_rgba(0.1, 0.1, 0.1, 1.0);
+        cr.move_to((self.width - 24u32) as f64 + 1.0, (1.0 - y) * (self.height as f64) - 1.0);
+        cr.set_font_size(17.0);
+        // cr.show_text("");
+        cr_text_aligned(cr.clone(), "".into(), self.width as f64 - 5.0, ypos, 1.0, 0.0);
+        /* end */
+
         cr.set_source_rgba(1.0, 0.1, 0.2, 1.0);
         cr.move_to((self.width - 24u32) as f64, (1.0 - y) * (self.height as f64));
         cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
         cr.set_font_size(15.0);
-        // cr.show_text("");
         cr_text_aligned(cr.clone(), "".into(), self.width as f64 - 5.0, ypos, 1.0, 0.0);
 
         if let Some(rec) = self.battery_recharging {
