@@ -10,46 +10,8 @@ pub struct PartialMsg {
     pub icon: String,
     pub data: Option<serde_json::Value>,
 }
-/*
-pub fn start_socket_listener(state: Arc<Mutex<PartialMsg>>, tx: Sender<PartialMsg>) {
-    thread::spawn(move || {
-        let sock_path = "/tmp/ratatoskr.sock";
-        let _ = std::fs::remove_file(sock_path); // evita Address in use
-        let listener = match UnixDatagram::bind(sock_path) {
-            Ok(s) => s,
-            Err(e) => {
-                eprintln!("Impossibile creare socket: {e}");
-                return;
-            }
-        };
 
-        let mut buf = [0u8; 4096];
-        loop {
-            match listener.recv(&mut buf) {
-                Ok(size) => {
-                    let msg = String::from_utf8_lossy(&buf[..size]);
-                    if let Ok(new_data) = serde_json::from_str::<PartialMsg>(&msg) {
-                        if let Ok(mut data) = state.lock() {
-                            tx.send(PartialMsg { resource: new_data.resource.clone(), warning: new_data.warning, data: None }).ok();
-                            *data = new_data;
-                            // println!("Updated! {}", msg);
-                        }
-                    } else {
-                        // eprintln!("Messaggio JSON non valido: {msg}");
-                    }
-                }
-                Err(e) => {
-                    eprintln!("Errore socket: {e}");
-                    thread::sleep(Duration::from_secs(1));
-                }
-            }
-        }
-    });
-}
-*/
-
-
-pub struct HeimdallrSocket {
+pub struct RatatoskrSocket {
     stream: Option<UnixStream>,
     path: &'static str,
     tx: Sender<PartialMsg>,
@@ -57,7 +19,7 @@ pub struct HeimdallrSocket {
     recv_buf: String,
 }
 
-impl HeimdallrSocket {
+impl RatatoskrSocket {
     pub fn new(path: &'static str) -> Self {
         let (tx, rx) = channel();
         Self { stream: None, path, tx, rx, recv_buf: "".to_string() }
@@ -134,3 +96,20 @@ impl HeimdallrSocket {
     }
 
 }
+
+/*
+Usage example:
+
+let mut sock = RatatoskrSocket::new("/tmp/ratatoskr.sock");
+
+... and in the main loop ...
+
+sock.poll_messages();
+if let Ok(data) = sock.rx.try_recv() {
+    if data.resource == "DESIRED" {
+        if let Some(info) = &data.data {
+            let some_number = info["key"].as_f64();
+        }
+    }
+}
+ */

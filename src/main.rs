@@ -14,7 +14,7 @@ use smithay_client_toolkit::shell::WaylandSurface;
 
 use std::collections::HashMap;
 
-use crate::{commands::start_command_listener, data::HeimdallrSocket, heimdallr_layer::screen_height, notifications::Notification, utils::get_color_gradient};
+use crate::{commands::start_command_listener, data::RatatoskrSocket, heimdallr_layer::screen_height, notifications::Notification, utils::get_color_gradient};
 
 mod data;
 mod config;
@@ -94,7 +94,7 @@ fn main() {
     let (tx, rx_cmds): (Sender<String>, Receiver<String>) = mpsc::channel();
     let _ = start_command_listener(tx, "/tmp/heimdallr_cmds");
 
-    let mut sock = HeimdallrSocket::new("/tmp/ratatoskr.sock");
+    let mut sock = RatatoskrSocket::new("/tmp/ratatoskr.sock");
 
     let (tx, rx_notif): (Sender<Vec<Notification>>, Receiver<Vec<Notification>>) = mpsc::channel();
     // let rx_notif: Option<Receiver<Notification>> = None;
