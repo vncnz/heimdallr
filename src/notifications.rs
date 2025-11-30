@@ -1,5 +1,16 @@
 use zbus::{ConnectionBuilder, dbus_interface, zvariant};
-use std::{ops::Not, sync::{Arc, Mutex, mpsc::Sender}, time::{Duration, Instant}};
+use std::{sync::{Arc, Mutex, mpsc::Sender}, time::{Duration, Instant}};
+
+// 🔔 Nuova notifica: app_name:nemo summary:Unmounting 255 GB Volume body:Disconnecting from filesystem. timeout:-1 hints:{"desktop-entry": Str(Str(Borrowed("org.Nemo"))), "urgency": U8(2), "image-path": Str(Str(Borrowed("media-removable")))}
+// 🔔 Nuova notifica: app_name:nemo summary:255 GB Volume unmounted body:Filesystem has been disconnected. timeout:-1 hints:{"desktop-entry": Str(Str(Borrowed("org.Nemo"))), "image-path": Str(Str(Borrowed("media-removable"))), "urgency": U8(1)}
+
+use std::sync::atomic::{AtomicU32, Ordering};
+
+static NEXT_ID: AtomicU32 = AtomicU32::new(2);
+
+fn generate_id() -> u32 {
+    NEXT_ID.fetch_add(1, Ordering::Relaxed)
+}
 
 #[derive(Debug, Clone)]
 pub struct Notification {
@@ -9,7 +20,8 @@ pub struct Notification {
     pub urgency: u8,
     pub received_at: Instant,
     pub expired_at: Option<Instant>,
-    pub app_icon: String
+    pub app_icon: String,
+    pub id: u32
 }
 
 #[derive(Clone)]
@@ -23,7 +35,7 @@ impl NotificationServer {
     fn notify(
         &self,
         app_name: &str,
-        _replaces_id: u32,
+        mut replaces_id: u32,
         app_icon: &str,
         summary: &str,
         body: &str,
@@ -32,7 +44,7 @@ impl NotificationServer {
         expire_timeout: i32,
     ) -> u32 {
         let mut list = self.notifications.lock().unwrap();
-        let msg = format!("app_name:{app_name} summary:{summary} body:{body} timeout:{expire_timeout} hints:{hints:?}");
+        let msg = format!("app_name:{app_name} summary:{summary} body:{body} timeout:{expire_timeout} hints:{hints:?} replaces_id:{replaces_id}");
         println!("🔔 Nuova notifica: {msg}");
 
         let urgency = hints.get("urgency").unwrap().clone().downcast().expect("No urgency");
@@ -41,6 +53,23 @@ impl NotificationServer {
                                 else { None };
         // *list = list.iter().filter(|notif| notif.expired_at > Instant::now()).map(|item|item.to_owned()).collect();
 
+        let mut custom_replace = None;
+        if summary.contains("unmounted") {
+            let to_be_replaced = list.iter().find(|x| x.summary.contains("Unmounting"));
+            if let Some(notif) = to_be_replaced {
+                custom_replace = Some(notif.id);
+            }
+        }
+        if let Some(rep) = custom_replace {
+            list.retain(|n| n.id != rep);
+        }
+
+        if replaces_id > 0 {
+            list.retain(|n| n.id != replaces_id);
+        }
+
+        // let id = list.iter().map(|x| x.id).max().unwrap_or();
+        let id = generate_id();
         list.insert(0, Notification {
             app_name: app_name.into(),
             summary: summary.into(),
@@ -48,7 +77,8 @@ impl NotificationServer {
             urgency,
             received_at: Instant::now(),
             expired_at: expired_at,
-            app_icon: app_icon.into()
+            app_icon: app_icon.into(),
+            id
         });
         let _ = self.tx.send(list.clone());
 
@@ -73,7 +103,8 @@ impl NotificationServer {
         }); */
 
         // ID arbitrario della notifica (di solito crescente)
-        list.len() as u32
+        println!("Returning {}", id);
+        id
     }
 
     fn get_server_information(&self) -> (String, String, String, String) {
@@ -98,7 +129,7 @@ pub async fn start_notification_listener(tx: Sender<Vec<Notification>>) -> zbus:
         .build()
         .await?;
 
-    println!("Heimdallr ora serve come notificatore DBus!");
+    println!("Heimdallr is now listening to notifications!");
     loop {
         std::thread::park();
     }
