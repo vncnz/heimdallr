@@ -94,3 +94,5 @@ Another notification example, critical
 ## TODOs
 - ~~Add a visual indicator for Ratatoskr disconnection~~ Done!
 - ~~Dynamic frame color (depending on resource icons)~~ Done!
+- ~~Manage replacing logic for unmounting/unmounted notifications~~ Done!
+- ~~Add an alert icon for "reboot recommended" situation~~ Done!

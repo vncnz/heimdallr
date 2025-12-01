@@ -216,6 +216,9 @@ fn main() {
             // draw_notifications(&list);
             // manage redraw
             println!("{:?}", list);
+            if list.iter().any(|x| x.reboot) {
+                app.add_icon("reboot", "󱄋", get_color_gradient(1.0), 1.0);
+            }
             app.notifications = list;
             app.request_redraw();
         }

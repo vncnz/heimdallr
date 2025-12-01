@@ -4,6 +4,9 @@ use std::{sync::{Arc, Mutex, mpsc::Sender}, time::{Duration, Instant}};
 // 🔔 Nuova notifica: app_name:nemo summary:Unmounting 255 GB Volume body:Disconnecting from filesystem. timeout:-1 hints:{"desktop-entry": Str(Str(Borrowed("org.Nemo"))), "urgency": U8(2), "image-path": Str(Str(Borrowed("media-removable")))}
 // 🔔 Nuova notifica: app_name:nemo summary:255 GB Volume unmounted body:Filesystem has been disconnected. timeout:-1 hints:{"desktop-entry": Str(Str(Borrowed("org.Nemo"))), "image-path": Str(Str(Borrowed("media-removable"))), "urgency": U8(1)}
 
+// 🔔 Nuova notifica: app_name:EndeavourOS notification summary:Waiting to notify about reboot... body:Waiting at most 120 seconds to notify about reboot. timeout:-1 hints:{"urgency": U8(2), "sender-pid": I64(30368)} replaces_id:0
+// 🔔 Nuova notifica: app_name:EndeavourOS notification summary:Reboot recommended! body:Reboot is recommended due to the upgrade of core system package(s). timeout:-1 hints:{"urgency": U8(2), "sender-pid": I64(31014)} replaces_id:0
+
 use std::sync::atomic::{AtomicU32, Ordering};
 
 static NEXT_ID: AtomicU32 = AtomicU32::new(2);
@@ -21,7 +24,9 @@ pub struct Notification {
     pub received_at: Instant,
     pub expired_at: Option<Instant>,
     pub app_icon: String,
-    pub id: u32
+    pub id: u32,
+    pub unmounting: bool,
+    pub reboot: bool
 }
 
 #[derive(Clone)]
@@ -35,7 +40,7 @@ impl NotificationServer {
     fn notify(
         &self,
         app_name: &str,
-        mut replaces_id: u32,
+        replaces_id: u32,
         app_icon: &str,
         summary: &str,
         body: &str,
@@ -55,7 +60,7 @@ impl NotificationServer {
 
         let mut custom_replace = None;
         if summary.contains("unmounted") {
-            let to_be_replaced = list.iter().find(|x| x.summary.contains("Unmounting"));
+            let to_be_replaced = list.iter().find(|x| x.unmounting);
             if let Some(notif) = to_be_replaced {
                 custom_replace = Some(notif.id);
             }
@@ -78,7 +83,9 @@ impl NotificationServer {
             received_at: Instant::now(),
             expired_at: expired_at,
             app_icon: app_icon.into(),
-            id
+            id,
+            unmounting: summary.contains("Unmounting"),
+            reboot: summary.contains("Reboot recommended")
         });
         let _ = self.tx.send(list.clone());
 
