@@ -162,7 +162,7 @@ impl HeimdallrLayer {
         // Outer black border (semi-transparent)
         cr.rectangle(0.0, 0.0, w, h);
         cr.set_fill_rule(cairo::FillRule::EvenOdd);
-        rounded_rect(&cr, thickness / 2.0, top, w_hole, h - thickness, radius, radius2, res_w, res_h);
+        rounded_rect(&cr, thickness / 2.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h);
         cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
         cr.fill().unwrap();
 
@@ -196,7 +196,7 @@ impl HeimdallrLayer {
         } {
             cr.set_line_width(1.0);
             cr.set_source_rgba(r, g, b, a);
-            rounded_rect(&cr, thickness / 2.0, top, w_hole, h - thickness, radius, radius2, res_w, res_h);
+            rounded_rect(&cr, thickness / 2.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h);
             cr.stroke().unwrap();
         }
 
