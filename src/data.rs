@@ -31,7 +31,7 @@ impl RatatoskrSocket {
         }
 
         match UnixStream::connect(self.path) {
-            Ok(mut stream) => {
+            Ok(stream) => {
                 println!("Ratatoskr connected");
                 stream.set_nonblocking(true).ok();
                 self.stream = Some(stream);

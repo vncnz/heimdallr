@@ -1,5 +1,5 @@
 use smithay_client_toolkit::{
-    compositor::CompositorHandler, delegate_compositor, delegate_layer, delegate_output, delegate_registry, delegate_shm, output::{OutputHandler, OutputState}, reexports::csd_frame::FrameClick, registry::{ProvidesRegistryState, RegistryState}, registry_handlers, shell::wlr_layer::{LayerShellHandler, LayerSurface, LayerSurfaceConfigure}, shm::{Shm, ShmHandler, slot::SlotPool}
+    compositor::CompositorHandler, delegate_compositor, delegate_layer, delegate_output, delegate_registry, delegate_shm, output::{OutputHandler, OutputState}, registry::{ProvidesRegistryState, RegistryState}, registry_handlers, shell::wlr_layer::{LayerShellHandler, LayerSurface, LayerSurfaceConfigure}, shm::{Shm, ShmHandler, slot::SlotPool}
 };
 use wayland_client::{Connection, Proxy, QueueHandle, backend::ObjectId, protocol::{wl_buffer::WlBuffer, wl_compositor, wl_region, wl_shm}};
 use cairo::{Context, Format, ImageSurface};
@@ -18,8 +18,6 @@ use chrono::Local;
 use chrono::Timelike;
 
 use crate::{config::FrameColor, utils::get_color_gradient};
-
-pub const screen_height: u32 = 900;
 
 pub struct AlarmIcon {
     symbol: String,
@@ -66,9 +64,9 @@ pub struct HeimdallrLayer {
 }
 
 impl HeimdallrLayer {
-    pub fn request_redraw(&mut self) {
+    pub fn request_redraw(&mut self, reason: &str) {
         self.needs_redraw = true;
-        // eprintln!("Redraw requested");
+        println!("Redraw requested by {}", reason);
     }
 
     pub fn maybe_redraw(&mut self, qh: &QueueHandle<Self>) {
@@ -92,7 +90,7 @@ impl HeimdallrLayer {
         // eprintln!("Draw started at {:?}", start);
         
         let stride = self.width as i32 * 4;
-        let (buffer, mut canvas) = self
+        let (buffer, canvas) = self
             .pool
             .create_buffer(self.width as i32, self.height as i32, stride, wl_shm::Format::Argb8888)
             .expect("buffer creation failed");
@@ -405,7 +403,7 @@ fn rounded_rect(cr: &Context, x: f64, y: f64, w: f64, h: f64, r: f64, r2: f64, r
 impl CompositorHandler for HeimdallrLayer {
     fn scale_factor_changed(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wayland_client::protocol::wl_surface::WlSurface, _: i32) {}
     fn transform_changed(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wayland_client::protocol::wl_surface::WlSurface, _: wayland_client::protocol::wl_output::Transform) {}
-    fn frame(&mut self, _: &Connection, qh: &QueueHandle<Self>, _: &wayland_client::protocol::wl_surface::WlSurface, _: u32) {
+    fn frame(&mut self, _: &Connection, _qh: &QueueHandle<Self>, _: &wayland_client::protocol::wl_surface::WlSurface, _: u32) {
         // self.draw(qh);
     }
     fn surface_enter(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wayland_client::protocol::wl_surface::WlSurface, _: &wayland_client::protocol::wl_output::WlOutput) {}
@@ -426,7 +424,7 @@ impl LayerShellHandler for HeimdallrLayer {
 
     fn configure(&mut self, _: &Connection, qh: &QueueHandle<Self>, _: &LayerSurface, configure: LayerSurfaceConfigure, _: u32) {
         self.width = NonZeroU32::new(configure.new_size.0).map_or(1920, NonZeroU32::get);
-        self.height = NonZeroU32::new(configure.new_size.1).map_or(screen_height, NonZeroU32::get);
+        self.height = NonZeroU32::new(configure.new_size.1).map_or(1080, NonZeroU32::get);
         if self.first_configure {
             self.first_configure = false;
             self.draw(qh);
@@ -479,8 +477,8 @@ impl Dispatch<wl_buffer::WlBuffer, ()> for HeimdallrLayer {
 
 impl Dispatch<wl_compositor::WlCompositor, ()> for HeimdallrLayer {
     fn event(
-        state: &mut Self,
-        proxy: &wl_compositor::WlCompositor,
+        _state: &mut Self,
+        _proxy: &wl_compositor::WlCompositor,
         _event: wl_compositor::Event,
         _data: &(),
         _conn: &wayland_client::Connection,

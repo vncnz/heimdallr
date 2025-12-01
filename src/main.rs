@@ -14,7 +14,7 @@ use smithay_client_toolkit::shell::WaylandSurface;
 
 use std::collections::HashMap;
 
-use crate::{commands::start_command_listener, data::RatatoskrSocket, heimdallr_layer::screen_height, notifications::Notification, utils::get_color_gradient};
+use crate::{commands::start_command_listener, data::RatatoskrSocket, notifications::Notification, utils::get_color_gradient};
 
 mod data;
 mod config;
@@ -59,7 +59,7 @@ fn main() {
     layer.set_size(0, 0); // full screen
     layer.commit();
 
-    let pool = SlotPool::new(1920 * (screen_height as usize) * 4, &shm).expect("pool creation failed");
+    let pool = SlotPool::new(1920 * 1080 * 4, &shm).expect("pool creation failed");
 
     //let resources = Arc::new(Mutex::new(ResourceData::default()));
     //let receiver = start_resource_watcher("/tmp/ratatoskr.json", resources.clone());
@@ -73,7 +73,7 @@ fn main() {
         pool,
         layer,
         width: 1920,
-        height: screen_height,
+        height: 1080,
         first_configure: true,
         input_region: Some(empty_region),
         icons: HashMap::new(),
@@ -141,19 +141,19 @@ fn main() {
                 "hide_notification" => {
                     println!("hide!");
                     if app.remove_notification() {
-                        app.request_redraw();
+                        app.request_redraw("hide_notification");
                     }
                 },
                 "prev_notification" => {
                     println!("prev!");
                     if app.show_notification(app.notification_idx as i32 - 1) {
-                        app.request_redraw();
+                        app.request_redraw("prev_notification");
                     }
                 },
                 "next_notification" => {
                     println!("next!");
                     if app.show_notification(app.notification_idx as i32 + 1) {
-                        app.request_redraw();
+                        app.request_redraw("next_notification");
                     }
                 },
                 _ => println!("{}", cmd)
@@ -175,7 +175,8 @@ fn main() {
                         "Charging" => Some(true),
                         _ => None
                     };
-                    app.request_redraw();
+                    // println!("{:?}", bat);
+                    app.request_redraw("battery");
                     // eprintln!("{:?}", bat);
                     // eprintln!("battery {:?} {:?}", app.battery_recharging, app.battery_eta);
                 }
@@ -185,11 +186,11 @@ fn main() {
                 let new_ratatoskr_status = data.warning < 0.5;
                 if app.ratatoskr_connected != new_ratatoskr_status {
                     app.ratatoskr_connected = new_ratatoskr_status;
-                    app.request_redraw();
+                    app.request_redraw("ratatoskr");
                 }
             } else if data.warning < 0.3 {
                 if app.remove_icon(&data.resource) {
-                    app.request_redraw();
+                    app.request_redraw(&"data.resource");
                 }
             }
             else {
@@ -207,7 +208,7 @@ fn main() {
                 if icon != "" {
                     app.remove_icon(&data.resource);
                     app.add_icon(&data.resource, icon, get_color_gradient(data.warning), data.warning);
-                    app.request_redraw();
+                    app.request_redraw(&data.resource);
                 }
             }
         }
@@ -220,7 +221,7 @@ fn main() {
                 app.add_icon("reboot", "󱄋", get_color_gradient(1.0), 1.0);
             }
             app.notifications = list;
-            app.request_redraw();
+            app.request_redraw("notifications updated");
         }
 
         app.maybe_redraw(&qh);
