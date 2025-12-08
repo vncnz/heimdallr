@@ -93,6 +93,8 @@ Another notification example, critical
 
 ## TODOs
 - ~~Add a visual indicator for Ratatoskr disconnection~~ Done!
-- ~~Dynamic frame color (depending on resource icons)~~ Done!
+- ~~Dynamic frame border color (depending on resource icons)~~ Done!
 - ~~Manage replacing logic for unmounting/unmounted notifications~~ Done!
 - ~~Add an alert icon for "reboot recommended" situation~~ Done!
+- Force a red frame border when battery is low, regardless of the settings
+- Put a volume icon regardless of the warning level is output is internal speakers?
