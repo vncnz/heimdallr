@@ -395,9 +395,10 @@ fn rounded_rect(cr: &Context, x: f64, y: f64, w: f64, h: f64, r: f64, r2: f64, r
     cr.arc(x + w - r, y + h - r, r, 0.0, 90f64.to_radians());
     
     if reserved_h > 0.0 {
+        let r2_safe = if reserved_h > r2 { r2 } else { reserved_h/2.0 };
         // eprintln!("reserved_h: {}", reserved_h);
-        cr.arc(x + r2 + reserved_w, y + h - r2, r2, 90f64.to_radians(), 180f64.to_radians());
-        cr.arc_negative(x - r2 + reserved_w, y + h + r2 - reserved_h, r2, 0f64.to_radians(), 270f64.to_radians());
+        cr.arc(x + r2_safe + reserved_w, y + h - r2_safe, r2_safe, 90f64.to_radians(), 180f64.to_radians());
+        cr.arc_negative(x - r2_safe + reserved_w, y + h + r2_safe - reserved_h, r2_safe, 0f64.to_radians(), 270f64.to_radians());
         cr.arc(x + r2, y + h - r2 - reserved_h, r2, 90f64.to_radians(), 180f64.to_radians());
     } else {
         cr.arc(x + r, y + h - r, r, 90f64.to_radians(), 180f64.to_radians());
