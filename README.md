@@ -98,4 +98,4 @@ Another notification example, critical
 - ~~Add an alert icon for "reboot recommended" situation~~ Done!
 - Force a red frame border when battery is low, regardless of the settings
 - Put a volume icon regardless of the warning level if output is internal speakers?
-- Animation system?
+- ~~Animation system?~~ Done!
