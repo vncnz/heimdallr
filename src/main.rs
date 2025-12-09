@@ -14,7 +14,7 @@ use smithay_client_toolkit::shell::WaylandSurface;
 
 use std::collections::HashMap;
 
-use crate::{commands::start_command_listener, data::RatatoskrSocket, notifications::Notification, utils::get_color_gradient};
+use crate::{commands::start_command_listener, data::RatatoskrSocket, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, get_color_gradient}};
 
 mod data;
 mod config;
@@ -87,7 +87,9 @@ fn main() {
         background_surface: None,
         config,
         notifications: vec![],
-        notification_idx: 0
+        notification_idx: 0,
+        animator: Animator::new(),
+        frame_model: FrameModel::new()
     };
     
     // app.add_icon("avg", "󰬢", (1.0, 0.2, 0.2, 1.0)); // example
@@ -190,6 +192,12 @@ fn main() {
                 }
             } else if data.warning < 0.3 {
                 if app.remove_icon(&data.resource) {
+                    app.animator.animate_property(
+                        &app.frame_model,
+                        AnimationKey::IconsHeight,
+                        app.icons.len() as f64,
+                        200
+                    );
                     app.request_redraw(&"data.resource");
                 }
             }
@@ -206,8 +214,16 @@ fn main() {
                 // display
 
                 if icon != "" {
-                    app.remove_icon(&data.resource);
+                    let removed = app.remove_icon(&data.resource);
                     app.add_icon(&data.resource, icon, get_color_gradient(data.warning), data.warning);
+                    if !removed {
+                        app.animator.animate_property(
+                            &app.frame_model,
+                            AnimationKey::IconsHeight,
+                            app.icons.len() as f64,
+                            200
+                        );
+                    }
                     app.request_redraw(&data.resource);
                 }
             }
@@ -220,7 +236,16 @@ fn main() {
             if list.iter().any(|x| x.reboot) {
                 app.add_icon("reboot", "󱄋", get_color_gradient(1.0), 1.0);
             }
-            app.notifications = list;
+            let changed = (app.notifications.len() == 0) != (list.len() == 0);
+            if changed {
+                app.animator.animate_property(
+                    &app.frame_model,
+                    AnimationKey::NotificationHeight,
+                    if list.len() > 0 { 1.0 } else { 0.0 },
+                    200
+                );
+                app.notifications = list;
+            }
             app.request_redraw("notifications updated");
         }
 
@@ -229,3 +254,17 @@ fn main() {
         std::thread::sleep(Duration::from_millis(10));
     }
 }
+
+/*
+self.animator.animate_property(
+    self.alpha,
+    1.0,
+    Duration::from_millis(120),
+    {
+        let ptr = &mut self.alpha as *mut f32;
+        move |v| unsafe {
+            *ptr = v;
+        }
+    }
+);
+*/

@@ -17,7 +17,7 @@ use wayland_client::Dispatch;
 use chrono::Local;
 use chrono::Timelike;
 
-use crate::{config::FrameColor, utils::get_color_gradient};
+use crate::{config::FrameColor, utils::{AnimationKey, Animator, FrameModel, get_color_gradient}};
 
 pub struct AlarmIcon {
     symbol: String,
@@ -60,7 +60,9 @@ pub struct HeimdallrLayer {
     pub(crate) config: crate::config::Config,
     pub(crate) notifications: Vec<crate::notifications::Notification>,
     pub(crate) notification_idx: usize,
-    pub(crate) ratatoskr_connected: bool
+    pub(crate) ratatoskr_connected: bool,
+    pub(crate) animator: Animator,
+    pub(crate) frame_model: FrameModel
 }
 
 impl HeimdallrLayer {
@@ -70,12 +72,16 @@ impl HeimdallrLayer {
     }
 
     pub fn maybe_redraw(&mut self, qh: &QueueHandle<Self>) {
-        if !self.needs_redraw {
-            return;
-        }
+        let animating = self.animator.step(&mut self.frame_model);
+        if !animating { // Now, we skip calling draw only if we are not animating something
 
-        if self.last_redraw.elapsed() < self.redraw_interval {
-            return;
+            if !self.needs_redraw {
+                return;
+            }
+
+            if self.last_redraw.elapsed() < self.redraw_interval {
+                return;
+            }
         }
 
         self.needs_redraw = false;
@@ -144,7 +150,8 @@ impl HeimdallrLayer {
         // icons space reserved
         let mut y_offset = self.height as f64 - 12.0; // parte dal basso
         let res_w = 24.0;
-        let res_h = if self.ratatoskr_connected { (self.icons.len() as f64) * 30.0 } else { 30.0 };
+        // let res_h = if self.ratatoskr_connected { (self.icons.len() as f64) * 30.0 } else { 30.0 };
+        let res_h = self.frame_model.icons_ratio * 30.0;
 
         // Draw rounded rectangle frame
         let thickness = 1.0;
@@ -155,7 +162,7 @@ impl HeimdallrLayer {
         let h = self.height as f64;
         let w_hole = w - thickness - (if self.config.show_clock { 8.0 } else { 0.0 });
 
-        let top = thickness / 2.0 + if self.notifications.len() > 0 { 24.0 } else { 0.0 };
+        let top = thickness / 2.0 + /*if self.notifications.len() > 0 { 24.0 } else { 0.0 }*/24.0 * self.frame_model.notif_height_ratio;
 
         // Outer black border (semi-transparent)
         cr.rectangle(0.0, 0.0, w, h);
