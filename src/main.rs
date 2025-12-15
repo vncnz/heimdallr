@@ -143,6 +143,14 @@ fn main() {
                 "hide_notification" => {
                     println!("hide!");
                     if app.remove_notification() {
+                        if app.notifications.len() == 0 {
+                            app.animator.animate_property(
+                                &app.frame_model,
+                                AnimationKey::NotificationHeight,
+                                0.0,
+                                200
+                            );
+                        }
                         app.request_redraw("hide_notification");
                     }
                 },
