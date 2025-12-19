@@ -208,6 +208,7 @@ fn main() {
                 else if data.resource == "temperature" { icon = &data.icon; }
                 else if data.resource == "network" { icon = if data.icon != "" { &data.icon } else { "󰞃" }; }
                 else if data.resource == "disk" { icon = "󰋊"; }
+                else if data.resource == "volume" { icon = if data.icon != "" { &data.icon } else { "󱄡" }; }
                 // weather
                 // volume
                 // disk
