@@ -68,7 +68,9 @@ pub struct HeimdallrLayer {
 impl HeimdallrLayer {
     pub fn request_redraw(&mut self, reason: &str) {
         self.needs_redraw = true;
-        println!("Redraw requested by {}", reason);
+        #[cfg(debug_assertions)] {
+            println!("Redraw requested by {}", reason);
+        }
     }
 
     pub fn maybe_redraw(&mut self, qh: &QueueHandle<Self>) {
@@ -133,9 +135,11 @@ impl HeimdallrLayer {
         
         self.last_redraw = Instant::now();
 
-        let end = std::time::Instant::now();
-        let dur = (end - start).as_millis();
-        eprintln!("Draw ended ({}ms)", dur);
+        #[cfg(debug_assertions)] {
+            let end = std::time::Instant::now();
+            let dur = (end - start).as_millis();
+            eprintln!("Draw ended ({}ms)", dur);
+        }
     }
 
     fn draw_myframe(&mut self, cr: Context) {
