@@ -47,6 +47,17 @@ fn hsv_to_rgb(h: f64, s: f64, v: f64) -> (u8, u8, u8) {
     (r, g, b)
 }
 
+use std::fs::OpenOptions;
+use std::io::Write;
+
+pub fn log_to_file(msg: String) {
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("/tmp/heimdallr.log")
+        .expect("impossibile aprire log file");
+    writeln!(file, "[{}] {}", chrono::Local::now().format("%H:%M:%S%.3f"), msg).unwrap();
+}
 
 
 
@@ -56,14 +67,7 @@ fn hsv_to_rgb(h: f64, s: f64, v: f64) -> (u8, u8, u8) {
 
 
 
-
-
-
-
-
-
-
-
+/* ANIMATION SYSTEM */
 
 
 

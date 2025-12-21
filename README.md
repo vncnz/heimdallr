@@ -97,6 +97,6 @@ Another notification example, critical
 - ~~Manage replacing logic for unmounting/unmounted notifications~~ Done!
 - ~~Add an alert icon for "reboot recommended" situation~~ Done!
 - Force a red frame border when battery is low, regardless of the settings
-- Put a volume icon regardless of the warning level if output is internal speakers?
 - Force embedded screen in laptops
 - ~~Animation system?~~ Done!
+- Move logs to file and check why sometime heimdallr dies
