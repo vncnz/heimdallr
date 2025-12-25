@@ -16,7 +16,7 @@ use std::collections::HashMap;
 
 use std::panic;
 
-use crate::{commands::start_command_listener, data::RatatoskrSocket, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file}};
+use crate::{commands::start_command_listener, data::RatatoskrSocket, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
 
 mod data;
 mod config;
@@ -221,7 +221,16 @@ fn main() {
                 else if data.resource == "temperature" { icon = &data.icon; }
                 else if data.resource == "network" { icon = if data.icon != "" { &data.icon } else { "󰞃" }; }
                 else if data.resource == "disk" { icon = "󰋊"; }
-                else if data.resource == "volume" { icon = if data.icon != "" { &data.icon } else { "󱄡" }; }
+                else if data.resource == "volume" {
+                    if let Some(vol) = &data.data {
+                        if vol.get("headphones").unwrap().as_i64().unwrap() == 1 { icon = ""; }
+                        else {
+                            icon = select_icon(0.0, 100.0, vol["value"].as_f64().unwrap_or_default(), &["", "", ""]).unwrap();
+                        }
+                    } else {
+                        icon = "󱄡";
+                    }
+                } // if data.icon != "" { &data.icon } else { "󱄡" }; }
                 // weather
                 // volume
                 // disk

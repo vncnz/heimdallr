@@ -26,6 +26,20 @@ pub fn get_color_gradient_full(min: f64, max: f64, value: f64, reversed: bool) -
     ((r as f64) / 255.0, (g as f64) / 255.0, (b as f64) / 255.0, 1.0)
 }
 
+pub fn select_icon<T: Clone>(min: f64, max: f64, value: f64, icons: &[T]) -> Option<T> {
+    if icons.is_empty() || min >= max {
+        return None;
+    }
+
+    let value = value.clamp(min, max);
+    let range = (max - min) as f64;
+    let norm = (value - min) as f64 / range;
+
+    let idx = ((norm * icons.len() as f64).floor() as usize).min(icons.len() - 1);
+
+    Some(icons[idx].clone())
+}
+
 fn hsv_to_rgb(h: f64, s: f64, v: f64) -> (u8, u8, u8) {
     let c = v * s;
     let x = c * (1.0 - ((h / 60.0) % 2.0 - 1.0).abs());
