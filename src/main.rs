@@ -14,7 +14,9 @@ use smithay_client_toolkit::shell::WaylandSurface;
 
 use std::collections::HashMap;
 
-use crate::{commands::start_command_listener, data::RatatoskrSocket, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, get_color_gradient}};
+use std::panic;
+
+use crate::{commands::start_command_listener, data::RatatoskrSocket, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
 
 mod data;
 mod config;
@@ -31,10 +33,21 @@ use crate::notifications::start_notification_listener;
 // Tip: find src | entr -r cargo run for a sorta hotreloading (entr is an external cmd to be installed using pacman)
 
 fn main() {
+    panic::set_hook(Box::new(|info| {
+        eprintln!("PANIC");
+        eprintln!("{info}");
+        let bt = std::backtrace::Backtrace::capture();
+        eprintln!("{bt}");
+
+        log_to_file("PANIC".to_string());
+        log_to_file(format!("{info}"));
+        log_to_file(format!("{bt}"));
+    }));
+
     env_logger::init();
 
     let config = Config::load_from_file("~/.config/heimdallr/config.json");
-    println!("Configurazione caricata: {:?}", config);
+    log_to_file(format!("Configurazione caricata: {:?}", config));
 
     let conn = Connection::connect_to_env().unwrap();
     let (globals, mut event_queue) = registry_queue_init(&conn).unwrap();
@@ -104,7 +117,7 @@ fn main() {
     thread::spawn(|| {
         futures::executor::block_on(async {
             if let Err(e) = start_notification_listener(tx).await {
-                eprintln!("Notification listener error: {:?}", e);
+                log_to_file(format!("Notification listener error: {:?}", e));
             }
         });
     });
@@ -216,6 +229,16 @@ fn main() {
                 else if data.resource == "temperature" { icon = &data.icon; }
                 else if data.resource == "network" { icon = if data.icon != "" { &data.icon } else { "󰞃" }; }
                 else if data.resource == "disk" { icon = "󰋊"; }
+                else if data.resource == "volume" {
+                    if let Some(vol) = &data.data {
+                        if vol.get("headphones").unwrap().as_i64().unwrap() == 1 { icon = ""; }
+                        else {
+                            icon = select_icon(0.0, 100.0, vol["value"].as_f64().unwrap_or_default(), &["", "", ""]).unwrap();
+                        }
+                    } else {
+                        icon = "󱄡";
+                    }
+                } // if data.icon != "" { &data.icon } else { "󱄡" }; }
                 // weather
                 // volume
                 // disk
