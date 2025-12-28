@@ -64,11 +64,13 @@ For example:
 ```
 {
     "frame_color": [0.2, 0.6, 1.0, 1.0],
-    "show_clock": true
+    "show_clock": true,
+    "show_always_bluetooth": true
 }
 ```
 
 If you set "worst-resource" as frame_color, in absence of resource warnings the frame will have no border.
+If you ser false as show_always_bluetooth, you'll see icons for your bluetooth peripherals only if their battery runs low.
 
 ## Notifications
 Now, Heimdallr listen to notifications. When there is a notification, the upper section of the frame become thicker to accomodate the notification.
