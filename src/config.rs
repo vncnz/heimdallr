@@ -2,7 +2,7 @@ use std::fs;
 use rand::Rng;
 use serde::Deserialize;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum FrameColor {
     None,
     Rgba(f64, f64, f64, f64),
@@ -10,10 +10,11 @@ pub enum FrameColor {
     WorstResource,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Config {
     pub frame_color: FrameColor,
     pub show_clock: bool,
+    pub show_always_bluetooth: bool
     // pub border_width: u32,
 }
 
@@ -21,6 +22,7 @@ pub struct Config {
 struct RawConfig {
     frame_color: Option<serde_json::Value>,
     show_clock: Option<bool>,
+    show_always_bluetooth: Option<bool>
     // border_width: Option<u32>,
 }
 
@@ -81,6 +83,7 @@ impl Config {
             RawConfig {
                 frame_color: None,
                 show_clock: None,
+                show_always_bluetooth: None
                 // border_width: None,
             }
         });
@@ -88,6 +91,7 @@ impl Config {
         Config {
             frame_color: FrameColor::from_json(raw.frame_color),
             show_clock: raw.show_clock.unwrap_or(true),
+            show_always_bluetooth: raw.show_always_bluetooth.unwrap_or(true)
             // border_width: raw.border_width.unwrap_or(2),
         }
     }

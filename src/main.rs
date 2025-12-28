@@ -1,4 +1,5 @@
 
+use serde::Deserialize;
 use smithay_client_toolkit::{
     compositor::{CompositorState},
     output::{OutputState},
@@ -16,7 +17,7 @@ use std::collections::HashMap;
 
 use std::panic;
 
-use crate::{commands::start_command_listener, data::RatatoskrSocket, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
+use crate::{commands::start_command_listener, data::{BluetoothStats, DeviceKind, RatatoskrSocket}, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, get_color_gradient_full, log_to_file, select_icon}};
 
 mod data;
 mod config;
@@ -98,7 +99,7 @@ fn main() {
         redraw_interval: Duration::from_millis(1000),
         buffers: HashMap::new(),
         background_surface: None,
-        config,
+        config: config.clone(),
         notifications: vec![],
         notification_idx: 0,
         animator: Animator::new(),
@@ -156,14 +157,6 @@ fn main() {
                 "hide_notification" => {
                     println!("hide!");
                     if app.remove_notification() {
-                        if app.notifications.len() == 0 {
-                            app.animator.animate_property(
-                                &app.frame_model,
-                                AnimationKey::NotificationHeight,
-                                0.0,
-                                200
-                            );
-                        }
                         app.request_redraw("hide_notification");
                     }
                 },
@@ -202,6 +195,47 @@ fn main() {
                     app.request_redraw("battery");
                     // eprintln!("{:?}", bat);
                     // eprintln!("battery {:?} {:?}", app.battery_recharging, app.battery_eta);
+                }
+            }
+
+            // Bluetooth data has a custom management
+            if data.resource == "bt-batteries" {
+                eprintln!("{:?}", data);
+                if data.warning >= 0.3 || config.show_always_bluetooth {
+                    if let Some(blue) = &data.data {
+                        if let Ok(b) = BluetoothStats::deserialize(blue.clone()) {
+                            let keys: Vec<String> = app.icons
+                                .keys()
+                                .filter(|k| k.starts_with("bt-"))
+                                .cloned()
+                                .collect();
+                            for iconkey in keys {
+                                app.remove_icon(&iconkey);
+                            }
+
+                            for dev in b.devices {
+                                // println!("device extracted: {:?}", dev);
+                                let iconkey = format!("bt-{}", dev.name);
+                                let icon = match dev.kind {
+                                    DeviceKind::Mouse => "󰦋",
+                                    DeviceKind::Headphones => "󰥰",
+                                    DeviceKind::Gamepad => "󱤙",
+                                    DeviceKind::Keyboard => "󰌌",
+                                    _ => "󰂱"
+                                };
+                                if config.show_always_bluetooth || dev.warn >= 0.3 {
+                                    app.add_icon(&iconkey, icon, get_color_gradient(dev.warn), dev.warn);
+                                }
+                            }
+                            app.animator.animate_property(
+                                &app.frame_model,
+                                AnimationKey::IconsHeight,
+                                app.icons.len() as f64,
+                                200
+                            );
+                        }
+                        // PartialMsg { resource: "bt-batteries", warning: 0.0, icon: "", data: Some(Object {"devices": Array [Object {"kind": String("Mouse"), "name": String("MX Anywhere 2S"), "percentage": Number(90.0), "warn": Number(0.0)}], "icon": String(""), "warn": Number(0.0)}) }
+                    }
                 }
             }
 

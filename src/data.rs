@@ -3,6 +3,30 @@ use std::os::unix::net::UnixStream;
 use std::io::Read;
 use serde::Deserialize;
 
+#[derive(Default, Deserialize)]
+pub struct BluetoothStats {
+    pub devices: Vec<BatteryDevice>,
+    pub icon: String,
+    pub warn: f64
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct BatteryDevice {
+    pub name: String,
+    pub kind: DeviceKind,
+    pub percentage: f64,
+    pub warn: f64
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub enum DeviceKind {
+    Mouse,
+    Keyboard,
+    Headphones,
+    Gamepad,
+    Unknown,
+}
+
 #[derive(Default, Deserialize, Debug)]
 pub struct PartialMsg {
     pub resource: String,
