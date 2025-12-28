@@ -152,15 +152,15 @@ impl HeimdallrLayer {
         cr.set_operator(cairo::Operator::Over);
 
         // icons space reserved
-        let mut y_offset = self.height as f64 - 12.0; // parte dal basso
+        let mut y_offset = self.height as f64 - 2.0 - 8.0; // parte dal basso
         let res_w = 24.0;
         // let res_h = if self.ratatoskr_connected { (self.icons.len() as f64) * 30.0 } else { 30.0 };
-        let res_h = self.frame_model.icons_ratio * 30.0;
+        let res_h = if self.ratatoskr_connected { self.frame_model.icons_ratio * 20.0 + 6.0 + 8.0 } else { 24.0 };
 
         // Draw rounded rectangle frame
         let thickness = 1.0;
         let radius = 25.0;
-        let radius2 = 10.0;
+        let radius2 = 4.0;
 
         let w = self.width as f64;
         let h = self.height as f64;
@@ -189,8 +189,8 @@ impl HeimdallrLayer {
         } else {
             let red = get_color_gradient(1.0);
             cr.set_source_rgba(red.0, red.1, red.2, red.3);
-            cr.move_to(4.0, y_offset);
-            cr.show_text("󰠗").unwrap();
+            // cr.move_to(4.0, y_offset);
+            cr_text_aligned(cr.clone(), "󰠗".to_string(), 12.0, y_offset, 0.5, 0.5);
         }
 
         // === Draw colored border ===
