@@ -152,10 +152,10 @@ impl HeimdallrLayer {
         cr.set_operator(cairo::Operator::Over);
 
         // icons space reserved
-        let mut y_offset = self.height as f64 - 2.0 - 8.0; // parte dal basso
+        let mut y_offset = self.height as f64 - 8.0; // parte dal basso
         let res_w = 24.0;
         // let res_h = if self.ratatoskr_connected { (self.icons.len() as f64) * 30.0 } else { 30.0 };
-        let res_h = if self.ratatoskr_connected { self.frame_model.icons_ratio * 20.0 + 6.0 + 8.0 } else { 24.0 };
+        let res_h = if self.ratatoskr_connected { self.frame_model.icons_ratio * 24.0 } else { 24.0 };
 
         // Draw rounded rectangle frame
         let thickness = 1.0;
