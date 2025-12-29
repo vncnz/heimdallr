@@ -98,6 +98,7 @@ Another notification example, critical
 - ~~Dynamic frame border color (depending on resource icons)~~ Done!
 - ~~Manage replacing logic for unmounting/unmounted notifications~~ Done!
 - ~~Add an alert icon for "reboot recommended" situation~~ Done!
+- Fix clock height when running on a monitor with a scale factor different from 1.0 (or a different monitor size, maybe?)
 - Force a red frame border when battery is low, regardless of the settings
 - Force embedded screen in laptops
 - ~~Animation system?~~ Done!
