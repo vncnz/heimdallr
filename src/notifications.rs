@@ -1,5 +1,6 @@
+use serde_json::Value;
 use zbus::{ConnectionBuilder, dbus_interface, zvariant};
-use std::{sync::{Arc, Mutex, mpsc::Sender}, time::{Duration, Instant}};
+use std::{collections::HashMap, sync::{Arc, Mutex, mpsc::Sender}, time::{Duration, Instant}};
 
 // 🔔 Nuova notifica: app_name:nemo summary:Unmounting 255 GB Volume body:Disconnecting from filesystem. timeout:-1 hints:{"desktop-entry": Str(Str(Borrowed("org.Nemo"))), "urgency": U8(2), "image-path": Str(Str(Borrowed("media-removable")))}
 // 🔔 Nuova notifica: app_name:nemo summary:255 GB Volume unmounted body:Filesystem has been disconnected. timeout:-1 hints:{"desktop-entry": Str(Str(Borrowed("org.Nemo"))), "image-path": Str(Str(Borrowed("media-removable"))), "urgency": U8(1)}
@@ -35,6 +36,17 @@ struct NotificationServer {
     tx: Sender<Vec<Notification>>
 }
 
+fn get_u8(map: &HashMap<String, zvariant::Value<'_>>, key: &str) -> u8 {
+    map.get(key)
+        .and_then(|v| {
+            v.downcast_ref::<u8>().copied()
+                .or_else(|| v.downcast_ref::<u16>().and_then(|&n| u8::try_from(n).ok()))
+                .or_else(|| v.downcast_ref::<u32>().and_then(|&n| u8::try_from(n).ok()))
+        })
+        .unwrap_or(0)
+}
+
+
 #[dbus_interface(name = "org.freedesktop.Notifications")]
 impl NotificationServer {
     fn notify(
@@ -52,7 +64,9 @@ impl NotificationServer {
         let msg = format!("app_name:{app_name} summary:{summary} body:{body} timeout:{expire_timeout} hints:{hints:?} replaces_id:{replaces_id}");
         println!("🔔 Nuova notifica: {msg}");
 
-        let urgency = hints.get("urgency").unwrap().clone().downcast().expect("No urgency");
+        // let u = hints.get("urgency").and_then(Value::as_u64).and_then(|n|u8::try_from(n).ok()).unwrap_or(0);
+        // let urgency = hints.get("urgency").unwrap().clone().downcast().expect("No urgency");
+        let urgency: u8 = get_u8(&hints, "urgency");
         let expired_at = if expire_timeout > 1 { Some(Instant::now() + Duration::new(expire_timeout as u64, 0)) } 
                                 else if urgency < 2 { Some(Instant::now() + Duration::new(3, 0)) }
                                 else { None };
