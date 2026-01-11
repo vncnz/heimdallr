@@ -17,7 +17,7 @@ use std::collections::HashMap;
 
 use std::panic;
 
-use crate::{commands::start_command_listener, data::{BluetoothStats, DeviceKind, RatatoskrSocket}, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, get_color_gradient_full, log_to_file, select_icon}};
+use crate::{commands::start_command_listener, data::{BluetoothStats, DeviceKind, RatatoskrSocket}, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
 
 mod data;
 mod config;
