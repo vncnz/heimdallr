@@ -57,13 +57,13 @@ impl FrameColor {
                 if vals.len() == 4 {
                     FrameColor::Rgba(vals[0], vals[1], vals[2], vals[3])
                 } else {
-                    eprintln!("frame_color array non valido, uso None");
+                    eprintln!("Invalid frame_color array, using None");
                     FrameColor::None
                 }
             }
 
             _ => {
-                eprintln!("Tipo di frame_color non valido nel JSON {:?}", value);
+                eprintln!("Invalid frame_color in JSON configuration {:?}", value);
                 FrameColor::None
             }
         }
