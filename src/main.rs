@@ -1,3 +1,4 @@
+use signal_hook::{consts::{SIGHUP, SIGINT, SIGPIPE, SIGTERM}, iterator::Signals, low_level::signal_name};
 
 use serde::Deserialize;
 use smithay_client_toolkit::{
@@ -44,6 +45,32 @@ fn main() {
         log_to_file(format!("{info}"));
         log_to_file(format!("{bt}"));
     }));
+
+    let mut signals = Signals::new([SIGTERM, SIGINT, SIGHUP, SIGPIPE]).unwrap();
+    std::thread::spawn(move || {
+        for sig in signals.forever() {
+            let name = signal_name(sig).unwrap_or("UNKNOWN");
+            eprintln!("Received signal {sig} ({name}) from the system");
+
+            match sig {
+                SIGPIPE | SIGHUP => {
+                    // log only
+                }
+
+                SIGINT | SIGTERM => {
+                    eprintln!("Graceful shutdown requested");
+                    std::process::exit(0);
+                }
+
+                /* SIGABRT | SIGSEGV => {
+                    eprintln!("Fatal signal {}, aborting", sig);
+                    std::process::abort(); // preserve core dump
+                } */
+
+                _ => {} // Dummy case
+            }
+        }
+    });
 
     env_logger::init();
 
