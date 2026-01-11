@@ -146,11 +146,8 @@ fn main() {
             }
         }
 
-        // Processa eventuali eventi appena arrivati
+        // Dispatch wayland events
         let _ = event_queue.dispatch_pending(&mut app);
-
-        // event_queue.blocking_dispatch(&mut app).unwrap();
-        // while event_queue.dispatch_pending(&mut app).unwrap() > 0 {}
 
         if let Ok(cmd) = rx_cmds.try_recv() {
             match &*cmd {
