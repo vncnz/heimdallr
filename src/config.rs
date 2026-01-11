@@ -30,6 +30,7 @@ impl FrameColor {
     fn from_json(value: Option<serde_json::Value>) -> Self {
         match value {
             Some(serde_json::Value::Null) => FrameColor::None,
+            None => FrameColor::None,
 
             Some(serde_json::Value::String(s)) => match s.as_str() {
                 "random" => {
