@@ -51,6 +51,7 @@ fn main() {
         for sig in signals.forever() {
             let name = signal_name(sig).unwrap_or("UNKNOWN");
             eprintln!("Received signal {sig} ({name}) from the system");
+            log_to_file("Received signal {sig} ({name}) from the system".to_string());
 
             match sig {
                 SIGPIPE | SIGHUP => {
