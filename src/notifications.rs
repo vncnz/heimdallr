@@ -1,14 +1,9 @@
 use serde_json::Value;
 use zbus::{ConnectionBuilder, dbus_interface, zvariant};
 use std::{collections::HashMap, sync::{Arc, Mutex, mpsc::Sender}, time::{Duration, Instant}};
-
-// 🔔 Nuova notifica: app_name:nemo summary:Unmounting 255 GB Volume body:Disconnecting from filesystem. timeout:-1 hints:{"desktop-entry": Str(Str(Borrowed("org.Nemo"))), "urgency": U8(2), "image-path": Str(Str(Borrowed("media-removable")))}
-// 🔔 Nuova notifica: app_name:nemo summary:255 GB Volume unmounted body:Filesystem has been disconnected. timeout:-1 hints:{"desktop-entry": Str(Str(Borrowed("org.Nemo"))), "image-path": Str(Str(Borrowed("media-removable"))), "urgency": U8(1)}
-
-// 🔔 Nuova notifica: app_name:EndeavourOS notification summary:Waiting to notify about reboot... body:Waiting at most 120 seconds to notify about reboot. timeout:-1 hints:{"urgency": U8(2), "sender-pid": I64(30368)} replaces_id:0
-// 🔔 Nuova notifica: app_name:EndeavourOS notification summary:Reboot recommended! body:Reboot is recommended due to the upgrade of core system package(s). timeout:-1 hints:{"urgency": U8(2), "sender-pid": I64(31014)} replaces_id:0
-
 use std::sync::atomic::{AtomicU32, Ordering};
+
+use crate::utils::log_to_file;
 
 static NEXT_ID: AtomicU32 = AtomicU32::new(2);
 
@@ -62,7 +57,7 @@ impl NotificationServer {
     ) -> u32 {
         let mut list = self.notifications.lock().unwrap();
         let msg = format!("app_name:{app_name} summary:{summary} body:{body} timeout:{expire_timeout} hints:{hints:?} replaces_id:{replaces_id}");
-        println!("🔔 Nuova notifica: {msg}");
+        log_to_file(msg);
 
         // let u = hints.get("urgency").and_then(Value::as_u64).and_then(|n|u8::try_from(n).ok()).unwrap_or(0);
         // let urgency = hints.get("urgency").unwrap().clone().downcast().expect("No urgency");
