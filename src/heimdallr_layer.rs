@@ -431,6 +431,7 @@ impl OutputHandler for HeimdallrLayer {
 
 impl LayerShellHandler for HeimdallrLayer {
     fn closed(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &LayerSurface) {
+        eprintln!("LayerShellHandler -> closed");
         std::process::exit(0);
     }
 
