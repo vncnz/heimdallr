@@ -103,5 +103,6 @@ Another notification example, critical
 - Force a red frame border when battery is low, regardless of the settings?
 - Force embedded screen in laptops
 - ~~Animation system?~~ Done!
+
 ## Known bugs
-- Sometimes heimdallr terminate itself after system suspension/resume
+- Sometimes heimdallr terminates itself after system suspension/resume
