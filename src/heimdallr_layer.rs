@@ -17,7 +17,7 @@ use wayland_client::Dispatch;
 use chrono::Local;
 use chrono::Timelike;
 
-use crate::{config::FrameColor, utils::{AnimationKey, Animator, FrameModel, get_color_gradient}};
+use crate::{config::FrameColor, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file}};
 
 pub struct AlarmIcon {
     symbol: String,
@@ -431,7 +431,8 @@ impl OutputHandler for HeimdallrLayer {
 
 impl LayerShellHandler for HeimdallrLayer {
     fn closed(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &LayerSurface) {
-        eprintln!("LayerShellHandler -> closed");
+        eprintln!("LayerShell surface closed by compositor");
+        log_to_file("LayerShell surface closed by compositor".to_string());
         std::process::exit(0);
     }
 
