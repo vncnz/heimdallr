@@ -105,4 +105,4 @@ Another notification example, critical
 - ~~Animation system?~~ Done!
 
 ## Known bugs
-- Sometimes heimdallr terminates itself after system suspension/resume
+- ~~Sometimes heimdallr terminates itself after system suspension/resume~~ Normal behaviour, surface is destroyed by Wayland. Solution: set Heimdallr as a system service with automatic restart!
