@@ -103,6 +103,8 @@ Another notification example, critical
 - Force a red frame border when battery is low, regardless of the settings?
 - Force embedded screen in laptops
 - ~~Animation system?~~ Done!
+- Reduce quantity of damaged surface (wl_surface.damage_buffer only for changed areas)
 
 ## Known bugs
 - ~~Sometimes heimdallr terminates itself after system suspension/resume~~ Normal behaviour, surface is destroyed by Wayland. Solution: set Heimdallr as a system service with automatic restart!
+- Sometimes, closing an urgent notifications doesn't restore normal frame width
