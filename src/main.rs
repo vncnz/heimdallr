@@ -140,7 +140,7 @@ fn main() {
 
     let mut sock = RatatoskrSocket::new("/tmp/ratatoskr.sock");
 
-    let (tx, rx_notif): (Sender<Vec<Notification>>, Receiver<Vec<Notification>>) = mpsc::channel();
+    let (tx, rx_notif): (Sender<Notification>, Receiver<Notification>) = mpsc::channel();
     // let rx_notif: Option<Receiver<Notification>> = None;
     use std::thread;
     thread::spawn(|| {
@@ -182,7 +182,15 @@ fn main() {
                 "hide_notification" => {
                     println!("hide!");
                     if app.remove_notification() {
+                        app.animator.animate_property(
+                            &app.frame_model,
+                            AnimationKey::NotificationHeight,
+                            if app.notifications.len() > 0 { 1.0 } else { 0.0 },
+                            200
+                        );
                         app.request_redraw("hide_notification");
+                    } else {
+                        eprintln!("--- No remove?");
                     }
                 },
                 "prev_notification" => {
@@ -319,22 +327,25 @@ fn main() {
             }
         }
 
-        if let Ok(list) = rx_notif.try_recv() {
+        if let Ok(new_notif) = rx_notif.try_recv() {
             // draw_notifications(&list);
-            // manage redraw
-            println!("{:?}", list);
-            if list.iter().any(|x| x.reboot) {
+            // IDEA: manage HERE notification list and use rx_notif for the single new notification, not the entire list
+            println!("{:?}", new_notif);
+            if new_notif.reboot {
                 app.add_icon("reboot", "󱄋", get_color_gradient(1.0), 1.0);
             }
-            let changed = (app.notifications.len() == 0) != (list.len() == 0);
+            // TODO: This logic is sorta duplicated here (for adding notif) and in maybe_draw (for deleting notif)
+            let a = app.notifications.len();
+            app.updateNotificationList(new_notif);
+            let b = app.notifications.len();
+            let changed = a != b;
             if changed {
                 app.animator.animate_property(
                     &app.frame_model,
                     AnimationKey::NotificationHeight,
-                    if list.len() > 0 { 1.0 } else { 0.0 },
+                    if app.notifications.len() > 0 { 1.0 } else { 0.0 },
                     200
                 );
-                app.notifications = list;
             }
             app.request_redraw("notifications updated");
         }

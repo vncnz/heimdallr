@@ -22,13 +22,14 @@ pub struct Notification {
     pub app_icon: String,
     pub id: u32,
     pub unmounting: bool,
-    pub reboot: bool
+    pub reboot: bool,
+    pub replaces_id: u32
 }
 
 #[derive(Clone)]
 struct NotificationServer {
     notifications: Arc<Mutex<Vec<Notification>>>,
-    tx: Sender<Vec<Notification>>
+    tx: Sender<Notification>
 }
 
 fn get_u8(map: &HashMap<String, zvariant::Value<'_>>, key: &str) -> u8 {
@@ -55,7 +56,6 @@ impl NotificationServer {
         hints: std::collections::HashMap<String, zvariant::Value<'_>>,
         expire_timeout: i32,
     ) -> u32 {
-        let mut list = self.notifications.lock().unwrap();
         let msg = format!("app_name:{app_name} summary:{summary} body:{body} timeout:{expire_timeout} hints:{hints:?} replaces_id:{replaces_id}");
         log_to_file(msg);
 
@@ -67,24 +67,8 @@ impl NotificationServer {
                                 else { None };
         // *list = list.iter().filter(|notif| notif.expired_at > Instant::now()).map(|item|item.to_owned()).collect();
 
-        let mut custom_replace = None;
-        if summary.contains("unmounted") {
-            let to_be_replaced = list.iter().find(|x| x.unmounting);
-            if let Some(notif) = to_be_replaced {
-                custom_replace = Some(notif.id);
-            }
-        }
-        if let Some(rep) = custom_replace {
-            list.retain(|n| n.id != rep);
-        }
-
-        if replaces_id > 0 {
-            list.retain(|n| n.id != replaces_id);
-        }
-
-        // let id = list.iter().map(|x| x.id).max().unwrap_or();
         let id = generate_id();
-        list.insert(0, Notification {
+        let new_notif = Notification {
             app_name: app_name.into(),
             summary: summary.into(),
             body: body.into(),
@@ -93,24 +77,13 @@ impl NotificationServer {
             expired_at: expired_at,
             app_icon: app_icon.into(),
             id,
+            replaces_id,
             unmounting: summary.contains("Unmounting"),
             reboot: summary.contains("Reboot recommended")
-        });
-        let _ = self.tx.send(list.clone());
+        };
+        let _ = self.tx.send(new_notif);
 
-        let list_clone = Arc::clone(&self.notifications);
-        let tx_clone = self.tx.clone();
-
-        if expired_at.is_some() {
-            use std::thread;
-            thread::spawn(move || {
-                let remaining = expired_at.unwrap().saturating_duration_since(Instant::now());
-                thread::sleep(remaining + Duration::from_millis(10)); // un piccolo margine
-                let mut vec = list_clone.lock().unwrap();
-                vec.retain(|n| n.expired_at.is_none() || (n.expired_at.unwrap() > Instant::now()));
-                let _ = tx_clone.send(vec.clone());
-            });
-        }
+        
 
         /* use std::thread;
         thread::spawn(|| {
@@ -133,7 +106,7 @@ impl NotificationServer {
     }
 }
 
-pub async fn start_notification_listener(tx: Sender<Vec<Notification>>) -> zbus::Result<()> {
+pub async fn start_notification_listener(tx: Sender<Notification>) -> zbus::Result<()> {
     let server = NotificationServer {
         notifications: Arc::new(Mutex::new(vec![])),
         tx
