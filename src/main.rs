@@ -334,19 +334,7 @@ fn main() {
             if new_notif.reboot {
                 app.add_icon("reboot", "󱄋", get_color_gradient(1.0), 1.0);
             }
-            // TODO: This logic is sorta duplicated here (for adding notif) and in maybe_draw (for deleting notif)
-            let a = app.notifications.len();
-            app.updateNotificationList(new_notif);
-            let b = app.notifications.len();
-            let changed = a != b;
-            if changed {
-                app.animator.animate_property(
-                    &app.frame_model,
-                    AnimationKey::NotificationHeight,
-                    if app.notifications.len() > 0 { 1.0 } else { 0.0 },
-                    200
-                );
-            }
+            app.updateNotificationList(Some(new_notif));
             app.request_redraw("notifications updated");
         }
 

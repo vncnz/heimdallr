@@ -75,20 +75,8 @@ impl HeimdallrLayer {
 
     pub fn maybe_redraw(&mut self, qh: &QueueHandle<Self>) {
 
-        let a = self.notifications.len();
-        self.notifications.retain(|n| n.expired_at.is_none() || (n.expired_at.unwrap() > Instant::now()));
-        let b = self.notifications.len();
-
-        if a != b {
-            self.needs_redraw;
-
-            self.animator.animate_property(
-                &self.frame_model,
-                AnimationKey::NotificationHeight,
-                if b > 0 { 1.0 } else { 0.0 },
-                200
-            );
-        }
+        // Now, updateNotificationList is for both adding new, and removing expired, notifications
+        self.updateNotificationList(None);
 
         let animating = self.animator.step(&mut self.frame_model);
         if !animating { // Now, we skip calling draw only if we are not animating something
@@ -374,38 +362,47 @@ impl HeimdallrLayer {
         cr_text_aligned(cr.clone(), msg, x, top, 0.0, 0.5);
     }
 
-    pub fn updateNotificationList (&mut self, new_notif: Notification) {
-        let mut custom_replace = None;
-        if new_notif.summary.contains("unmounted") {
-            let to_be_replaced = self.notifications.iter().find(|x| x.unmounting);
-            if let Some(notif) = to_be_replaced {
-                custom_replace = Some(notif.id);
+    pub fn updateNotificationList (&mut self, new_notif_opt: Option<Notification>) {
+
+        let mut changed: bool = false;
+        if let Some(new_notif) = new_notif_opt {
+            let mut custom_replace = None;
+            if new_notif.summary.contains("unmounted") {
+                let to_be_replaced = self.notifications.iter().find(|x| x.unmounting);
+                if let Some(notif) = to_be_replaced {
+                    custom_replace = Some(notif.id);
+                }
             }
+            if let Some(rep) = custom_replace {
+                self.notifications.retain(|n| n.id != rep);
+            }
+
+            if new_notif.replaces_id > 0 {
+                self.notifications.retain(|n| n.id != new_notif.replaces_id);
+            }
+
+            // let id = list.iter().map(|x| x.id).max().unwrap_or();
+            
+            self.notifications.insert(0, new_notif);
+            changed = true;
         }
-        if let Some(rep) = custom_replace {
-            self.notifications.retain(|n| n.id != rep);
+
+        let a = self.notifications.len();
+        self.notifications.retain(|n| n.expired_at.is_none() || (n.expired_at.unwrap() > Instant::now()));
+        let b = self.notifications.len();
+
+        changed = changed || (a != b);
+
+        if changed {
+            self.animator.animate_property(
+                &self.frame_model,
+                AnimationKey::NotificationHeight,
+                if self.notifications.len() > 0 { 1.0 } else { 0.0 },
+                200
+            );
+            self.request_redraw("notifications updated");
         }
 
-        if new_notif.replaces_id > 0 {
-            self.notifications.retain(|n| n.id != new_notif.replaces_id);
-        }
-
-        // let id = list.iter().map(|x| x.id).max().unwrap_or();
-        
-        self.notifications.insert(0, new_notif);
-
-        /* let tx_clone = self.tx.clone(); // remove and replace with redraw request
-
-        if new_notif.expired_at.is_some() {
-            use std::thread;
-            thread::spawn(move || {
-                let remaining = new_notif.expired_at.unwrap().saturating_duration_since(Instant::now());
-                thread::sleep(remaining + Duration::from_millis(10)); // un piccolo margine
-                let mut vec = list_clone.lock().unwrap();
-                vec.retain(|n| n.expired_at.is_none() || (n.expired_at.unwrap() > Instant::now()));
-                let _ = tx_clone.send(vec.clone());
-            });
-        } */
     }
 }
 
