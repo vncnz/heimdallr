@@ -1,6 +1,5 @@
-use serde_json::Value;
 use zbus::{ConnectionBuilder, dbus_interface, zvariant};
-use std::{collections::HashMap, sync::{Arc, Mutex, mpsc::Sender}, time::{Duration, Instant}};
+use std::{collections::HashMap, sync::mpsc::Sender, time::{Duration, Instant}};
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::utils::log_to_file;
@@ -17,8 +16,10 @@ pub struct Notification {
     pub summary: String,
     pub body: String,
     pub urgency: u8,
+    #[allow(unused)]
     pub received_at: Instant,
     pub expired_at: Option<Instant>,
+    #[allow(unused)]
     pub app_icon: String,
     pub id: u32,
     pub unmounting: bool,
@@ -28,7 +29,7 @@ pub struct Notification {
 
 #[derive(Clone)]
 struct NotificationServer {
-    notifications: Arc<Mutex<Vec<Notification>>>,
+    // notifications: Arc<Mutex<Vec<Notification>>>,
     tx: Sender<Notification>
 }
 
@@ -108,7 +109,7 @@ impl NotificationServer {
 
 pub async fn start_notification_listener(tx: Sender<Notification>) -> zbus::Result<()> {
     let server = NotificationServer {
-        notifications: Arc::new(Mutex::new(vec![])),
+        // notifications: Arc::new(Mutex::new(vec![])),
         tx
     };
 

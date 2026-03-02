@@ -48,7 +48,7 @@ pub struct HeimdallrLayer {
     pub(crate) width: u32,
     pub(crate) height: u32,
     pub(crate) first_configure: bool,
-    pub(crate) input_region: Option<wl_region::WlRegion>,
+    // pub(crate) input_region: Option<wl_region::WlRegion>,
     pub(crate) icons: HashMap<String, AlarmIcon>,
     pub(crate) battery_eta: Option<f64>,
     pub(crate) battery_recharging: Option<bool>,
@@ -76,7 +76,7 @@ impl HeimdallrLayer {
     pub fn maybe_redraw(&mut self, qh: &QueueHandle<Self>) {
 
         // Now, updateNotificationList is for both adding new, and removing expired, notifications
-        self.updateNotificationList(None);
+        self.update_notification_list(None);
 
         let animating = self.animator.step(&mut self.frame_model);
         if !animating { // Now, we skip calling draw only if we are not animating something
@@ -362,7 +362,7 @@ impl HeimdallrLayer {
         cr_text_aligned(cr.clone(), msg, x, top, 0.0, 0.5);
     }
 
-    pub fn updateNotificationList (&mut self, new_notif_opt: Option<Notification>) {
+    pub fn update_notification_list (&mut self, new_notif_opt: Option<Notification>) {
 
         let mut changed: bool = false;
         if let Some(new_notif) = new_notif_opt {

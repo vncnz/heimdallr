@@ -6,7 +6,9 @@ use serde::Deserialize;
 #[derive(Default, Deserialize)]
 pub struct BluetoothStats {
     pub devices: Vec<BatteryDevice>,
+    #[allow(unused)]
     pub icon: String,
+    #[allow(unused)]
     pub warn: f64
 }
 
@@ -14,6 +16,7 @@ pub struct BluetoothStats {
 pub struct BatteryDevice {
     pub name: String,
     pub kind: DeviceKind,
+    #[allow(unused)]
     pub percentage: f64,
     pub warn: f64
 }

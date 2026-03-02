@@ -117,7 +117,7 @@ fn main() {
         width: 1920,
         height: 1080,
         first_configure: true,
-        input_region: Some(empty_region),
+        // input_region: Some(empty_region),
         icons: HashMap::new(),
         ratatoskr_connected: false,
         battery_eta: None,
@@ -159,7 +159,7 @@ fn main() {
         // Prova a leggere nuovi eventi — non blocca
         match event_queue.prepare_read() {
             Some(guard) => {
-                if let Err(e) = guard.read() {
+                if let Err(_) = guard.read() {
                     // Silenzia WouldBlock (nessun evento da leggere)
                     /* if let Some(raw_err) = e.raw_os_error() {
                         if raw_err != 11 {
@@ -300,7 +300,8 @@ fn main() {
                     if let Some(vol) = &data.data {
                         if vol.get("headphones").unwrap().as_i64().unwrap() == 1 { icon = ""; }
                         else {
-                            icon = select_icon(0.0, 100.0, vol["value"].as_f64().unwrap_or_default(), &["", "", ""]).unwrap();
+                            let slice: &[&str] = &["", "", ""][..];
+                            icon = select_icon(0.0, 100.0, vol["value"].as_f64().unwrap_or_default(), slice).unwrap();
                         }
                     } else {
                         icon = "󱄡";
@@ -334,7 +335,7 @@ fn main() {
             if new_notif.reboot {
                 app.add_icon("reboot", "󱄋", get_color_gradient(1.0), 1.0);
             }
-            app.updateNotificationList(Some(new_notif));
+            app.update_notification_list(Some(new_notif));
             app.request_redraw("notifications updated");
         }
 

@@ -102,8 +102,11 @@ pub struct Animation {
 }
 
 pub enum Easing {
+    #[allow(unused)]
     Linear,
+    #[allow(unused)]
     Smooth,
+    #[allow(unused)]
     Smoother,
     EaseOutCubic,
 }
