@@ -86,20 +86,7 @@ fn main() {
     let layer_shell = LayerShell::bind(&globals, &qh).unwrap();
     let shm = Shm::bind(&globals, &qh).unwrap();
 
-    let surface = compositor.create_surface(&qh);
-    let layer = layer_shell.create_layer_surface(&qh, surface, Layer::Overlay, Some("heimdallr"), None);
-    layer.set_anchor(Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT);
-    layer.set_keyboard_interactivity(KeyboardInteractivity::None);
-
-    let raw_compositor: wl_compositor::WlCompositor =
-    globals.bind::<wl_compositor::WlCompositor, _, _>(&qh, 1..=4, ())
-    .expect("failed to bind wl_compositor for region creation");
-
-    let empty_region: wl_region::WlRegion = raw_compositor.create_region(&qh, ());
-    layer.wl_surface().set_input_region(Some(&empty_region));
-
-    layer.set_size(0, 0); // full screen
-    layer.commit();
+    
 
     let pool = SlotPool::new(1920 * 1080 * 4, &shm).expect("pool creation failed");
 
@@ -113,7 +100,7 @@ fn main() {
         output_state: OutputState::new(&globals, &qh),
         shm,
         pool,
-        layer,
+        layer: None,
         width: 1920,
         height: 1080,
         first_configure: true,
@@ -133,6 +120,28 @@ fn main() {
         animator: Animator::new(),
         frame_model: FrameModel::new()
     };
+
+    let output_state = OutputState::new(&globals, &qh);
+    event_queue.roundtrip(&mut app).unwrap();
+    let mut outputs = output_state.outputs();
+    let chosen_output = outputs.next();
+
+    let surface = compositor.create_surface(&qh);
+    let layer = layer_shell.create_layer_surface(&qh, surface, Layer::Overlay, Some("heimdallr"), chosen_output.as_ref());
+    layer.set_anchor(Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT);
+    layer.set_keyboard_interactivity(KeyboardInteractivity::None);
+
+    let raw_compositor: wl_compositor::WlCompositor =
+    globals.bind::<wl_compositor::WlCompositor, _, _>(&qh, 1..=4, ())
+    .expect("failed to bind wl_compositor for region creation");
+
+    let empty_region: wl_region::WlRegion = raw_compositor.create_region(&qh, ());
+    layer.wl_surface().set_input_region(Some(&empty_region));
+
+    layer.set_size(0, 0); // full screen
+    layer.commit();
+
+    app.layer = Some(layer);
     
     // app.add_icon("avg", "󰬢", (1.0, 0.2, 0.2, 1.0)); // example
     let (tx, rx_cmds): (Sender<String>, Receiver<String>) = mpsc::channel();

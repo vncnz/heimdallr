@@ -44,7 +44,7 @@ pub struct HeimdallrLayer {
     pub(crate) output_state: OutputState,
     pub(crate) shm: Shm,
     pub(crate) pool: SlotPool,
-    pub(crate) layer: LayerSurface,
+    pub(crate) layer: Option<LayerSurface>,
     pub(crate) width: u32,
     pub(crate) height: u32,
     pub(crate) first_configure: bool,
@@ -97,52 +97,57 @@ impl HeimdallrLayer {
     }
 
     fn draw(&mut self, qh: &QueueHandle<Self>) {
-        self.needs_redraw = false;
-        let start = std::time::Instant::now();
-        // eprintln!("Draw started at {:?}", start);
-        
-        let stride = self.width as i32 * 4;
-        let (buffer, canvas) = self
-            .pool
-            .create_buffer(self.width as i32, self.height as i32, stride, wl_shm::Format::Argb8888)
-            .expect("buffer creation failed");
+        if self.layer.is_some() {
+            self.needs_redraw = false;
+            let start = std::time::Instant::now();
+            // eprintln!("Draw started at {:?}", start);
+            
+            let stride = self.width as i32 * 4;
+            let (buffer, canvas) = self
+                .pool
+                .create_buffer(self.width as i32, self.height as i32, stride, wl_shm::Format::Argb8888)
+                .expect("buffer creation failed");
 
-        let wl_buffer: WlBuffer = buffer.wl_buffer().clone();
-        let id: ObjectId = wl_buffer.id();
-        self.buffers.insert(id, wl_buffer);
+            let wl_buffer: WlBuffer = buffer.wl_buffer().clone();
+            let id: ObjectId = wl_buffer.id();
+            self.buffers.insert(id, wl_buffer);
 
-        // Cairo surface on the shared memory buffer
-        let surface = unsafe {
-            ImageSurface::create_for_data_unsafe(
-                canvas.as_mut_ptr(),
-                Format::ARgb32,
-                self.width as i32,
-                self.height as i32,
-                stride,
-            )
-            .unwrap()
-        };
-        let cr = Context::new(&surface).unwrap();
+            // Cairo surface on the shared memory buffer
+            let surface = unsafe {
+                ImageSurface::create_for_data_unsafe(
+                    canvas.as_mut_ptr(),
+                    Format::ARgb32,
+                    self.width as i32,
+                    self.height as i32,
+                    stride,
+                )
+                .unwrap()
+            };
+            let cr = Context::new(&surface).unwrap();
 
-        self.draw_myframe(cr.clone());
-        if self.config.show_clock { self.draw_clock(cr.clone()); }
-        if self.notifications.len() > 0 { self.draw_notification(cr.clone()) }
+            self.draw_myframe(cr.clone());
+            if self.config.show_clock { self.draw_clock(cr.clone()); }
+            if self.notifications.len() > 0 { self.draw_notification(cr.clone()) }
 
-        // Damage + commit
-        buffer.attach_to(self.layer.wl_surface()).unwrap();
-        self.layer.attach(Some(&buffer.wl_buffer()), 0, 0);
-        self.layer.wl_surface().damage_buffer(0, 0, self.width as i32, self.height as i32);
-        self.layer.wl_surface().frame(qh, self.layer.wl_surface().clone());
-        self.layer.commit();
+            // Damage + commit
+            let layer = self.layer.clone().unwrap();
+            buffer.attach_to(layer.wl_surface()).unwrap();
+            layer.attach(Some(&buffer.wl_buffer()), 0, 0);
+            layer.wl_surface().damage_buffer(0, 0, self.width as i32, self.height as i32);
+            layer.wl_surface().frame(qh, layer.wl_surface().clone());
+            layer.commit();
 
-        drop(surface);
-        
-        self.last_redraw = Instant::now();
+            drop(surface);
+            
+            self.last_redraw = Instant::now();
 
-        #[cfg(debug_assertions)] {
-            let end = std::time::Instant::now();
-            let dur = (end - start).as_millis();
-            eprintln!("Draw ended ({}ms)", dur);
+            #[cfg(debug_assertions)] {
+                let end = std::time::Instant::now();
+                let dur = (end - start).as_millis();
+                eprintln!("Draw ended ({}ms)", dur);
+            }
+        } else {
+            // No layer yet
         }
     }
 
