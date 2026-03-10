@@ -372,7 +372,7 @@ impl HeimdallrLayer {
         let mut changed: bool = false;
         if let Some(new_notif) = new_notif_opt {
             let mut custom_replace = None;
-            if new_notif.summary.contains("unmounted") {
+            if new_notif.unmounted {
                 let to_be_replaced = self.notifications.iter().find(|x| x.unmounting);
                 if let Some(notif) = to_be_replaced {
                     custom_replace = Some(notif.id);

@@ -24,7 +24,8 @@ pub struct Notification {
     pub id: u32,
     pub unmounting: bool,
     pub reboot: bool,
-    pub replaces_id: u32
+    pub replaces_id: u32,
+    pub unmounted: bool
 }
 
 #[derive(Clone)]
@@ -67,7 +68,8 @@ impl NotificationServer {
                                 else if urgency < 2 { Some(Instant::now() + Duration::new(3, 0)) }
                                 else { None };
         // *list = list.iter().filter(|notif| notif.expired_at > Instant::now()).map(|item|item.to_owned()).collect();
-
+        let unmounting = app_icon == "media-removable" && urgency == 2;
+        let unmounted = app_icon == "media-removable" && urgency != 2;
         let id = generate_id();
         let new_notif = Notification {
             app_name: app_name.into(),
@@ -79,7 +81,8 @@ impl NotificationServer {
             app_icon: app_icon.into(),
             id,
             replaces_id,
-            unmounting: summary.contains("Unmounting"),
+            unmounting, // : summary.contains("Unmounting"),
+            unmounted,
             reboot: summary.contains("Reboot recommended")
         };
         let _ = self.tx.send(new_notif);
