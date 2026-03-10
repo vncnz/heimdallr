@@ -2,13 +2,9 @@ use signal_hook::{consts::{SIGHUP, SIGINT, SIGPIPE, SIGTERM}, iterator::Signals,
 
 use serde::Deserialize;
 use smithay_client_toolkit::{
-    compositor::{CompositorState},
-    output::{OutputState},
-    registry::{RegistryState},
-    shell::wlr_layer::{Anchor, KeyboardInteractivity, Layer, LayerShell},
-    shm::{slot::SlotPool, Shm},
+    compositor::CompositorState, output::{OutputState, OutputInfo}, reexports::protocols_wlr::foreign_toplevel::v1::client::zwlr_foreign_toplevel_handle_v1::State, registry::RegistryState, shell::wlr_layer::{Anchor, KeyboardInteractivity, Layer, LayerShell}, shm::{Shm, slot::SlotPool}
 };
-use wayland_client::{globals::registry_queue_init, protocol::{wl_compositor, wl_region}, Connection};
+use wayland_client::{Connection, QueueHandle, globals::{GlobalList, registry_queue_init}, protocol::{wl_compositor, wl_output::WlOutput, wl_region}};
 
 use std::{sync::mpsc::{self, Receiver, Sender}, time::{Duration, Instant}};
 
@@ -33,6 +29,27 @@ use crate::heimdallr_layer::HeimdallrLayer;
 use crate::notifications::start_notification_listener;
 
 // Tip: find src | entr -r cargo run for a sorta hotreloading (entr is an external cmd to be installed using pacman)
+
+fn choose_output (app: &HeimdallrLayer) -> std::option::Option<WlOutput>{
+    let mut chosen_output = None;
+    for output in app.output_state.outputs() {
+        if let Some(info) = app.output_state.info(&output) {
+            // eprintln!("Display info {:?}", info);
+            if let Some(name) = info.name {
+                log_to_file(format!("Found display {name}"));
+                if name.starts_with("eDP") {
+                    chosen_output = Some(output.clone());
+                    // eprintln!("Found internal display");
+                    log_to_file(format!("{name} is an embedded display!"));
+                }
+            }
+        }
+        if chosen_output.is_none() {
+            chosen_output = Some(output.clone());
+        }
+    }
+    chosen_output
+}
 
 fn main() {
     panic::set_hook(Box::new(|info| {
@@ -86,8 +103,6 @@ fn main() {
     let layer_shell = LayerShell::bind(&globals, &qh).unwrap();
     let shm = Shm::bind(&globals, &qh).unwrap();
 
-    
-
     let pool = SlotPool::new(1920 * 1080 * 4, &shm).expect("pool creation failed");
 
     //let resources = Arc::new(Mutex::new(ResourceData::default()));
@@ -121,10 +136,14 @@ fn main() {
         frame_model: FrameModel::new()
     };
 
-    let output_state = OutputState::new(&globals, &qh);
     event_queue.roundtrip(&mut app).unwrap();
-    let mut outputs = output_state.outputs();
-    let chosen_output = outputs.next();
+    // event_queue.dispatch_pending(&mut app).unwrap();
+    // let chosen_output = choose_output(&globals, &qh);
+    // let output_state = OutputState::new(&globals, &qh);
+    // let mut outputs = output_state.outputs();
+    // let chosen_output = outputs.next();
+    let chosen_output = choose_output(&app);
+    eprintln!("\n\n\n\n\n\n\n\n\n");
 
     let surface = compositor.create_surface(&qh);
     let layer = layer_shell.create_layer_surface(&qh, surface, Layer::Overlay, Some("heimdallr"), chosen_output.as_ref());
