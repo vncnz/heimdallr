@@ -30,11 +30,26 @@ use crate::notifications::start_notification_listener;
 
 // Tip: find src | entr -r cargo run for a sorta hotreloading (entr is an external cmd to be installed using pacman)
 
-/* fn choose_output (&globals: &GlobalList, &qh: &QueueHandle<State>) -> std::option::Option<WlOutput>{
-    let output_state = OutputState::new(&globals, &qh);
-    let mut outputs = output_state.outputs();
-    outputs.next()
-} */
+fn choose_output (app: &HeimdallrLayer) -> std::option::Option<WlOutput>{
+    let mut chosen_output = None;
+    for output in app.output_state.outputs() {
+        if let Some(info) = app.output_state.info(&output) {
+            // eprintln!("Display info {:?}", info);
+            if let Some(name) = info.name {
+                log_to_file(format!("Found display {name}"));
+                if name.starts_with("eDP") {
+                    chosen_output = Some(output.clone());
+                    // eprintln!("Found internal display");
+                    log_to_file(format!("{name} is an embedded display!"));
+                }
+            }
+        }
+        if chosen_output.is_none() {
+            chosen_output = Some(output.clone());
+        }
+    }
+    chosen_output
+}
 
 fn main() {
     panic::set_hook(Box::new(|info| {
@@ -122,29 +137,12 @@ fn main() {
     };
 
     event_queue.roundtrip(&mut app).unwrap();
+    // event_queue.dispatch_pending(&mut app).unwrap();
     // let chosen_output = choose_output(&globals, &qh);
-    let output_state = OutputState::new(&globals, &qh);
+    // let output_state = OutputState::new(&globals, &qh);
     // let mut outputs = output_state.outputs();
     // let chosen_output = outputs.next();
-    let mut chosen_output = None;
-    eprintln!("\n\n\n\n\n\n\n\n\n");
-    for output in output_state.outputs() {
-        if let Some(info) = output_state.info(&output) {
-            eprintln!("Display info {:?}", info);
-            if let Some(name) = info.name {
-                eprintln!("Display name {}", name);
-                if name.starts_with("eDP") {
-                    chosen_output = Some(output.clone());
-                    eprintln!("Found internal display");
-                }
-            }
-        } else {
-            eprintln!("Display no info");
-        }
-        if chosen_output.is_none() {
-            chosen_output = Some(output.clone());
-        }
-    }
+    let chosen_output = choose_output(&app);
     eprintln!("\n\n\n\n\n\n\n\n\n");
 
     let surface = compositor.create_surface(&qh);
