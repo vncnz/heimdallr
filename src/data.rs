@@ -70,7 +70,7 @@ impl RatatoskrSocket {
                 });
             }
             Err(_) => {
-                // non connesso, riproveremo
+                // Not connected, atm
             }
         }
     }
