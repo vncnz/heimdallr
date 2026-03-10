@@ -130,7 +130,7 @@ fn main() {
     eprintln!("\n\n\n\n\n\n\n\n\n");
     for output in output_state.outputs() {
         if let Some(info) = output_state.info(&output) {
-            eprintln!("Display yes info");
+            eprintln!("Display info {:?}", info);
             if let Some(name) = info.name {
                 eprintln!("Display name {}", name);
                 if name.starts_with("eDP") {
