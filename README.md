@@ -99,10 +99,10 @@ Another notification example, critical
 - ~~Manage replacing logic for unmounting/unmounted notifications~~ Done!
 - ~~Add an alert icon for "reboot recommended" situation~~ Done!
 - ~~Move logs to file and check why sometime heimdallr dies~~ Done!
+- Force embedded screen in laptops - Doing!
 - Put temporary notification always before important ones (because the latter doesn't expire!)
 - New functionality: show a resources resume for some time after receiving a dedicated command (something like [AVG 0.9 1.27 1.41] [MEM 73% / SWP 14%] [DSK 49%] and so on)?
 - Force a red frame border when battery is low, regardless of the settings?
-- Force embedded screen in laptops
 - ~~Animation system?~~ Done!
 - Reduce quantity of damaged surface (wl_surface.damage_buffer only for changed areas)
 
