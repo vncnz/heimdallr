@@ -103,8 +103,6 @@ fn main() {
     let layer_shell = LayerShell::bind(&globals, &qh).unwrap();
     let shm = Shm::bind(&globals, &qh).unwrap();
 
-    let pool = SlotPool::new(1920 * 1080 * 4, &shm).expect("pool creation failed");
-
     //let resources = Arc::new(Mutex::new(ResourceData::default()));
     //let receiver = start_resource_watcher("/tmp/ratatoskr.json", resources.clone());
 
@@ -114,10 +112,10 @@ fn main() {
         registry_state: RegistryState::new(&globals),
         output_state: OutputState::new(&globals, &qh),
         shm,
-        pool,
+        pool: None,
         layer: None,
-        width: 1920,
-        height: 1080,
+        width: 1,
+        height: 1,
         first_configure: true,
         // input_region: Some(empty_region),
         icons: HashMap::new(),

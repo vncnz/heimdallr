@@ -43,7 +43,7 @@ pub struct HeimdallrLayer {
     pub(crate) registry_state: RegistryState,
     pub(crate) output_state: OutputState,
     pub(crate) shm: Shm,
-    pub(crate) pool: SlotPool,
+    pub(crate) pool: Option<SlotPool>,
     pub(crate) layer: Option<LayerSurface>,
     pub(crate) width: u32,
     pub(crate) height: u32,
@@ -97,14 +97,14 @@ impl HeimdallrLayer {
     }
 
     fn draw(&mut self, qh: &QueueHandle<Self>) {
-        if self.layer.is_some() {
+        if self.layer.is_some() && self.pool.is_some() {
             self.needs_redraw = false;
             let start = std::time::Instant::now();
             // eprintln!("Draw started at {:?}", start);
             
             let stride = self.width as i32 * 4;
             let (buffer, canvas) = self
-                .pool
+                .pool.as_mut().unwrap()
                 .create_buffer(self.width as i32, self.height as i32, stride, wl_shm::Format::Argb8888)
                 .expect("buffer creation failed");
 
@@ -489,8 +489,10 @@ impl LayerShellHandler for HeimdallrLayer {
     }
 
     fn configure(&mut self, _: &Connection, qh: &QueueHandle<Self>, _: &LayerSurface, configure: LayerSurfaceConfigure, _: u32) {
+        eprintln!("LayerShell surface configured by compositor {:?}", configure.new_size);
         self.width = NonZeroU32::new(configure.new_size.0).map_or(1920, NonZeroU32::get);
         self.height = NonZeroU32::new(configure.new_size.1).map_or(1080, NonZeroU32::get);
+        self.pool = Some(SlotPool::new((self.width * self.height * 4) as usize, &self.shm).expect("pool creation failed"));
         if self.first_configure {
             self.first_configure = false;
             self.draw(qh);

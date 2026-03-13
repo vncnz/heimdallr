@@ -100,7 +100,7 @@ Another notification example, critical
 - ~~Add an alert icon for "reboot recommended" situation~~ Done!
 - ~~Move logs to file and check why sometime heimdallr dies~~ Done!
 - ~~Force embedded screen in laptops~~ Done!
-- Make buffer size depending on output size
+- ~~Make buffer size depending on output size~~ Done!
 - Put temporary notification always before important ones (because the latter doesn't expire!)
 - New functionality: show a resources resume for some time after receiving a dedicated command (something like [AVG 0.9 1.27 1.41] [MEM 73% / SWP 14%] [DSK 49%] and so on)?
 - Force a red frame border when battery is low, regardless of the settings?
