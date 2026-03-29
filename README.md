@@ -110,4 +110,3 @@ Another notification example, critical
 ## Known bugs
 - ~~Sometimes heimdallr terminates itself after system suspension/resume~~ Normal behaviour, surface is destroyed by Wayland. Solution: set Heimdallr as a system service with automatic restart!
 ~~- Sometimes, closing an urgent notifications doesn't restore normal frame width~~ Fixed!
-- After a standby, if there was a bluetooth mouse and now it is powered off Heimdallrs keep showing the icon (maybe a Heimdallr bug, maybe a Ratatoskr bug)
