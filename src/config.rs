@@ -6,7 +6,7 @@ use serde::Deserialize;
 pub enum FrameColor {
     None,
     Rgba(f64, f64, f64, f64),
-    Random,
+    // Random,
     WorstResource,
 }
 

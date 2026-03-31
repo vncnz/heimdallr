@@ -2,9 +2,9 @@ use signal_hook::{consts::{SIGHUP, SIGINT, SIGPIPE, SIGTERM}, iterator::Signals,
 
 use serde::Deserialize;
 use smithay_client_toolkit::{
-    compositor::CompositorState, output::{OutputState, OutputInfo}, reexports::protocols_wlr::foreign_toplevel::v1::client::zwlr_foreign_toplevel_handle_v1::State, registry::RegistryState, shell::wlr_layer::{Anchor, KeyboardInteractivity, Layer, LayerShell}, shm::{Shm, slot::SlotPool}
+    compositor::CompositorState, output::OutputState, registry::RegistryState, shell::wlr_layer::{Anchor, KeyboardInteractivity, Layer, LayerShell}, shm::Shm
 };
-use wayland_client::{Connection, QueueHandle, globals::{GlobalList, registry_queue_init}, protocol::{wl_compositor, wl_output::WlOutput, wl_region}};
+use wayland_client::{Connection, globals::{registry_queue_init}, protocol::{wl_compositor, wl_output::WlOutput, wl_region}};
 
 use std::{sync::mpsc::{self, Receiver, Sender}, time::{Duration, Instant}};
 

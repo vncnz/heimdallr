@@ -66,10 +66,10 @@ pub struct HeimdallrLayer {
 }
 
 impl HeimdallrLayer {
-    pub fn request_redraw(&mut self, reason: &str) {
+    pub fn request_redraw(&mut self, _reason: &str) {
         self.needs_redraw = true;
         #[cfg(debug_assertions)] {
-            println!("Redraw requested by {}", reason);
+            println!("Redraw requested by {}", _reason);
         }
     }
 
@@ -99,7 +99,7 @@ impl HeimdallrLayer {
     fn draw(&mut self, qh: &QueueHandle<Self>) {
         if self.layer.is_some() && self.pool.is_some() {
             self.needs_redraw = false;
-            let start = std::time::Instant::now();
+            let _start = std::time::Instant::now();
             // eprintln!("Draw started at {:?}", start);
             
             let stride = self.width as i32 * 4;
@@ -133,7 +133,9 @@ impl HeimdallrLayer {
             let layer = self.layer.clone().unwrap();
             buffer.attach_to(layer.wl_surface()).unwrap();
             layer.attach(Some(&buffer.wl_buffer()), 0, 0);
-            layer.wl_surface().damage_buffer(0, 0, self.width as i32, self.height as i32);
+            layer.wl_surface().damage_buffer(0, 0, self.width as i32, self.height as i32); // Negletable difference between full damage and local damage!
+            // layer.wl_surface().damage_buffer(0, 0, 50, self.height as i32);
+            // layer.wl_surface().damage_buffer(0, 0, self.width as i32, 50);
             layer.wl_surface().frame(qh, layer.wl_surface().clone());
             layer.commit();
 
@@ -143,8 +145,8 @@ impl HeimdallrLayer {
 
             #[cfg(debug_assertions)] {
                 let end = std::time::Instant::now();
-                let dur = (end - start).as_millis();
-                eprintln!("Draw ended ({}ms)", dur);
+                let dur = (end - _start).as_nanos();
+                eprintln!("Draw ended ({:.2}ms)", (dur as f64) / 1_000_000.0);
             }
         } else {
             // No layer yet
@@ -210,7 +212,7 @@ impl HeimdallrLayer {
                 .values()
                 .max_by(|a, b| a.warn.partial_cmp(&b.warn).unwrap_or(std::cmp::Ordering::Equal))
                 .map(|icon| icon.color),
-            FrameColor::None | FrameColor::Random => None,
+            FrameColor::None /* | FrameColor::Random */ => None,
         } {
             cr.set_line_width(1.0);
             cr.set_source_rgba(r, g, b, a);
