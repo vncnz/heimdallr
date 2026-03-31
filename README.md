@@ -101,6 +101,8 @@ Another notification example, critical
 - ~~Move logs to file and check why sometime heimdallr dies~~ Done!
 - ~~Force embedded screen in laptops~~ Done!
 - ~~Make buffer size depending on output size~~ Done!
+- New functionality: show lightness and volume bars when retrieving relevant events
+- New functionality: monitor and indicate mic/camera accesses
 - Put temporary notification always before important ones (because the latter doesn't expire!)
 - New functionality: show a resources resume for some time after receiving a dedicated command (something like [AVG 0.9 1.27 1.41] [MEM 73% / SWP 14%] [DSK 49%] and so on)?
 - Force a red frame border when battery is low, regardless of the settings?
