@@ -94,20 +94,24 @@ Another notification example, critical
 ![Critical notification example](./screenshots/notif_critical.png)
 
 ## TODOs
-- ~~Add a visual indicator for Ratatoskr disconnection~~ Done!
-- ~~Dynamic frame border color (depending on resource icons)~~ Done!
+
+### Improvements
 - ~~Manage replacing logic for unmounting/unmounted notifications~~ Done!
-- ~~Add an alert icon for "reboot recommended" situation~~ Done!
 - ~~Move logs to file and check why sometime heimdallr dies~~ Done!
 - ~~Force embedded screen in laptops~~ Done!
 - ~~Make buffer size depending on output size~~ Done!
-- New functionality: show lightness and volume bars when retrieving relevant events
-- New functionality: monitor and indicate mic/camera accesses
 - Put temporary notification always before important ones (because the latter doesn't expire!)
-- New functionality: show a resources resume for some time after receiving a dedicated command (something like [AVG 0.9 1.27 1.41] [MEM 73% / SWP 14%] [DSK 49%] and so on)?
-- Force a red frame border when battery is low, regardless of the settings?
-- ~~Animation system?~~ Done!
 - Reduce quantity of damaged surface (wl_surface.damage_buffer only for changed areas)
+
+### New functionalities
+- ~~Add a visual indicator for Ratatoskr disconnection~~ Done!
+- ~~Dynamic frame border color (depending on resource icons)~~ Done!
+- ~~Add an alert icon for "reboot recommended" situation~~ Done!
+- ~~Animation system?~~ Done!
+- Show lightness and volume bars when retrieving relevant events
+- Monitor and indicate mic/camera accesses
+- Show a resources resume for some time after receiving a dedicated command (something like [AVG 0.9 1.27 1.41] [MEM 73% / SWP 14%] [DSK 49%] and so on)?
+- Force a red frame border when battery is low, regardless of the settings?
 
 ## Known bugs
 - ~~Sometimes heimdallr terminates itself after system suspension/resume~~ Normal behaviour, surface is destroyed by Wayland. Solution: set Heimdallr as a system service with automatic restart!
