@@ -1,3 +1,4 @@
+use image::Frame;
 use smithay_client_toolkit::{
     compositor::CompositorHandler, delegate_compositor, delegate_layer, delegate_output, delegate_registry, delegate_shm, output::{OutputHandler, OutputState}, registry::{ProvidesRegistryState, RegistryState}, registry_handlers, shell::wlr_layer::{LayerShellHandler, LayerSurface, LayerSurfaceConfigure}, shm::{Shm, ShmHandler, slot::SlotPool}
 };
@@ -187,6 +188,21 @@ impl HeimdallrLayer {
         cr.set_fill_rule(cairo::FillRule::EvenOdd);
         rounded_rect(&cr, thickness / 2.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h, wob_h);
         cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
+        cr.fill().unwrap();
+
+        // wob-like
+        let xc = (thickness + w_hole) / 2.0;
+        match self.config.frame_color {
+            FrameColor::None => {
+                wob_rect(&cr, xc, h - thickness, radius2, wob_h, 1.0);
+                cr.set_source_rgba(1.0, 1.0, 1.0, 0.35);
+                cr.fill().unwrap();
+            },
+            _ => {}
+        }
+
+        wob_rect(&cr, xc, h - thickness, radius2, wob_h, self.wob_value);
+        cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
         cr.fill().unwrap();
 
         // === Draw alarm icons ===
@@ -453,7 +469,23 @@ impl HeimdallrLayer { // This is for icon management, I like to keep it separate
         eprintln!("TODO {} {:?}", value, kind);
         let changed = !self.wob_show || self.wob_value != value;
         self.wob_show = true;
+        self.wob_value = value.clamp(0.0, 1.0);
         changed
+    }
+}
+
+fn wob_rect (cr: &Context, xc: f64, yb: f64, r2: f64, wob_h: f64, wob_value: f64) {
+    if wob_h > 0.0 {
+        cr.new_sub_path();
+
+        let r2_safe = if wob_h > r2 { r2 } else { wob_h/2.0 };
+        let wob_half_width = 100.0;
+        cr.arc(xc + r2_safe + (wob_half_width * 2.0 * (wob_value - 0.5)), yb - r2_safe, r2_safe, 90f64.to_radians(), 180f64.to_radians());
+        cr.arc_negative(xc - r2_safe + (wob_half_width * 2.0 * (wob_value - 0.5)), yb + r2_safe - wob_h, r2_safe, 0f64.to_radians(), 270f64.to_radians());
+        cr.arc_negative(xc + r2_safe - wob_half_width, yb + r2_safe - wob_h, r2_safe, 270f64.to_radians(), 180f64.to_radians());
+        cr.arc(xc - r2_safe - wob_half_width, yb - r2_safe, r2_safe, 0f64.to_radians(), 90f64.to_radians());
+
+        cr.close_path();
     }
 }
 
