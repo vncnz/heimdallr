@@ -445,6 +445,11 @@ impl HeimdallrLayer { // This is for icon management, I like to keep it separate
         }
         false
     }
+
+    pub fn show_value(&mut self, value: f64, kind: Option<&str>) -> bool {
+        eprintln!("TODO {} {:?}", value, kind);
+        false
+    }
 }
 
 fn rounded_rect(cr: &Context, x: f64, y: f64, w: f64, h: f64, r: f64, r2: f64, reserved_w: f64, reserved_h: f64) {

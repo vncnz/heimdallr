@@ -231,7 +231,33 @@ fn main() {
                         app.request_redraw("next_notification");
                     }
                 },
-                _ => println!("{}", cmd)
+                _ => {
+                    println!("{}", cmd);
+                    let parts: Vec<&str> = cmd.split(" ").collect();
+                    let refresh = match parts.as_slice() {
+                        [kind, value_str] => {
+                            match value_str.parse::<f64>() {
+                                Ok(value) => app.show_value(value, Some(*kind)),
+                                Err(_) => { eprintln!("Invalid number: {}", value_str); false }
+                            }
+                        }
+
+                        [value_str] => {
+                            match value_str.parse::<f64>() {
+                                Ok(value) => app.show_value(value, None),
+                                Err(_) => { eprintln!("Invalid number: {}", value_str); false }
+                            }
+                        }
+
+                        _ => {
+                            eprintln!("Unknown command");
+                            false
+                        }
+                    };
+                    if refresh {
+                        app.request_redraw("external value event");
+                    }
+                }
             };
             // app.request_redraw();
         }
