@@ -90,7 +90,8 @@ use std::time::{Duration, Instant};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AnimationKey {
     NotificationHeight,
-    IconsHeight
+    IconsHeight,
+    WobHeight
 }
 
 pub struct Animation {
@@ -181,28 +182,32 @@ impl Animator {
 
 pub struct FrameModel {
     pub(crate) notif_height_ratio: f64,
-    pub(crate) icons_ratio: f64
+    pub(crate) icons_ratio: f64,
+    pub(crate) wob_height: f64
 }
 
 impl FrameModel {
     pub fn new () -> Self {
         FrameModel {
             notif_height_ratio: 0.0,
-            icons_ratio: 0.0
+            icons_ratio: 0.0,
+            wob_height: 0.0
         }
     }
 
     pub fn set(&mut self, id: AnimationKey, val: f64) {
         match id {
             AnimationKey::NotificationHeight => self.notif_height_ratio = val,
-            AnimationKey::IconsHeight => self.icons_ratio = val
+            AnimationKey::IconsHeight => self.icons_ratio = val,
+            AnimationKey::WobHeight => self.wob_height = val
         }
     }
 
     pub fn get(&self, id: AnimationKey) -> f64 {
         match id {
             AnimationKey::NotificationHeight => self.notif_height_ratio,
-            AnimationKey::IconsHeight => self.icons_ratio
+            AnimationKey::IconsHeight => self.icons_ratio,
+            AnimationKey::WobHeight => self.wob_height
         }
     }
 }

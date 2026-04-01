@@ -60,6 +60,8 @@ pub struct HeimdallrLayer {
     pub(crate) config: crate::config::Config,
     pub(crate) notifications: Vec<crate::notifications::Notification>,
     pub(crate) notification_idx: usize,
+    pub(crate) wob_value: f64,
+    pub(crate) wob_show: bool,
     pub(crate) ratatoskr_connected: bool,
     pub(crate) animator: Animator,
     pub(crate) frame_model: FrameModel
@@ -167,6 +169,7 @@ impl HeimdallrLayer {
         let res_w = 24.0;
         // let res_h = if self.ratatoskr_connected { (self.icons.len() as f64) * 30.0 } else { 30.0 };
         let res_h = if self.ratatoskr_connected { self.frame_model.icons_ratio * 24.0 } else { 24.0 };
+        let wob_h = self.frame_model.wob_height;
 
         // Draw rounded rectangle frame
         let thickness = 1.0;
@@ -179,10 +182,10 @@ impl HeimdallrLayer {
 
         let top = thickness / 2.0 + /*if self.notifications.len() > 0 { 24.0 } else { 0.0 }*/24.0 * self.frame_model.notif_height_ratio;
 
-        // Outer black border (semi-transparent)
+        // Outer black border
         cr.rectangle(0.0, 0.0, w, h);
         cr.set_fill_rule(cairo::FillRule::EvenOdd);
-        rounded_rect(&cr, thickness / 2.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h);
+        rounded_rect(&cr, thickness / 2.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h, wob_h);
         cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
         cr.fill().unwrap();
 
@@ -216,7 +219,7 @@ impl HeimdallrLayer {
         } {
             cr.set_line_width(1.0);
             cr.set_source_rgba(r, g, b, a);
-            rounded_rect(&cr, thickness / 2.0 + 1.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h);
+            rounded_rect(&cr, thickness / 2.0 + 1.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h, wob_h);
             cr.stroke().unwrap();
         }
 
@@ -448,14 +451,25 @@ impl HeimdallrLayer { // This is for icon management, I like to keep it separate
 
     pub fn show_value(&mut self, value: f64, kind: Option<&str>) -> bool {
         eprintln!("TODO {} {:?}", value, kind);
-        false
+        let changed = !self.wob_show || self.wob_value != value;
+        self.wob_show = true;
+        changed
     }
 }
 
-fn rounded_rect(cr: &Context, x: f64, y: f64, w: f64, h: f64, r: f64, r2: f64, reserved_w: f64, reserved_h: f64) {
+fn rounded_rect(cr: &Context, x: f64, y: f64, w: f64, h: f64, r: f64, r2: f64, reserved_w: f64, reserved_h: f64, wob_h: f64) {
     cr.new_sub_path();
     cr.arc(x + w - r, y + r, r, -90f64.to_radians(), 0.0);
     cr.arc(x + w - r, y + h - r, r, 0.0, 90f64.to_radians());
+
+    if wob_h > 0.0 {
+        let r2_safe = if wob_h > r2 { r2 } else { wob_h/2.0 };
+        let wob_half_width = 100.0;
+        cr.arc(x + w/2.0 + r2_safe + wob_half_width, y + h - r2_safe, r2_safe, 90f64.to_radians(), 180f64.to_radians());
+        cr.arc_negative(x + w/2.0 - r2_safe + wob_half_width, y + h + r2_safe - wob_h, r2_safe, 0f64.to_radians(), 270f64.to_radians());
+        cr.arc_negative(x + w/2.0 + r2_safe - wob_half_width, y + h + r2_safe - wob_h, r2_safe, 270f64.to_radians(), 180f64.to_radians());
+        cr.arc(x + w/2.0 - r2_safe - wob_half_width, y + h - r2_safe, r2_safe, 0f64.to_radians(), 90f64.to_radians());
+    }
     
     if reserved_h > 0.0 {
         let r2_safe = if reserved_h > r2 { r2 } else { reserved_h/2.0 };
