@@ -62,7 +62,7 @@ pub struct HeimdallrLayer {
     pub(crate) notifications: Vec<crate::notifications::Notification>,
     pub(crate) notification_idx: usize,
     pub(crate) wob_value: f64,
-    pub(crate) wob_show: bool,
+    pub(crate) wob_expiration: Option<Instant>,
     pub(crate) ratatoskr_connected: bool,
     pub(crate) animator: Animator,
     pub(crate) frame_model: FrameModel
@@ -80,6 +80,14 @@ impl HeimdallrLayer {
 
         // Now, updateNotificationList is for both adding new, and removing expired, notifications
         self.update_notification_list(None);
+
+        // Check if wob-like must be closed
+        if let Some(exp) = self.wob_expiration {
+            if Instant::now() > exp {
+                self.animator.animate_property(&self.frame_model, AnimationKey::WobHeight, 0.0, 500);
+                self.wob_expiration = None;
+            }
+        }
 
         let animating = self.animator.step(&mut self.frame_model);
         if !animating { // Now, we skip calling draw only if we are not animating something
@@ -194,14 +202,14 @@ impl HeimdallrLayer {
         let xc = (thickness + w_hole) / 2.0;
         match self.config.frame_color {
             FrameColor::None => {
-                wob_rect(&cr, xc, h - thickness, radius2, wob_h, 1.0);
+                wob_rect(&cr, xc, h - thickness, radius, wob_h, 1.0);
                 cr.set_source_rgba(1.0, 1.0, 1.0, 0.35);
                 cr.fill().unwrap();
             },
             _ => {}
         }
 
-        wob_rect(&cr, xc, h - thickness, radius2, wob_h, self.wob_value);
+        wob_rect(&cr, xc, h - thickness, radius, wob_h, self.wob_value);
         cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
         cr.fill().unwrap();
 
@@ -466,9 +474,8 @@ impl HeimdallrLayer { // This is for icon management, I like to keep it separate
     }
 
     pub fn show_value(&mut self, value: f64, kind: Option<&str>) -> bool {
-        eprintln!("TODO {} {:?}", value, kind);
-        let changed = !self.wob_show || self.wob_value != value;
-        self.wob_show = true;
+        let changed = self.wob_expiration.is_none() || self.wob_value != value;
+        self.wob_expiration = Some(Instant::now() + Duration::from_millis(2000));
         self.wob_value = value.clamp(0.0, 1.0);
         changed
     }

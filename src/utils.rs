@@ -130,7 +130,6 @@ impl Animator {
         Self { animations: Vec::new() }
     }
 
-    /// Da chiamare nel tuo `_animation_step()`
     pub fn step(&mut self, model: &mut FrameModel) -> bool {
         let now = Instant::now();
         let mut changed = false;

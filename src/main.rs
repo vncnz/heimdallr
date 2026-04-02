@@ -130,7 +130,7 @@ fn main() {
         config: config.clone(),
         notifications: vec![],
         notification_idx: 0,
-        wob_show: false,
+        wob_expiration: None,
         wob_value: 0.35, // TODO: set 0
         animator: Animator::new(),
         frame_model: FrameModel::new()
@@ -260,7 +260,7 @@ fn main() {
                         app.animator.animate_property(
                             &app.frame_model,
                             AnimationKey::WobHeight,
-                            5.0,
+                            10.0,
                             500
                         );
                         app.request_redraw("external value event");
