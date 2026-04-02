@@ -93,6 +93,16 @@ Notification example:
 Another notification example, critical
 ![Critical notification example](./screenshots/notif_critical.png)
 
+## Wob-like indicator
+
+Inspired by the [wob project](https://github.com/francma/wob), I implemented a generic indicator in Heimdallr. You can write to /tmp/heimdallr_cmds a decimal number between 0 and 1 and that number will be used to show an indicator in the bottom-center of the screen. The indicator slides in over 500 ms, remains visible for two seconds, and then slides out over 500 ms. Values outside the 0–1 range are clamped.
+
+If no colored border is configured, the indicator uses a white background with 0.1 opacity to improve readability.
+
+For example: ```echo "0.35" > /tmp/heimdallr_cmds```
+
+![Wob-like example](./screenshots/wob_like.png)
+
 ## TODOs
 
 ### Improvements
@@ -108,7 +118,7 @@ Another notification example, critical
 - ~~Dynamic frame border color (depending on resource icons)~~ Done!
 - ~~Add an alert icon for "reboot recommended" situation~~ Done!
 - ~~Animation system?~~ Done!
-- Show lightness and volume bars when retrieving relevant events
+- ~~Wob-like functionality~~ Done!
 - Monitor and indicate mic/camera accesses
 - Show a resources resume for some time after receiving a dedicated command (something like [AVG 0.9 1.27 1.41] [MEM 73% / SWP 14%] [DSK 49%] and so on)?
 - Force a red frame border when battery is low, regardless of the settings?
