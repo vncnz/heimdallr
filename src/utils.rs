@@ -91,7 +91,7 @@ use std::time::{Duration, Instant};
 pub enum AnimationKey {
     NotificationHeight,
     IconsHeight,
-    WobHeight
+    WobHeightRatio
 }
 
 pub struct Animation {
@@ -198,7 +198,7 @@ impl FrameModel {
         match id {
             AnimationKey::NotificationHeight => self.notif_height_ratio = val,
             AnimationKey::IconsHeight => self.icons_ratio = val,
-            AnimationKey::WobHeight => self.wob_height = val
+            AnimationKey::WobHeightRatio => self.wob_height = val
         }
     }
 
@@ -206,7 +206,7 @@ impl FrameModel {
         match id {
             AnimationKey::NotificationHeight => self.notif_height_ratio,
             AnimationKey::IconsHeight => self.icons_ratio,
-            AnimationKey::WobHeight => self.wob_height
+            AnimationKey::WobHeightRatio => self.wob_height
         }
     }
 }

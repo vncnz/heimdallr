@@ -84,7 +84,7 @@ impl HeimdallrLayer {
         // Check if wob-like must be closed
         if let Some(exp) = self.wob_expiration {
             if Instant::now() > exp {
-                self.animator.animate_property(&self.frame_model, AnimationKey::WobHeight, 0.0, 500);
+                self.animator.animate_property(&self.frame_model, AnimationKey::WobHeightRatio, 0.0, 500);
                 self.wob_expiration = None;
             }
         }
@@ -178,7 +178,7 @@ impl HeimdallrLayer {
         let res_w = 24.0;
         // let res_h = if self.ratatoskr_connected { (self.icons.len() as f64) * 30.0 } else { 30.0 };
         let res_h = if self.ratatoskr_connected { self.frame_model.icons_ratio * 24.0 } else { 24.0 };
-        let wob_h = self.frame_model.wob_height;
+        let wob_h = 24.0 * self.frame_model.wob_height;
 
         // Draw rounded rectangle frame
         let thickness = 1.0;
@@ -202,14 +202,14 @@ impl HeimdallrLayer {
         let xc = (thickness + w_hole) / 2.0;
         match self.config.frame_color {
             FrameColor::None => {
-                wob_rect(&cr, xc, h - thickness, radius, wob_h, 1.0);
+                wob_rect(&cr, xc, h - thickness, radius2, wob_h, 1.0);
                 cr.set_source_rgba(1.0, 1.0, 1.0, 0.35);
                 cr.fill().unwrap();
             },
             _ => {}
         }
 
-        wob_rect(&cr, xc, h - thickness, radius, wob_h, self.wob_value);
+        wob_rect(&cr, xc, h - thickness, radius2, wob_h, self.wob_value);
         cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
         cr.fill().unwrap();
 

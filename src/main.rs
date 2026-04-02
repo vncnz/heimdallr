@@ -259,8 +259,8 @@ fn main() {
                     if refresh {
                         app.animator.animate_property(
                             &app.frame_model,
-                            AnimationKey::WobHeight,
-                            10.0,
+                            AnimationKey::WobHeightRatio,
+                            1.0,
                             500
                         );
                         app.request_redraw("external value event");
