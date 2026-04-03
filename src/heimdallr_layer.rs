@@ -200,13 +200,19 @@ impl HeimdallrLayer {
 
         // wob-like
         let xc = (thickness + w_hole) / 2.0;
-        match self.config.frame_color {
-            FrameColor::None => {
-                wob_rect(&cr, xc, h - thickness, radius2, wob_h, 1.0);
-                cr.set_source_rgba(1.0, 1.0, 1.0, 0.35);
-                cr.fill().unwrap();
-            },
-            _ => {}
+        if wob_h != 0.0 {
+            match self.config.frame_color {
+                FrameColor::None => {
+                    wob_rect(&cr, xc, h - thickness, radius2, wob_h, 1.0);
+                    cr.set_source_rgba(1.0, 1.0, 1.0, 0.35);
+                    cr.fill().unwrap();
+
+                    wob_rect(&cr, xc, h - thickness, radius2, wob_h, 1.0);
+                    cr.set_source_rgba(0.0, 0.0, 0.0, 0.5);
+                    cr.stroke().unwrap();
+                },
+                _ => {}
+            }
         }
 
         wob_rect(&cr, xc, h - thickness, radius2, wob_h, self.wob_value);
