@@ -111,6 +111,7 @@ For example: ```echo "0.35" > /tmp/heimdallr_cmds```
 - ~~Force embedded screen in laptops~~ Done!
 - ~~Make buffer size depending on output size~~ Done!
 - Put temporary notification always before important ones (because the latter doesn't expire!)
+- Manage those situations where the "unmounted" notification arrives before the "mounting" situation
 - Reduce quantity of damaged surface (wl_surface.damage_buffer only for changed areas)
 
 ### New functionalities
