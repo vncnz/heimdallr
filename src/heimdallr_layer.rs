@@ -106,59 +106,46 @@ impl HeimdallrLayer {
         self.draw(qh);
     }
 
+    fn acquire_buffer(buffers: &mut [Option<Buffer>; 2], width: u32, height: u32, current_buffer_idx: usize, pool: &mut SlotPool) -> usize {
+        let stride = width as i32 * 4;
+        let buffer_idx = current_buffer_idx;
+
+        if let Some(buffer) = buffers[buffer_idx].as_mut() {
+            if buffer.canvas(pool).is_some() {
+                return buffer_idx;
+            }
+        }
+
+        let other_idx = 1 - buffer_idx;
+        if let Some(buffer) = buffers[other_idx].as_mut() {
+            if buffer.canvas(pool).is_some() {
+                return other_idx;
+            }
+        }
+
+        let (new_buffer, _canvas) = pool
+            .create_buffer(width as i32, height as i32, stride, wl_shm::Format::Argb8888)
+            .expect("buffer creation failed");
+        buffers[buffer_idx] = Some(new_buffer);
+        buffer_idx
+    }
+
     fn draw(&mut self, qh: &QueueHandle<Self>) {
         if self.layer.is_some() && self.pool.is_some() {
             self.needs_redraw = false;
             let _start = std::time::Instant::now();
-            
-            let stride = self.width as i32 * 4;
+
             let pool = self.pool.as_mut().unwrap();
-            let mut buffer_idx = self.current_buffer_idx;
-            let selected_canvas: &mut [u8];
-
-            if let Some(buffer) = self.buffers[buffer_idx].as_mut() {
-                if let Some(canvas) = buffer.canvas(pool) {
-                    selected_canvas = canvas;
-                } else {
-                    let other_idx = 1 - buffer_idx;
-                    if let Some(buffer) = self.buffers[other_idx].as_mut() {
-                        if let Some(canvas) = buffer.canvas(pool) {
-                            buffer_idx = other_idx;
-                            selected_canvas = canvas;
-                        } else {
-                            let new_buffer = pool
-                                .create_buffer(self.width as i32, self.height as i32, stride, wl_shm::Format::Argb8888)
-                                .expect("buffer creation failed")
-                                .0;
-                            self.buffers[buffer_idx] = Some(new_buffer);
-                            selected_canvas = self.buffers[buffer_idx].as_mut().unwrap().canvas(pool).expect("canvas should be available immediately");
-                        }
-                    } else {
-                        let new_buffer = pool
-                            .create_buffer(self.width as i32, self.height as i32, stride, wl_shm::Format::Argb8888)
-                            .expect("buffer creation failed")
-                            .0;
-                        self.buffers[buffer_idx] = Some(new_buffer);
-                        selected_canvas = self.buffers[buffer_idx].as_mut().unwrap().canvas(pool).expect("canvas should be available immediately");
-                    }
-                }
-            } else {
-                let new_buffer = pool
-                    .create_buffer(self.width as i32, self.height as i32, stride, wl_shm::Format::Argb8888)
-                    .expect("buffer creation failed")
-                    .0;
-                self.buffers[buffer_idx] = Some(new_buffer);
-                selected_canvas = self.buffers[buffer_idx].as_mut().unwrap().canvas(pool).expect("canvas should be available immediately");
-            }
-
-            let canvas = selected_canvas;
+            let buffer_idx = Self::acquire_buffer(&mut self.buffers, self.width, self.height, self.current_buffer_idx, pool);
+            let buffer = self.buffers[buffer_idx].as_ref().unwrap();
+            let canvas = buffer.canvas(pool).expect("canvas should be available immediately");
             let surface = unsafe {
                 ImageSurface::create_for_data_unsafe(
                     canvas.as_mut_ptr(),
                     Format::ARgb32,
                     self.width as i32,
                     self.height as i32,
-                    stride,
+                    buffer.stride(),
                 )
                 .unwrap()
             };
