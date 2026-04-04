@@ -1,8 +1,7 @@
-use image::Frame;
 use smithay_client_toolkit::{
-    compositor::CompositorHandler, delegate_compositor, delegate_layer, delegate_output, delegate_registry, delegate_shm, output::{OutputHandler, OutputState}, registry::{ProvidesRegistryState, RegistryState}, registry_handlers, shell::wlr_layer::{LayerShellHandler, LayerSurface, LayerSurfaceConfigure}, shm::{Shm, ShmHandler, slot::SlotPool}
+    compositor::CompositorHandler, delegate_compositor, delegate_layer, delegate_output, delegate_registry, delegate_shm, output::{OutputHandler, OutputState}, registry::{ProvidesRegistryState, RegistryState}, registry_handlers, shell::wlr_layer::{LayerShellHandler, LayerSurface, LayerSurfaceConfigure}, shm::{Shm, ShmHandler, slot::{Buffer, SlotPool}}
 };
-use wayland_client::{Connection, Proxy, QueueHandle, backend::ObjectId, protocol::{wl_buffer::WlBuffer, wl_compositor, wl_region, wl_shm}};
+use wayland_client::{Connection, QueueHandle, protocol::{wl_compositor, wl_region, wl_shm}};
 use cairo::{Context, Format, ImageSurface};
 
 use std::{num::NonZeroU32, time::{Duration, Instant}};
@@ -12,7 +11,6 @@ use smithay_client_toolkit::shell::WaylandSurface;
 use std::collections::HashMap;
 use cairo::FontSlant;
 
-use wayland_client::protocol::wl_buffer;
 use wayland_client::Dispatch;
 
 use chrono::Local;
@@ -56,7 +54,8 @@ pub struct HeimdallrLayer {
     pub(crate) needs_redraw: bool,
     pub(crate) last_redraw: Instant,
     pub(crate) redraw_interval: Duration,
-    pub(crate) buffers: HashMap<ObjectId, wl_buffer::WlBuffer>,
+    pub(crate) buffers: [Option<Buffer>; 2],
+    pub(crate) current_buffer_idx: usize,
     pub(crate) background_surface: Option<cairo::ImageSurface>,
     pub(crate) config: crate::config::Config,
     pub(crate) notifications: Vec<crate::notifications::Notification>,
@@ -111,19 +110,48 @@ impl HeimdallrLayer {
         if self.layer.is_some() && self.pool.is_some() {
             self.needs_redraw = false;
             let _start = std::time::Instant::now();
-            // eprintln!("Draw started at {:?}", start);
             
             let stride = self.width as i32 * 4;
-            let (buffer, canvas) = self
-                .pool.as_mut().unwrap()
-                .create_buffer(self.width as i32, self.height as i32, stride, wl_shm::Format::Argb8888)
-                .expect("buffer creation failed");
+            let pool = self.pool.as_mut().unwrap();
+            let mut buffer_idx = self.current_buffer_idx;
+            let selected_canvas: &mut [u8];
 
-            let wl_buffer: WlBuffer = buffer.wl_buffer().clone();
-            let id: ObjectId = wl_buffer.id();
-            self.buffers.insert(id, wl_buffer);
+            if let Some(buffer) = self.buffers[buffer_idx].as_mut() {
+                if let Some(canvas) = buffer.canvas(pool) {
+                    selected_canvas = canvas;
+                } else {
+                    let other_idx = 1 - buffer_idx;
+                    if let Some(buffer) = self.buffers[other_idx].as_mut() {
+                        if let Some(canvas) = buffer.canvas(pool) {
+                            buffer_idx = other_idx;
+                            selected_canvas = canvas;
+                        } else {
+                            let new_buffer = pool
+                                .create_buffer(self.width as i32, self.height as i32, stride, wl_shm::Format::Argb8888)
+                                .expect("buffer creation failed")
+                                .0;
+                            self.buffers[buffer_idx] = Some(new_buffer);
+                            selected_canvas = self.buffers[buffer_idx].as_mut().unwrap().canvas(pool).expect("canvas should be available immediately");
+                        }
+                    } else {
+                        let new_buffer = pool
+                            .create_buffer(self.width as i32, self.height as i32, stride, wl_shm::Format::Argb8888)
+                            .expect("buffer creation failed")
+                            .0;
+                        self.buffers[buffer_idx] = Some(new_buffer);
+                        selected_canvas = self.buffers[buffer_idx].as_mut().unwrap().canvas(pool).expect("canvas should be available immediately");
+                    }
+                }
+            } else {
+                let new_buffer = pool
+                    .create_buffer(self.width as i32, self.height as i32, stride, wl_shm::Format::Argb8888)
+                    .expect("buffer creation failed")
+                    .0;
+                self.buffers[buffer_idx] = Some(new_buffer);
+                selected_canvas = self.buffers[buffer_idx].as_mut().unwrap().canvas(pool).expect("canvas should be available immediately");
+            }
 
-            // Cairo surface on the shared memory buffer
+            let canvas = selected_canvas;
             let surface = unsafe {
                 ImageSurface::create_for_data_unsafe(
                     canvas.as_mut_ptr(),
@@ -140,18 +168,15 @@ impl HeimdallrLayer {
             if self.config.show_clock { self.draw_clock(cr.clone()); }
             if self.notifications.len() > 0 { self.draw_notification(cr.clone()) }
 
-            // Damage + commit
             let layer = self.layer.clone().unwrap();
+            let buffer = self.buffers[buffer_idx].as_ref().unwrap();
             buffer.attach_to(layer.wl_surface()).unwrap();
-            layer.attach(Some(&buffer.wl_buffer()), 0, 0);
-            layer.wl_surface().damage_buffer(0, 0, self.width as i32, self.height as i32); // Negletable difference between full damage and local damage!
-            // layer.wl_surface().damage_buffer(0, 0, 50, self.height as i32);
-            // layer.wl_surface().damage_buffer(0, 0, self.width as i32, 50);
+            layer.wl_surface().damage_buffer(0, 0, self.width as i32, self.height as i32);
             layer.wl_surface().frame(qh, layer.wl_surface().clone());
             layer.commit();
 
             drop(surface);
-            
+            self.current_buffer_idx = 1 - buffer_idx;
             self.last_redraw = Instant::now();
 
             #[cfg(debug_assertions)] {
@@ -479,7 +504,7 @@ impl HeimdallrLayer { // This is for icon management, I like to keep it separate
         false
     }
 
-    pub fn show_value(&mut self, value: f64, kind: Option<&str>) -> bool {
+    pub fn show_value(&mut self, value: f64, _kind: Option<&str>) -> bool {
         let changed = self.wob_expiration.is_none() || self.wob_value != value;
         self.wob_expiration = Some(Instant::now() + Duration::from_millis(2000));
         self.wob_value = value.clamp(0.0, 1.0);
@@ -559,6 +584,8 @@ impl LayerShellHandler for HeimdallrLayer {
         self.width = NonZeroU32::new(configure.new_size.0).map_or(1920, NonZeroU32::get);
         self.height = NonZeroU32::new(configure.new_size.1).map_or(1080, NonZeroU32::get);
         self.pool = Some(SlotPool::new((self.width * self.height * 4) as usize, &self.shm).expect("pool creation failed"));
+        self.buffers = [None, None];
+        self.current_buffer_idx = 0;
         if self.first_configure {
             self.first_configure = false;
             self.draw(qh);
@@ -579,34 +606,6 @@ delegate_registry!(HeimdallrLayer);
 impl ProvidesRegistryState for HeimdallrLayer {
     fn registry(&mut self) -> &mut RegistryState { &mut self.registry_state }
     registry_handlers![OutputState];
-}
-
-// Dispatch per ricevere wl_buffer::Event::Release
-impl Dispatch<wl_buffer::WlBuffer, ()> for HeimdallrLayer {
-    fn event(
-        state: &mut Self,
-        proxy: &wl_buffer::WlBuffer,
-        event: wl_buffer::Event,
-        _data: &(),
-        _conn: &Connection,
-        _qh: &QueueHandle<Self>,
-    ) {
-        eprintln!("Dispatch wlbuffer called");
-        match event {
-            wl_buffer::Event::Release => {
-                // ottieni l'id del proxy rilasciato
-                let id = proxy.id();
-                // rimuovi dalla mappa: l'ultimo WlBuffer viene droppato -> memoria liberata
-                let removed = state.buffers.remove(&id);
-                if removed.is_none() {
-                    eprintln!("Release per buffer non presente in mappa: {}", id);
-                } else {
-                    eprintln!("Buffer {} rilasciato e rimosso", id);
-                }
-            }
-            _ => {}
-        }
-    }
 }
 
 impl Dispatch<wl_compositor::WlCompositor, ()> for HeimdallrLayer {
