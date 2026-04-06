@@ -24,6 +24,9 @@ pub struct AlarmIcon {
     warn: f64
 }
 
+static mut AVG_DUR: u128 = 0;
+static mut AVG_CNT: i64 = -5;
+
 fn cr_text_aligned (cr: Context, text: String, x: f64, y: f64, dx: f64, dy: f64) -> (f64, f64) {
     // if v != 0.0 || h != 0.0 {
         let mut x1 = x;
@@ -159,6 +162,8 @@ impl HeimdallrLayer {
             let buffer = self.buffers[buffer_idx].as_ref().unwrap();
             buffer.attach_to(layer.wl_surface()).unwrap();
             layer.wl_surface().damage_buffer(0, 0, self.width as i32, self.height as i32);
+            // layer.wl_surface().damage_buffer(0, 0, self.width as i32, 50);
+            // layer.wl_surface().damage_buffer(0, 0, 50, self.height as i32);
             layer.wl_surface().frame(qh, layer.wl_surface().clone());
             layer.commit();
 
@@ -169,7 +174,12 @@ impl HeimdallrLayer {
             #[cfg(debug_assertions)] {
                 let end = std::time::Instant::now();
                 let dur = (end - _start).as_nanos();
-                eprintln!("Draw ended ({:.2}ms)", (dur as f64) / 1_000_000.0);
+                unsafe {
+                    AVG_CNT += 1;
+                    if AVG_CNT > -1 {
+                        AVG_DUR += dur;
+                        eprintln!("Draw ended ({:.2}ms avg {:.2}ms)", (dur as f64) / 1_000_000.0, ((AVG_DUR as f64)/(AVG_CNT as f64)) / 1_000_000.0); }
+                    }
             }
         } else {
             // No layer yet
