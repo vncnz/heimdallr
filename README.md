@@ -111,8 +111,8 @@ For example: ```echo "0.35" > /tmp/heimdallr_cmds```
 - ~~Force embedded screen in laptops~~ Done!
 - ~~Make buffer size depending on output size~~ Done!
 - Put temporary notification always before important ones (because the latter doesn't expire!)
-- Manage those situations where the "unmounted" notification arrives before the "mounting" situation
-- Reduce quantity of damaged surface (wl_surface.damage_buffer only for changed areas)
+- Manage those situations where the "unmounted" notification arrives instants before the "mounting" notification
+- Reduce quantity of damaged surface (wl_surface.damage_buffer only for changed areas) (to be evaluated if it's worth it)
 
 ### New functionalities
 - ~~Add a visual indicator for Ratatoskr disconnection~~ Done!
