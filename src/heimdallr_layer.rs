@@ -42,7 +42,7 @@ fn cr_text_aligned (cr: Context, text: String, x: f64, y: f64, dx: f64, dy: f64)
         x1 -= extents.width() * dx;
         y1 -= extents.height() * dy + extents.y_bearing();
         cr.move_to(x1, y1);
-        // eprintln!("({},{}) -> ({},{})   {:?}", &x, &y, &x1, &y1, extents);
+        // dbg_println!("({},{}) -> ({},{})   {:?}", &x, &y, &x1, &y1, extents);
     // }
     cr.show_text(&text).ok();
     (extents.width(), extents.height())
@@ -74,7 +74,8 @@ pub struct HeimdallrLayer {
     pub(crate) wob_expiration: Option<Instant>,
     pub(crate) ratatoskr_connected: bool,
     pub(crate) animator: Animator,
-    pub(crate) frame_model: FrameModel
+    pub(crate) frame_model: FrameModel,
+    pub(crate) is_waiting_for_frame: bool
 }
 
 impl HeimdallrLayer {
@@ -123,80 +124,101 @@ impl HeimdallrLayer {
         self.draw(qh);
     }
 
-    fn acquire_buffer(buffers: &mut [Option<Buffer>; 2], width: u32, height: u32, current_buffer_idx: usize, pool: &mut SlotPool) -> usize {
+    fn acquire_buffer(buffers: &mut [Option<Buffer>; 2], width: u32, height: u32, current_buffer_idx: usize, pool: &mut SlotPool) -> Option<usize> {
         let stride = width as i32 * 4;
         let buffer_idx = current_buffer_idx;
 
+        if buffers[buffer_idx].is_none() {
+            let (new_buffer, _canvas) = pool
+                .create_buffer(width as i32, height as i32, stride, wl_shm::Format::Argb8888)
+                .expect("buffer creation failed");
+            buffers[buffer_idx] = Some(new_buffer);
+            dbg_println!("Buffer created");
+        }
         if let Some(buffer) = buffers[buffer_idx].as_mut() {
             if buffer.canvas(pool).is_some() {
-                return buffer_idx;
+                return Some(buffer_idx);
             }
         }
 
-        let other_idx = 1 - buffer_idx;
+        /*let other_idx = 1 - buffer_idx;
+        if buffers[other_idx].is_none() {
+            let (new_buffer, _canvas) = pool
+                .create_buffer(width as i32, height as i32, stride, wl_shm::Format::Argb8888)
+                .expect("buffer creation failed");
+            buffers[other_idx] = Some(new_buffer);
+        }
         if let Some(buffer) = buffers[other_idx].as_mut() {
             if buffer.canvas(pool).is_some() {
-                return other_idx;
+                return Some(other_idx);
             }
-        }
+        }*/
 
-        let (new_buffer, _canvas) = pool
+        /* let (new_buffer, _canvas) = pool
             .create_buffer(width as i32, height as i32, stride, wl_shm::Format::Argb8888)
             .expect("buffer creation failed");
         buffers[buffer_idx] = Some(new_buffer);
-        buffer_idx
+        buffer_idx */
+        None
     }
 
     fn draw(&mut self, qh: &QueueHandle<Self>) {
+        if self.is_waiting_for_frame {
+            return;
+        }
         if self.layer.is_some() && self.pool.is_some() {
             self.needs_redraw = false;
             let _start = std::time::Instant::now();
 
             let pool = self.pool.as_mut().unwrap();
-            let buffer_idx = Self::acquire_buffer(&mut self.buffers, self.width, self.height, self.current_buffer_idx, pool);
-            let buffer = self.buffers[buffer_idx].as_ref().unwrap();
-            let canvas = buffer.canvas(pool).expect("canvas should be available immediately");
-            let surface = unsafe {
-                ImageSurface::create_for_data_unsafe(
-                    canvas.as_mut_ptr(),
-                    Format::ARgb32,
-                    self.width as i32,
-                    self.height as i32,
-                    buffer.stride(),
-                )
-                .unwrap()
-            };
-            let cr = Context::new(&surface).unwrap();
+            let buffer_idx_opt = Self::acquire_buffer(&mut self.buffers, self.width, self.height, self.current_buffer_idx, pool);
+            if let Some(buffer_idx) = buffer_idx_opt {
+                let buffer = self.buffers[buffer_idx].as_ref().unwrap();
+                let canvas = buffer.canvas(pool).expect("canvas should be available immediately");
+                let surface = unsafe {
+                    ImageSurface::create_for_data_unsafe(
+                        canvas.as_mut_ptr(),
+                        Format::ARgb32,
+                        self.width as i32,
+                        self.height as i32,
+                        buffer.stride(),
+                    )
+                    .unwrap()
+                };
+                let cr = Context::new(&surface).unwrap();
 
-            self.draw_myframe(cr.clone());
-            if self.config.show_clock { self.draw_clock(cr.clone()); }
-            if self.notifications.len() > 0 { self.draw_notification(cr.clone()) }
+                self.draw_myframe(cr.clone());
+                if self.config.show_clock { self.draw_clock(cr.clone()); }
+                if self.notifications.len() > 0 { self.draw_notification(cr.clone()) }
 
-            let layer = self.layer.clone().unwrap();
-            let buffer = self.buffers[buffer_idx].as_ref().unwrap();
-            buffer.attach_to(layer.wl_surface()).unwrap();
-            layer.wl_surface().damage_buffer(0, 0, self.width as i32, self.height as i32);
-            // layer.wl_surface().damage_buffer(0, 0, self.width as i32, 50);
-            // layer.wl_surface().damage_buffer(0, 0, 50, self.height as i32);
-            layer.wl_surface().frame(qh, layer.wl_surface().clone());
-            layer.commit();
+                let layer = self.layer.clone().unwrap();
+                let buffer = self.buffers[buffer_idx].as_ref().unwrap();
+                buffer.attach_to(layer.wl_surface()).unwrap();
+                layer.wl_surface().damage_buffer(0, 0, self.width as i32, self.height as i32);
+                // layer.wl_surface().damage_buffer(0, 0, self.width as i32, 50);
+                // layer.wl_surface().damage_buffer(0, 0, 50, self.height as i32);
+                self.is_waiting_for_frame = true;
+                layer.wl_surface().frame(qh, layer.wl_surface().clone());
+                layer.commit();
 
-            drop(surface);
-            self.current_buffer_idx = 1 - buffer_idx;
-            self.last_redraw = Instant::now();
+                drop(surface);
+                // self.current_buffer_idx = 1 - buffer_idx;
+                self.current_buffer_idx = (buffer_idx + 1) % self.buffers.len();
+                self.last_redraw = Instant::now();
 
-            #[cfg(debug_assertions)] {
-                let end = std::time::Instant::now();
-                let dur = (end - _start).as_nanos();
-                unsafe {
-                    AVG_CNT += 1;
-                    if AVG_CNT > -1 {
-                        AVG_DUR += dur;
-                        eprintln!("Draw ended ({:.2}ms avg {:.2}ms)", (dur as f64) / 1_000_000.0, ((AVG_DUR as f64)/(AVG_CNT as f64)) / 1_000_000.0); }
-                    }
+                #[cfg(debug_assertions)] {
+                    let end = std::time::Instant::now();
+                    let dur = (end - _start).as_nanos();
+                    unsafe {
+                        AVG_CNT += 1;
+                        if AVG_CNT > -1 {
+                            AVG_DUR += dur;
+                            eprintln!("Draw ended ({:.2}ms avg {:.2}ms)", (dur as f64) / 1_000_000.0, ((AVG_DUR as f64)/(AVG_CNT as f64)) / 1_000_000.0); }
+                        }
+                }
+            } else {
+                dbg_println!("No available buffer to use");
             }
-        } else {
-            // No layer yet
         }
     }
 
@@ -307,7 +329,7 @@ impl HeimdallrLayer {
         now.num_seconds_from_midnight() as f64 + f64::from(now.nanosecond()) / 1_000_000_000.0;
         let y = seconds_today / 86_400.0;
         let ypos = (1.0 - y) * (self.height as f64);
-        // eprintln!("{} {}", y, ypos);
+        // dbg_println!("{} {}", y, ypos);
 
         /* Border */
         cr.set_source_rgba(0.1, 0.1, 0.1, 1.0);
@@ -324,7 +346,7 @@ impl HeimdallrLayer {
         cr_text_aligned(cr.clone(), "".into(), self.width as f64 - 5.0, ypos, 1.0, 0.0);
 
         if let Some(rec) = self.battery_recharging {
-            // eprintln!("Battery moving");
+            // dbg_println!("Battery moving");
             let bat_symb: String = if rec { "󱐋".into() } else { "󰯆".into() };
             let font_size: f64;
             let color: (f64, f64, f64, f64);
@@ -354,7 +376,7 @@ impl HeimdallrLayer {
             
             // let extents = cr.text_extents(text).unwrap();
         } else {
-            // eprintln!("No battery info/moving");
+            // dbg_println!("No battery info/moving");
         }
     }
 
@@ -568,7 +590,7 @@ fn rounded_rect(cr: &Context, x: f64, y: f64, w: f64, h: f64, r: f64, r2: f64, r
     
     if reserved_h > 0.0 {
         let r2_safe = if reserved_h > r2 { r2 } else { reserved_h/2.0 };
-        // eprintln!("reserved_h: {}", reserved_h);
+        // dbg_println!("reserved_h: {}", reserved_h);
         cr.arc(x + r2_safe + reserved_w, y + h - r2_safe, r2_safe, 90f64.to_radians(), 180f64.to_radians());
         cr.arc_negative(x - r2_safe + reserved_w, y + h + r2_safe - reserved_h, r2_safe, 0f64.to_radians(), 270f64.to_radians());
         cr.arc(x + r2, y + h - r2 - reserved_h, r2, 90f64.to_radians(), 180f64.to_radians());
@@ -585,6 +607,8 @@ impl CompositorHandler for HeimdallrLayer {
     fn transform_changed(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wayland_client::protocol::wl_surface::WlSurface, _: wayland_client::protocol::wl_output::Transform) {}
     fn frame(&mut self, _: &Connection, _qh: &QueueHandle<Self>, _: &wayland_client::protocol::wl_surface::WlSurface, _: u32) {
         // self.draw(qh);
+        dbg_println!("SCTK Frame callback received");
+        self.is_waiting_for_frame = false;
     }
     fn surface_enter(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wayland_client::protocol::wl_surface::WlSurface, _: &wayland_client::protocol::wl_output::WlOutput) {}
     fn surface_leave(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wayland_client::protocol::wl_surface::WlSurface, _: &wayland_client::protocol::wl_output::WlOutput) {}
@@ -642,7 +666,7 @@ impl Dispatch<wl_compositor::WlCompositor, ()> for HeimdallrLayer {
         _conn: &wayland_client::Connection,
         _qh: &wayland_client::QueueHandle<Self>,
     ) {
-        eprintln!("Dispatch wlcompositor called");
+        dbg_println!("Dispatch wlcompositor called");
     }
 }
 
@@ -655,6 +679,6 @@ impl Dispatch<wl_region::WlRegion, ()> for HeimdallrLayer {
         _conn: &wayland_client::Connection,
         _qh: &wayland_client::QueueHandle<Self>,
     ) {
-        eprintln!("Dispatch wlregion called");
+        dbg_println!("Dispatch wlregion called");
     }
 }

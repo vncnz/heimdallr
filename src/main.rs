@@ -4,7 +4,7 @@ use serde::Deserialize;
 use smithay_client_toolkit::{
     compositor::CompositorState, output::OutputState, registry::RegistryState, shell::wlr_layer::{Anchor, KeyboardInteractivity, Layer, LayerShell}, shm::Shm
 };
-use wayland_client::{Connection, globals::{registry_queue_init}, protocol::{wl_compositor, wl_output::WlOutput, wl_region}};
+use wayland_client::{Connection, EventQueue, globals::{GlobalList, registry_queue_init}, protocol::{wl_compositor, wl_output::WlOutput, wl_region}};
 
 use std::{sync::mpsc::{self, Receiver, Sender}, time::{Duration, Instant}};
 
@@ -39,7 +39,7 @@ fn choose_output (app: &HeimdallrLayer) -> std::option::Option<WlOutput>{
                 log_to_file(format!("Found display {name}"));
                 if name.starts_with("eDP") {
                     chosen_output = Some(output.clone());
-                    // eprintln!("Found internal display");
+                    // dbg_println!("Found internal display");
                     log_to_file(format!("{name} is an embedded display!"));
                 }
             }
@@ -96,7 +96,7 @@ fn main() {
     log_to_file(format!("Configurazione caricata: {:?}", config));
 
     let conn = Connection::connect_to_env().unwrap();
-    let (globals, mut event_queue) = registry_queue_init(&conn).unwrap();
+    let (globals, mut event_queue): (GlobalList, EventQueue<HeimdallrLayer>) = registry_queue_init(&conn).unwrap();
     let qh = event_queue.handle();
 
     let compositor = CompositorState::bind(&globals, &qh).unwrap();
@@ -134,7 +134,8 @@ fn main() {
         wob_expiration: None,
         wob_value: 0.35, // TODO: set 0
         animator: Animator::new(),
-        frame_model: FrameModel::new()
+        frame_model: FrameModel::new(),
+        is_waiting_for_frame: false
     };
 
     event_queue.roundtrip(&mut app).unwrap();
@@ -144,7 +145,6 @@ fn main() {
     // let mut outputs = output_state.outputs();
     // let chosen_output = outputs.next();
     let chosen_output = choose_output(&app);
-    eprintln!("\n\n\n\n\n\n\n\n\n");
 
     let surface = compositor.create_surface(&qh);
     let layer = layer_shell.create_layer_surface(&qh, surface, Layer::Overlay, Some("heimdallr"), chosen_output.as_ref());
@@ -291,14 +291,14 @@ fn main() {
                     if battery_eta != app.battery_eta || battery_recharging != app.battery_recharging {
                         app.request_redraw("battery");
                     }
-                    // eprintln!("{:?}", bat);
-                    // eprintln!("battery {:?} {:?}", app.battery_recharging, app.battery_eta);
+                    // dbg_println!("{:?}", bat);
+                    // dbg_println!("battery {:?} {:?}", app.battery_recharging, app.battery_eta);
                 }
             }
 
             // Bluetooth data has a custom management
             if data.resource == "bt-batteries" {
-                eprintln!("{:?}", data);
+                dbg_println!("{:?}", data);
                 if data.warning >= 0.3 || config.show_always_bluetooth {
                     if let Some(blue) = &data.data {
                         if let Ok(b) = BluetoothStats::deserialize(blue.clone()) {
