@@ -56,7 +56,7 @@ pub struct HeimdallrLayer {
     pub(crate) battery_recharging: Option<bool>,
     pub(crate) needs_redraw: bool,
     pub(crate) last_redraw: Instant,
-    pub(crate) redraw_interval: Duration,
+    pub(crate) redraw_interval: [Duration; 2],
     pub(crate) buffers: [Option<Buffer>; 2],
     pub(crate) current_buffer_idx: usize,
     pub(crate) background_surface: Option<cairo::ImageSurface>,
@@ -71,6 +71,15 @@ pub struct HeimdallrLayer {
 }
 
 impl HeimdallrLayer {
+    pub fn check_redraw_timeout(&mut self) {
+
+        if self.last_redraw.elapsed() < self.redraw_interval[1] {
+            return;
+        }
+
+        self.request_redraw("time");
+    }
+    
     pub fn request_redraw(&mut self, _reason: &str) {
         self.needs_redraw = true;
         #[cfg(debug_assertions)] {
@@ -98,7 +107,7 @@ impl HeimdallrLayer {
                 return;
             }
 
-            if self.last_redraw.elapsed() < self.redraw_interval {
+            if self.last_redraw.elapsed() < self.redraw_interval[0] {
                 return;
             }
         }

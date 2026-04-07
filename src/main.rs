@@ -124,7 +124,7 @@ fn main() {
         battery_recharging: None,
         needs_redraw: true,
         last_redraw: Instant::now(),
-        redraw_interval: Duration::from_millis(1000),
+        redraw_interval: [Duration::from_millis(1_000), Duration::from_millis(60_000)],
         buffers: [None, None],
         current_buffer_idx: 0,
         background_surface: None,
@@ -400,6 +400,7 @@ fn main() {
             app.request_redraw("notifications updated");
         }
 
+        app.check_redraw_timeout();
         app.maybe_redraw(&qh);
         conn.flush().unwrap();
         std::thread::sleep(Duration::from_millis(10));
