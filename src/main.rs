@@ -390,8 +390,6 @@ fn main() {
         }
 
         if let Ok(new_notif) = rx_notif.try_recv() {
-            // draw_notifications(&list);
-            // IDEA: manage HERE notification list and use rx_notif for the single new notification, not the entire list
             println!("{:?}", new_notif);
             if new_notif.reboot {
                 app.add_icon("reboot", "󱄋", get_color_gradient(1.0), 1.0);
