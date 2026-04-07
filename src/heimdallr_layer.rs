@@ -18,6 +18,13 @@ use chrono::Timelike;
 
 use crate::{config::FrameColor, dbg_println, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file}};
 
+#[derive(PartialEq)]
+pub enum IconChange {
+    Added,
+    Changed,
+    // Removed,
+    None
+}
 pub struct AlarmIcon {
     symbol: String,
     color: (f64, f64, f64, f64), // RGBA
@@ -476,7 +483,16 @@ impl HeimdallrLayer {
 }
 
 impl HeimdallrLayer { // This is for icon management, I like to keep it separated, for now
-    pub fn add_icon(&mut self, id: &str, symbol: &str, color: (f64, f64, f64, f64), warn: f64) {
+    pub fn add_icon(&mut self, id: &str, symbol: &str, color: (f64, f64, f64, f64), warn: f64) -> IconChange {
+
+        let mut already_present = false;
+        if let Some(found) = self.icons.get(id) {
+            already_present = true;
+            if f64::abs(found.warn - warn) < 0.1 {
+                return IconChange::None;
+            }
+        }
+
         self.icons.insert(
             id.to_string(),
             AlarmIcon {
@@ -485,6 +501,11 @@ impl HeimdallrLayer { // This is for icon management, I like to keep it separate
                 warn
             },
         );
+        if already_present {
+            IconChange::Changed
+        } else {
+            IconChange::Added
+        }
     }
 
     pub fn remove_icon(&mut self, id: &str) -> bool {

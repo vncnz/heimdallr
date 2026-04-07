@@ -14,7 +14,7 @@ use std::collections::HashMap;
 
 use std::panic;
 
-use crate::{commands::start_command_listener, data::{BluetoothStats, DeviceKind, RatatoskrSocket}, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
+use crate::{commands::start_command_listener, data::{BluetoothStats, DeviceKind, RatatoskrSocket}, heimdallr_layer::IconChange, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
 
 mod data;
 mod config;
@@ -276,6 +276,8 @@ fn main() {
             // println!("{} Ricevuto: {:?}", chrono::Local::now().format("%H:%M:%S%.3f"), data.resource);
             if data.resource == "battery" {
                 if let Some(bat) = &data.data {
+                    let battery_eta = app.battery_eta;
+                    let battery_recharging = app.battery_recharging;
                     // {"capacity": Number(177228.0), "color": String("#55FF00"), "eta": Number(380.0978088378906), "icon": String("\u{f0079}"), "percentage": Number(100), "state": String("Discharging"), "warn": Number(0.0), "watt": Number(7.76800012588501)}
                     // let old_eta = app.battery_eta;
                     // let old_state = app.battery_recharging;
@@ -286,7 +288,9 @@ fn main() {
                         _ => None
                     };
                     // println!("{:?}", bat);
-                    app.request_redraw("battery");
+                    if battery_eta != app.battery_eta || battery_recharging != app.battery_recharging {
+                        app.request_redraw("battery");
+                    }
                     // eprintln!("{:?}", bat);
                     // eprintln!("battery {:?} {:?}", app.battery_recharging, app.battery_eta);
                 }
@@ -318,7 +322,7 @@ fn main() {
                                     _ => "󰂱"
                                 };
                                 if config.show_always_bluetooth || dev.warn >= 0.3 {
-                                    app.add_icon(&iconkey, icon, get_color_gradient(dev.warn), dev.warn);
+                                    let _added = app.add_icon(&iconkey, icon, get_color_gradient(dev.warn), dev.warn);
                                 }
                             }
                             app.animator.animate_property(
@@ -374,17 +378,25 @@ fn main() {
                 // display
 
                 if icon != "" {
-                    let removed = app.remove_icon(&data.resource);
-                    app.add_icon(&data.resource, icon, get_color_gradient(data.warning), data.warning);
-                    if !removed {
-                        app.animator.animate_property(
-                            &app.frame_model,
-                            AnimationKey::IconsHeight,
-                            app.icons.len() as f64,
-                            200
-                        );
+                    // let removed = app.remove_icon(&data.resource);
+                    let change = app.add_icon(&data.resource, icon, get_color_gradient(data.warning), data.warning);
+                    
+                    if change != IconChange::None {
+                        if change == IconChange::Added {
+                            dbg_println!("Icon added");
+                            app.animator.animate_property(
+                                &app.frame_model,
+                                AnimationKey::IconsHeight,
+                                app.icons.len() as f64,
+                                200
+                            );
+                        } else {
+                            dbg_println!("Icon changed");
+                        }
+                        app.request_redraw(&data.resource);
+                    } else {
+                        dbg_println!("Icon untouched");
                     }
-                    app.request_redraw(&data.resource);
                 }
             }
         }
