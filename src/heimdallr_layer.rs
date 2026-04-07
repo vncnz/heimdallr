@@ -16,7 +16,7 @@ use wayland_client::Dispatch;
 use chrono::Local;
 use chrono::Timelike;
 
-use crate::{config::FrameColor, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file}};
+use crate::{config::FrameColor, dbg_println, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file}};
 
 pub struct AlarmIcon {
     symbol: String,
@@ -82,9 +82,7 @@ impl HeimdallrLayer {
     
     pub fn request_redraw(&mut self, _reason: &str) {
         self.needs_redraw = true;
-        #[cfg(debug_assertions)] {
-            println!("Redraw requested by {}", _reason);
-        }
+        dbg_println!("Redraw requested by {}", _reason);
     }
 
     pub fn maybe_redraw(&mut self, qh: &QueueHandle<Self>) {

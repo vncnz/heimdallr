@@ -1,3 +1,16 @@
+#[macro_export]
+macro_rules! dbg_println {
+    ($($arg:tt)*) => {
+        #[cfg(debug_assertions)]
+        println!($($arg)*);
+    };
+}
+
+
+
+
+
+
 const DEFAULT_WHITE: bool = false;
 pub fn get_color_gradient(value: f64) -> (f64, f64, f64, f64) {
     get_color_gradient_full(0.0, 1.0, value, false)
