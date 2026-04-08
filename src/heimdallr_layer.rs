@@ -510,7 +510,7 @@ impl HeimdallrLayer { // This is for icon management, I like to keep it separate
         let mut already_present = false;
         if let Some(found) = self.icons.get(id) {
             already_present = true;
-            if f64::abs(found.warn - warn) < 0.1 {
+            if f64::abs(found.warn - warn) < 0.05 {
                 return IconChange::None;
             }
         }

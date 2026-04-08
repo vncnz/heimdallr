@@ -395,7 +395,7 @@ fn main() {
                         }
                         app.request_redraw(&data.resource);
                     } else {
-                        dbg_println!("Icon untouched");
+                        dbg_println!("Icon untouched {} {}", data.resource, data.warning);
                     }
                 }
             }
