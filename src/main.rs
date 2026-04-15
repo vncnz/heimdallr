@@ -90,7 +90,7 @@ fn main() {
         for sig in signals.forever() {
             let name = signal_name(sig).unwrap_or("UNKNOWN");
             eprintln!("Received signal {sig} ({name}) from the system");
-            log_to_file("Received signal {sig} ({name}) from the system".to_string());
+            log_to_file(format!("Received signal {sig} ({name}) from the system"));
 
             match sig {
                 SIGPIPE | SIGHUP => {
@@ -114,8 +114,10 @@ fn main() {
 
     env_logger::init();
 
+    log_to_file(format!("{} {} started", crate_name!(), crate_version!()));
+
     let config = Config::load_from_file("~/.config/heimdallr/config.json");
-    log_to_file(format!("Configurazione caricata: {:?}", config));
+    log_to_file(format!("Loaded configuration: {:?}", config));
 
     let conn = Connection::connect_to_env().unwrap();
     let (globals, mut event_queue): (GlobalList, EventQueue<HeimdallrLayer>) = registry_queue_init(&conn).unwrap();
