@@ -121,6 +121,7 @@ For example: ```echo "0.35" > /tmp/heimdallr_cmds```
 - ~~Animation system?~~ Done!
 - ~~Wob-like functionality~~ Done!
 - Monitor and indicate mic/camera accesses
+- Add output configuration both on config file and as parameter
 - Show a resources resume for some time after receiving a dedicated command (something like [AVG 0.9 1.27 1.41] [MEM 73% / SWP 14%] [DSK 49%] and so on)?
 - Force a red frame border when battery is low, regardless of the settings?
 
