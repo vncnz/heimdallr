@@ -1,6 +1,6 @@
 [package]
 name = "heimdallr"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
 
 [dependencies]
@@ -28,3 +28,5 @@ zbus = "3"
 futures = "0.3.31"
 libc = "0.2"
 signal-hook = "0.4.1"
+
+clap = { version = "4.6", features = ["derive", "cargo"] }

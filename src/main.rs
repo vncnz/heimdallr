@@ -28,7 +28,21 @@ use config::Config;
 use crate::heimdallr_layer::HeimdallrLayer;
 use crate::notifications::start_notification_listener;
 
-// Tip: find src | entr -r cargo run for a sorta hotreloading (entr is an external cmd to be installed using pacman)
+use clap::{crate_name, crate_version, Parser};
+
+#[derive(Debug, Parser)]
+#[command(disable_version_flag = true, about = "Zero-config system HUD for Wayland", long_about = None)]
+struct Args {
+    /* /// Sets a custom config file
+    #[arg(short, long, value_name = "FILE")]
+    config: Option<PathBuf>, */
+
+    //#[arg(short, long, default_value_t = 1)]
+    //count: u8,
+
+    #[arg(short = 'V', long, help = "Print version")]
+    version: bool,
+}
 
 fn choose_output (app: &HeimdallrLayer) -> std::option::Option<WlOutput>{
     let mut chosen_output = None;
@@ -52,6 +66,14 @@ fn choose_output (app: &HeimdallrLayer) -> std::option::Option<WlOutput>{
 }
 
 fn main() {
+
+    let args = Args::parse();
+
+    if args.version {
+        println!("{} {}", crate_name!(), crate_version!());
+        std::process::exit(0);
+    }
+
     panic::set_hook(Box::new(|info| {
         eprintln!("PANIC");
         eprintln!("{info}");
