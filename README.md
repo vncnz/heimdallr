@@ -1,5 +1,8 @@
 # heimdallr - ᚺᛖᛁᛗᛞᚨᛚᚱ
 
+Heimdallr is a minimal Wayland overlay that shows system state only when it matters.
+No bars, no noise — just timely information at the edge of your screen.
+
 ## About the name
 
 From wikipedia:
