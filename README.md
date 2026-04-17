@@ -107,6 +107,9 @@ For example: ```echo "0.35" > /tmp/heimdallr_cmds```
 ![Wob-like example](./screenshots/wob_like.png)
 
 ## TODOs
+- Publish on AUR
+- Publish as Nix flake?
+- Create a GIF?
 
 ### Improvements
 - ~~Manage replacing logic for unmounting/unmounted notifications~~ Done!
@@ -127,6 +130,8 @@ For example: ```echo "0.35" > /tmp/heimdallr_cmds```
 - Add output configuration both on config file and as parameter
 - Show a resources resume for some time after receiving a dedicated command (something like [AVG 0.9 1.27 1.41] [MEM 73% / SWP 14%] [DSK 49%] and so on)?
 - Force a red frame border when battery is low, regardless of the settings?
+- Custom hooks for events?
+- Plugin system?
 
 ## Known bugs
 - ~~Sometimes heimdallr terminates itself after system suspension/resume~~ Normal behaviour, surface is destroyed by Wayland. Solution: set Heimdallr as a system service with automatic restart!
