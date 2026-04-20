@@ -136,4 +136,4 @@ For example: ```echo "0.35" > /tmp/heimdallr_cmds```
 ## Known bugs
 - ~~Sometimes heimdallr terminates itself after system suspension/resume~~ Normal behaviour, surface is destroyed by Wayland. Solution: set Heimdallr as a system service with automatic restart!
 - ~~Sometimes, closing an urgent notifications doesn't restore normal frame width~~ Fixed!
-- ~~Sometimes, a bluetooth device keeps to be shown after it is shut off~~ upower's fault (used by ratatoskr)
+- ~~Sometimes, a bluetooth device keeps to be shown after it is shut off~~ upower's behaviour (used by ratatoskr) when mouse is charging
