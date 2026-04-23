@@ -12,6 +12,7 @@ From wikipedia:
 ## About this project
 
 The aim of this project is to show several kinds of information:
+
 - simulate rounded corners of the display
 - show which resources are in a worrying state
 - show current time
@@ -38,7 +39,6 @@ Oh, if the screen looks too empty, that’s by design: I like minimalism. No sta
 Light blue border; battery charging; high RAM, medium load, and light disk usage alarms:
 ![With border, several icons, charging](./screenshots/with_border_and_icons.png)
 
-
 Light blue border; battery discharging; light disk usage alarm:
 ![With border, disk icon, skull](./screenshots/with_border_and_skull.png)
 
@@ -55,8 +55,10 @@ Light blue border; light memory pressure and light disk usage alarms, with diffe
 ![With window](./screenshots/with_window.png)
 
 ## Configuration
+
 You can configure frame color and clock presence with a json file in ```~/.config/heimdallr/config.json```:
-```
+
+```json
 {
     "frame_color": [red,green,blue,alpha] | "worst-resource" | "random" | null,
     "show_clock": true | false
@@ -64,7 +66,8 @@ You can configure frame color and clock presence with a json file in ```~/.confi
 ```
 
 For example:
-```
+
+```json
 {
     "frame_color": [0.2, 0.6, 1.0, 1.0],
     "show_clock": true,
@@ -76,6 +79,7 @@ If you set "worst-resource" as frame_color, in absence of resource warnings the 
 If you ser false as show_always_bluetooth, you'll see icons for your bluetooth peripherals only if their battery runs low.
 
 ## Notifications
+
 Now, Heimdallr listen to notifications. When there is a notification, the upper section of the frame become thicker to accomodate the notification.
 Only one notification can be shown at any given moment, on a single line of text, with the following format:
 
@@ -84,6 +88,7 @@ Only one notification can be shown at any given moment, on a single line of text
 Normal notifications gets a timeout of 3 seconds, critical notifications lasts until eternity and beyond.
 
 You can browse and remove notifications with following commands:
+
 - echo hide_notification > /tmp/heimdallr_cmds
 - echo prev_notification > /tmp/heimdallr_cmds
 - echo next_notification > /tmp/heimdallr_cmds
@@ -107,11 +112,13 @@ For example: ```echo "0.35" > /tmp/heimdallr_cmds```
 ![Wob-like example](./screenshots/wob_like.png)
 
 ## TODOs
+
 - Publish on AUR
 - Publish as Nix flake?
 - Create a GIF?
 
 ### Improvements
+
 - ~~Manage replacing logic for unmounting/unmounted notifications~~ Done!
 - ~~Move logs to file and check why sometime heimdallr dies~~ Done!
 - ~~Force embedded screen in laptops~~ Done!
@@ -121,6 +128,7 @@ For example: ```echo "0.35" > /tmp/heimdallr_cmds```
 - ~~Reduce quantity of damaged surface (wl_surface.damage_buffer only for changed areas)~~ it's not worth it
 
 ### New functionalities
+
 - ~~Add a visual indicator for Ratatoskr disconnection~~ Done!
 - ~~Dynamic frame border color (depending on resource icons)~~ Done!
 - ~~Add an alert icon for "reboot recommended" situation~~ Done!
@@ -134,6 +142,7 @@ For example: ```echo "0.35" > /tmp/heimdallr_cmds```
 - Plugin system?
 
 ## Known bugs
+
 - ~~Sometimes heimdallr terminates itself after system suspension/resume~~ Normal behaviour, surface is destroyed by Wayland. Solution: set Heimdallr as a system service with automatic restart!
 - ~~Sometimes, closing an urgent notifications doesn't restore normal frame width~~ Fixed!
 - ~~Sometimes, a bluetooth device keeps to be shown after it is shut off~~ upower's behaviour (used by ratatoskr) when mouse is charging
