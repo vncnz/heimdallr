@@ -13,10 +13,7 @@ use cairo::FontSlant;
 
 use wayland_client::Dispatch;
 
-use chrono::Local;
-use chrono::Timelike;
-
-use crate::{config::FrameColor, dbg_println, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file}};
+use crate::{clock::ClockTrait, clock1::Clock1, config::FrameColor, dbg_println, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, cr_text_aligned, get_color_gradient, log_to_file}};
 
 #[derive(PartialEq)]
 pub enum IconChange {
@@ -33,20 +30,6 @@ pub struct AlarmIcon {
 
 static mut AVG_DUR: u128 = 0;
 static mut AVG_CNT: i64 = -5;
-
-fn cr_text_aligned (cr: Context, text: String, x: f64, y: f64, dx: f64, dy: f64) -> (f64, f64) {
-    // if v != 0.0 || h != 0.0 {
-        let mut x1 = x;
-        let mut y1 = y;
-        let extents = cr.text_extents(&text).unwrap();
-        x1 -= extents.width() * dx;
-        y1 -= extents.height() * dy + extents.y_bearing();
-        cr.move_to(x1, y1);
-        // dbg_println!("({},{}) -> ({},{})   {:?}", &x, &y, &x1, &y1, extents);
-    // }
-    cr.show_text(&text).ok();
-    (extents.width(), extents.height())
-}
 
 pub struct HeimdallrLayer {
     pub(crate) registry_state: RegistryState,
@@ -66,7 +49,6 @@ pub struct HeimdallrLayer {
     pub(crate) redraw_interval: [Duration; 2],
     pub(crate) buffers: [Option<Buffer>; 2],
     pub(crate) current_buffer_idx: usize,
-    pub(crate) background_surface: Option<cairo::ImageSurface>,
     pub(crate) config: crate::config::Config,
     pub(crate) notifications: Vec<crate::notifications::Notification>,
     pub(crate) notification_idx: usize,
@@ -75,7 +57,8 @@ pub struct HeimdallrLayer {
     pub(crate) ratatoskr_connected: bool,
     pub(crate) animator: Animator,
     pub(crate) frame_model: FrameModel,
-    pub(crate) is_waiting_for_frame: bool
+    pub(crate) is_waiting_for_frame: bool,
+    pub(crate) clock: Clock1
 }
 
 impl HeimdallrLayer {
@@ -188,7 +171,7 @@ impl HeimdallrLayer {
                 let cr = Context::new(&surface).unwrap();
 
                 self.draw_myframe(cr.clone());
-                if self.config.show_clock { self.draw_clock(cr.clone()); }
+                if self.config.show_clock { self.clock.draw(cr.clone(), self.height as i32, self.width, self.battery_recharging, self.battery_eta); }
                 if self.notifications.len() > 0 { self.draw_notification(cr.clone()) }
 
                 let layer = self.layer.clone().unwrap();
@@ -311,109 +294,6 @@ impl HeimdallrLayer {
             cr.stroke().unwrap();
         }
 
-            
-
-    }
-
-    fn draw_clock (&mut self, cr: Context) {
-        if self.background_surface.is_none() {
-            self.draw_clock_background();
-        }
-        if let Some(bg) = &self.background_surface {
-            cr.set_source_surface(bg, (self.width - 18) as f64, 0.0).unwrap();
-            cr.paint().unwrap();
-        }
-
-        let now = Local::now();
-        let seconds_today =
-        now.num_seconds_from_midnight() as f64 + f64::from(now.nanosecond()) / 1_000_000_000.0;
-        let y = seconds_today / 86_400.0;
-        let ypos = (1.0 - y) * (self.height as f64);
-        // dbg_println!("{} {}", y, ypos);
-
-        /* Border */
-        cr.set_source_rgba(0.1, 0.1, 0.1, 1.0);
-        cr.move_to((self.width - 24u32) as f64 + 1.0, (1.0 - y) * (self.height as f64) - 1.0);
-        cr.set_font_size(17.0);
-        // cr.show_text("");
-        cr_text_aligned(cr.clone(), "".into(), self.width as f64 - 5.0, ypos, 1.0, 0.0);
-        /* end */
-
-        cr.set_source_rgba(1.0, 0.1, 0.2, 1.0);
-        cr.move_to((self.width - 24u32) as f64, (1.0 - y) * (self.height as f64));
-        cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
-        cr.set_font_size(15.0);
-        cr_text_aligned(cr.clone(), "".into(), self.width as f64 - 5.0, ypos, 1.0, 0.0);
-
-        if let Some(rec) = self.battery_recharging {
-            // dbg_println!("Battery moving");
-            let bat_symb: String = if rec { "󱐋".into() } else { "󰯆".into() };
-            let font_size: f64;
-            let color: (f64, f64, f64, f64);
-            if rec {
-                font_size = 20.0;
-                color = (0.1, 1.0, 0.2, 1.0);
-            } else {
-                font_size = 14.0;
-                color = (1.0, 0.1, 0.2, 1.0);
-            };
-            if let Some(eta) = self.battery_eta {
-                let bpos = (ypos - (eta / 1440.0 * self.height as f64) + self.height as f64) % self.height as f64;
-                
-                /* Border */
-                cr.set_font_size(font_size + 2.0);
-                cr.set_source_rgba(0.1,0.1,0.1,1.0);
-                cr_text_aligned(cr.clone(), bat_symb.clone(), self.width as f64 - 7.0 + 1.0, bpos, 1.0, 0.5);
-                /* end */
-                
-                cr.set_font_size(font_size);
-                let (r,g,b,a) = color;
-                cr.set_source_rgba(r,g,b,a);
-                cr_text_aligned(cr.clone(), bat_symb, self.width as f64 - 7.0, bpos, 1.0, 0.5);
-            } else {
-                cr_text_aligned(cr.clone(), bat_symb, self.width as f64, 0.0, 1.0, 0.5);
-            }
-            
-            // let extents = cr.text_extents(text).unwrap();
-        } else {
-            // dbg_println!("No battery info/moving");
-        }
-    }
-
-    fn draw_clock_background(&mut self) {
-        let width = 18;
-        let height = self.height as i32;
-        let surface = cairo::ImageSurface::create(cairo::Format::ARgb32, width, height).unwrap();
-        let cr = cairo::Context::new(&surface).unwrap();
-
-        cr.set_source_rgba(0.0, 0.0, 0.0, 0.0);
-        cr.paint().unwrap();
-
-        // cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
-
-        for h in 1..24 {
-            let y = (1.0 - (h as f64 / 24.0)) * height as f64;
-            let mut symb = (h % 10).to_string();
-            let mut x = 15.0;
-            if h % 6 == 0 {
-                cr.set_source_rgba(0.6, 0.9, 1.0, 1.0);
-                cr.set_font_size(20.0);
-                x = 12.0;
-                cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
-                symb = "".into();
-            } else if h % 3 == 0 {
-                cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
-                cr.set_font_size(12.0);
-                cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
-            } else {
-                cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
-                cr.set_font_size(10.0);
-                cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
-            }
-            cr_text_aligned(cr.clone(), symb, x, y, 0.5, 0.5);
-        }
-
-        self.background_surface = Some(surface);
     }
 
     fn draw_notification(&mut self, cr: Context) {

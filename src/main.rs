@@ -14,7 +14,7 @@ use std::collections::HashMap;
 
 use std::panic;
 
-use crate::{commands::start_command_listener, data::{BluetoothStats, DeviceKind, RatatoskrSocket}, heimdallr_layer::IconChange, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
+use crate::{clock::ClockTrait, clock1::Clock1, commands::start_command_listener, data::{BluetoothStats, DeviceKind, RatatoskrSocket}, heimdallr_layer::IconChange, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
 
 mod data;
 mod config;
@@ -22,6 +22,8 @@ mod heimdallr_layer;
 mod notifications;
 mod commands;
 mod utils;
+mod clock;
+mod clock1;
 use config::Config;
 // use chrono;
 
@@ -151,7 +153,6 @@ fn main() {
         redraw_interval: [Duration::from_millis(1_000), Duration::from_millis(60_000)],
         buffers: [None, None],
         current_buffer_idx: 0,
-        background_surface: None,
         config: config.clone(),
         notifications: vec![],
         notification_idx: 0,
@@ -159,7 +160,8 @@ fn main() {
         wob_value: 0.35, // TODO: set 0
         animator: Animator::new(),
         frame_model: FrameModel::new(),
-        is_waiting_for_frame: false
+        is_waiting_for_frame: false,
+        clock: Clock1::new()
     };
 
     event_queue.roundtrip(&mut app).unwrap();

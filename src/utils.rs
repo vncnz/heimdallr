@@ -100,6 +100,8 @@ pub fn log_to_file(msg: String) {
 
 use std::time::{Duration, Instant};
 
+use cairo::Context;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AnimationKey {
     NotificationHeight,
@@ -238,3 +240,17 @@ self.animator.animate_property(
     }
 );
 */
+
+pub fn cr_text_aligned (cr: Context, text: String, x: f64, y: f64, dx: f64, dy: f64) -> (f64, f64) {
+    // if v != 0.0 || h != 0.0 {
+        let mut x1 = x;
+        let mut y1 = y;
+        let extents = cr.text_extents(&text).unwrap();
+        x1 -= extents.width() * dx;
+        y1 -= extents.height() * dy + extents.y_bearing();
+        cr.move_to(x1, y1);
+        // dbg_println!("({},{}) -> ({},{})   {:?}", &x, &y, &x1, &y1, extents);
+    // }
+    cr.show_text(&text).ok();
+    (extents.width(), extents.height())
+}
