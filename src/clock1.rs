@@ -71,15 +71,15 @@ impl ClockTrait for Clock1 {
                 /* Border */
                 cr.set_font_size(font_size + 2.0);
                 cr.set_source_rgba(0.1,0.1,0.1,1.0);
-                cr_text_aligned(cr.clone(), bat_symb.clone(), right as f64 - 7.0 + 1.0, bpos, 1.0, 0.5);
+                cr_text_aligned(cr.clone(), bat_symb.clone(), right as f64 - 8.0 - 1.0, bpos, 1.0, 0.5);
                 /* end */
                 
                 cr.set_font_size(font_size);
                 let (r,g,b,a) = color;
                 cr.set_source_rgba(r,g,b,a);
-                cr_text_aligned(cr.clone(), bat_symb, right as f64 - 7.0, bpos, 1.0, 0.5);
+                cr_text_aligned(cr.clone(), bat_symb, right as f64 - 8.0, bpos, 1.0, 0.5);
             } else {
-                cr_text_aligned(cr.clone(), bat_symb, right as f64, 0.0, 1.0, 0.5);
+                // cr_text_aligned(cr.clone(), bat_symb, right as f64, 0.0, 1.0, 0.5);
             }
             
             // let extents = cr.text_extents(text).unwrap();
