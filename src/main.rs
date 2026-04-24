@@ -157,7 +157,7 @@ fn main() {
         notifications: vec![],
         notification_idx: 0,
         wob_expiration: None,
-        wob_value: 0.35, // TODO: set 0
+        wob_value: 0.0,
         animator: Animator::new(),
         frame_model: FrameModel::new(),
         is_waiting_for_frame: false,
