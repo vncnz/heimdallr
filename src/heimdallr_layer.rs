@@ -58,7 +58,7 @@ pub struct HeimdallrLayer {
     pub(crate) animator: Animator,
     pub(crate) frame_model: FrameModel,
     pub(crate) is_waiting_for_frame: bool,
-    pub(crate) clock: Clock1
+    pub(crate) clock: Box<dyn ClockTrait>
 }
 
 impl HeimdallrLayer {
@@ -171,7 +171,7 @@ impl HeimdallrLayer {
                 let cr = Context::new(&surface).unwrap();
 
                 self.draw_myframe(cr.clone());
-                if self.config.show_clock { self.clock.draw(cr.clone(), self.height as i32, self.width, self.battery_recharging, self.battery_eta); }
+                self.clock.draw(cr.clone(), self.height as i32, self.width, self.battery_recharging, self.battery_eta);
                 if self.notifications.len() > 0 { self.draw_notification(cr.clone()) }
 
                 let layer = self.layer.clone().unwrap();
@@ -228,7 +228,7 @@ impl HeimdallrLayer {
 
         let w = self.width as f64;
         let h = self.height as f64;
-        let w_hole = w - thickness - (if self.config.show_clock { 8.0 } else { 0.0 });
+        let w_hole = w - thickness - self.clock.get_reserved_width();
 
         let top = thickness / 2.0 + /*if self.notifications.len() > 0 { 24.0 } else { 0.0 }*/24.0 * self.frame_model.notif_height_ratio;
 

@@ -9,12 +9,18 @@ pub struct Clock1 {
     pub(crate) background_surface: Option<cairo::ImageSurface>
 }
 
-impl ClockTrait for Clock1 {
-
-    fn new () -> Self {
+impl Clock1 {
+    pub fn new () -> Self {
         Clock1 {
             background_surface: None
         }
+    }
+}
+
+impl ClockTrait for Clock1 {
+
+    fn get_reserved_width (&self) -> f64 {
+        8.0
     }
 
     fn draw (&mut self, cr: Context, wheight: i32, right: u32, battery_recharging: Option<bool>, battery_eta: Option<f64>) {
