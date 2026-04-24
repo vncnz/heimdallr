@@ -228,7 +228,7 @@ impl HeimdallrLayer {
 
         let w = self.width as f64;
         let h = self.height as f64;
-        let w_hole = w - thickness - self.clock.get_reserved_width();
+        let w_hole = w - thickness - self.clock.get_reserved_width() - 2.0;
 
         let top = thickness / 2.0 + /*if self.notifications.len() > 0 { 24.0 } else { 0.0 }*/24.0 * self.frame_model.notif_height_ratio;
 
