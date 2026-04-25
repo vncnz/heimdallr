@@ -6,6 +6,8 @@ use chrono::Timelike;
 
 use crate::clock::ClockTrait;
 use crate::utils::rounded_rect;
+use crate::utils::rounded_rect_gradient;
+use crate::utils::rounded_rect_no_gradient;
 use crate::utils::{cr_text_aligned, rounded_big_hole};
 
 pub struct Clock2 {
@@ -39,31 +41,31 @@ impl ClockTrait for Clock2 {
         let seconds_today =
         now.num_seconds_from_midnight() as f64 + f64::from(now.nanosecond()) / 1_000_000_000.0;
         let y = seconds_today / 86_400.0;
-        let current_hour_ypos = (1.0 - y) * (wheight as f64);
+        // let current_hour_ypos = (1.0 - y) * (wheight as f64);
         // dbg_println!("{} {}", y, ypos);
 
         // let mut interval_time = (current_hour_ypos, wheight as f64);
         // let mut interval_battery: Option<(f64, f64)> = None;
-        let mut color: (f64, f64, f64, f64) = (0.0, 0.0, 0.0, 0.0);
+        let mut color_battery: (f64, f64, f64, f64) = (0.0, 0.0, 0.0, 0.0);
         // let mut battery_ypos = wheight as f64;
 
+        let color_green = (0.1, 1.0, 0.2, 1.0);
+        let color_red = (1.0, 0.1, 0.2, 1.0);
+        let color_full_1 = (1.0, 1.0, 1.0, 1.0);
+        let color_full_2 = (0.6, 0.9, 1.0, 1.0);
+        let color_half_1 = (1.0, 1.0, 1.0, 0.4);
+        let color_half_2 = (0.6, 0.9, 1.0, 0.4);
 
         let hour_time = y * 24.0;
         let mut hour_battery: Option<f64> = None;
         
-        if let (Some(rec), Some(eta)) = (battery_recharging, battery_eta) {
+        if let (Some(rec), Some(mut eta)) = (battery_recharging, battery_eta) {
+            // eta = 10.0;
             if rec {
-                color = (0.1, 1.0, 0.2, 1.0);
+                color_battery = color_green;
             } else {
-                color = (1.0, 0.1, 0.2, 1.0);
+                color_battery = color_red;
             };
-            /* battery_ypos = (current_hour_ypos - (eta / 1440.0 * wheight as f64) + wheight as f64) % wheight as f64;
-            if battery_ypos < current_hour_ypos {
-                interval_battery = Some((battery_ypos, current_hour_ypos));
-            } else if battery_ypos > current_hour_ypos {
-                interval_battery = Some((wheight as f64, battery_ypos));
-                interval_time = (current_hour_ypos, battery_ypos);
-            } */
             hour_battery = Some((eta / 60.0 + hour_time) % 24.0);
             eprintln!("hour_battery {hour_battery:?}");
         }
@@ -73,80 +75,81 @@ impl ClockTrait for Clock2 {
         let padding = 2.0;
         let xc = (right as f64) - 5.0;
         let w = 4.0;
+        let left = xc - w/2.0;
 
         /* bg */
-        for drawing_hour in 0..24 {
+        /* for drawing_hour in 0..24 {
             // let same = (hour_time / 6.0).ceil() == ((drawing_hour+1) as f64 / 6.0).ceil();
             // let w = if same { 6.0 } else { 2.0 };
 
             let top = wheight as f64 - drawing_hour as f64 * step_height - step_height;
             let height = step_height;
-            if drawing_hour % 6 > 0 {
+            // let left = xc - w/2.0;
+            /* if drawing_hour % 6 > 0 {
                 cr.set_source_rgba(1.0, 1.0, 1.0, 0.4);
             } else {
                 cr.set_source_rgba(0.6, 0.9, 1.0, 0.4);
             }
             rounded_rect(&cr, xc - w/2.0, top + padding, w, height - (padding*2.0), 2.0);
-            cr.fill().unwrap();
-        }
+            cr.fill().unwrap(); */
+            rounded_rect_gradient(&cr, left, top, w, height - (padding*2.0), 2.0,
+                vec![
+                    (0.0, if drawing_hour % 6 > 0 { (1.0, 1.0, 1.0, 0.4) } else { (0.6, 0.9, 1.0, 0.4) })
+                ], false
+            )
+        } */
         /* end bg */
 
         for drawing_hour in 0..24 {
-            // let same = (hour_time / 6.0).ceil() == ((drawing_hour+1) as f64 / 6.0).ceil();
-            // let w = if same { 6.0 } else { 2.0 };
+            let color_full = if drawing_hour % 6 > 0 { color_full_1 } else { color_full_2 };
+            let color_half = if drawing_hour % 6 > 0 { color_half_1 } else { color_half_2 };
 
-            let mut top: Option<f64> = None;
-            let mut height: f64 = 0.0;
-            if (drawing_hour as f64 + 1.0) < hour_time { // White box
-                top = Some(wheight as f64 - drawing_hour as f64 * step_height - step_height);
-                height = step_height;
-            } else if (drawing_hour as f64) < hour_time {
-                top = Some(wheight as f64 - hour_time * step_height);
-                height = (hour_time - drawing_hour as f64) * step_height;
-            }
+            let df64 = drawing_hour as f64;
+            let bat = hour_battery.unwrap_or_else(|| hour_time);
+            let initial_color = 
+                if bat < hour_time && df64 < bat { color_battery }
+                else if df64 < hour_time { color_full }
+                else if df64 < bat { color_battery }
+                else if df64 > hour_time && bat < hour_time { color_battery }
+                else { color_half };
+            let mut steps = vec![(0.0, initial_color)];
 
-            if let Some(t) = top {
-                // let (r,g,b,a) = color;
-                // cr.set_source_rgba(r,g,b,a);
-                // cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
-                if drawing_hour % 6 > 0 {
-                    cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
-                } else {
-                    cr.set_source_rgba(0.6, 0.9, 1.0, 1.0);
+            if bat > hour_time { // normal case
+                if df64 < hour_time && df64 + 1.0 > hour_time {
+
+                    if df64 < bat { // to green/red
+                        let limit = hour_time % 1.0;
+                        eprintln!("0a: h={drawing_hour} limit={limit}");
+                        steps.push((limit, color_battery));
+                    }
                 }
-                rounded_rect(&cr, xc - w/2.0, t + padding, w, height - (padding*2.0), 2.0);
-                cr.fill().unwrap();
-            }
-
-
-            if let Some(hour_bat) = hour_battery && drawing_hour as f64 > (hour_time-1.0) {
-                // red/green box
-                if hour_time > drawing_hour as f64 {
-                    let remove = if hour_bat < (drawing_hour + 1) as f64 { ((drawing_hour + 1) as f64 - hour_bat)*step_height } else { 0.0 };
-                    top = Some(wheight as f64 - drawing_hour as f64 * step_height - step_height + remove);
-                    height = step_height * (drawing_hour as f64 + 1.0 - hour_time) - remove;
-                    // eprintln!("case 0 h={drawing_hour} height={height}");
-                } else if (drawing_hour as f64 + 1.0) < hour_bat {
-                    top = Some(wheight as f64 - drawing_hour as f64 * step_height - step_height);
-                    height = step_height;
-                    // eprintln!("case 1 h={drawing_hour} height={height}");
-                } else if (drawing_hour as f64) < hour_bat {
-                    top = Some(wheight as f64 - hour_bat * step_height);
-                    height = (hour_bat - drawing_hour as f64) * step_height;
-                    // eprintln!("case 2 h={drawing_hour} height={height}");
-                } else {
-                    // eprintln!("case 3 h={drawing_hour}");
-                    top = None;
+                if (df64 + 1.0) > bat { // empty
+                    let limit = bat % 1.0;
+                    eprintln!("1a: h={drawing_hour} limit={limit}");
+                    steps.push((limit, color_half));
                 }
-
-                if let Some(t) = top {
-                    let (r,g,b,a) = color;
-                    cr.set_source_rgba(r,g,b,a);
-                    // cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
-                    rounded_rect(&cr, xc - w/2.0, t + padding, w, height - (padding*2.0), 2.0);
-                    cr.fill().unwrap();
+            } else if bat < hour_time { // bat over midnight
+                if df64 < hour_time && df64 + 1.0 > hour_time {
+                    // to green/red
+                    let limit = hour_time % 1.0;
+                    eprintln!("0b: h={drawing_hour} limit={limit}");
+                    steps.push((limit, color_battery));
+                }
+                if df64 < bat && (df64 + 1.0) > bat {
+                    let limit = bat % 1.0;
+                    eprintln!("1b: h={drawing_hour} limit={limit}");
+                    steps.push((limit, color_half));
+                }
+            } else { // no battery
+                if df64 < hour_time && df64 + 1.0 > hour_time {
+                    let limit = hour_time % 1.0;
+                    eprintln!("0c: h={drawing_hour} limit={limit}");
+                    steps.push((limit, color_half));
                 }
             }
+
+            let top = wheight as f64 - drawing_hour as f64 * step_height - step_height;
+            rounded_rect_gradient(&cr, left, top, w, step_height - (padding*2.0), 2.0, steps, false);
         }
     }
 }
