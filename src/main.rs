@@ -14,7 +14,7 @@ use std::collections::HashMap;
 
 use std::panic;
 
-use crate::{clock::{ClockTrait, NoClock}, clock1::Clock1, commands::start_command_listener, data::{BluetoothStats, DeviceKind, RatatoskrSocket}, heimdallr_layer::IconChange, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
+use crate::{clock::{ClockTrait, NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, data::{BluetoothStats, DeviceKind, RatatoskrSocket}, heimdallr_layer::IconChange, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
 
 mod data;
 mod config;
@@ -24,6 +24,7 @@ mod commands;
 mod utils;
 mod clock;
 mod clock1;
+mod clock2;
 use config::Config;
 // use chrono;
 
@@ -162,7 +163,7 @@ fn main() {
         frame_model: FrameModel::new(),
         is_waiting_for_frame: false,
         clock: if config.show_clock {
-            Box::new(Clock1::new()) as Box<dyn ClockTrait>
+            Box::new(Clock2::new()) as Box<dyn ClockTrait>
         } else {
             Box::new(NoClock::new()) as Box<dyn ClockTrait>
         }

@@ -13,7 +13,7 @@ use cairo::FontSlant;
 
 use wayland_client::Dispatch;
 
-use crate::{clock::ClockTrait, clock1::Clock1, config::FrameColor, dbg_println, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, cr_text_aligned, get_color_gradient, log_to_file}};
+use crate::{clock::ClockTrait, clock1::Clock1, config::FrameColor, dbg_println, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, cr_text_aligned, get_color_gradient, log_to_file, rounded_big_hole}};
 
 #[derive(PartialEq)]
 pub enum IconChange {
@@ -235,7 +235,7 @@ impl HeimdallrLayer {
         // Outer black border
         cr.rectangle(0.0, 0.0, w, h);
         cr.set_fill_rule(cairo::FillRule::EvenOdd);
-        rounded_rect(&cr, thickness / 2.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h, wob_h);
+        rounded_big_hole(&cr, thickness / 2.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h, wob_h);
         cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
         cr.fill().unwrap();
 
@@ -290,7 +290,7 @@ impl HeimdallrLayer {
         } {
             cr.set_line_width(1.0);
             cr.set_source_rgba(r, g, b, a);
-            rounded_rect(&cr, thickness / 2.0 + 1.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h, wob_h);
+            rounded_big_hole(&cr, thickness / 2.0 + 1.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h, wob_h);
             cr.stroke().unwrap();
         }
 
@@ -452,34 +452,6 @@ fn wob_rect (cr: &Context, xc: f64, yb: f64, r2: f64, wob_h: f64, wob_value: f64
 
         cr.close_path();
     }
-}
-
-fn rounded_rect(cr: &Context, x: f64, y: f64, w: f64, h: f64, r: f64, r2: f64, reserved_w: f64, reserved_h: f64, wob_h: f64) {
-    cr.new_sub_path();
-    cr.arc(x + w - r, y + r, r, -90f64.to_radians(), 0.0);
-    cr.arc(x + w - r, y + h - r, r, 0.0, 90f64.to_radians());
-
-    if wob_h > 0.0 {
-        let r2_safe = if wob_h > r2 { r2 } else { wob_h/2.0 };
-        let wob_half_width = 100.0;
-        cr.arc(x + w/2.0 + r2_safe + wob_half_width, y + h - r2_safe, r2_safe, 90f64.to_radians(), 180f64.to_radians());
-        cr.arc_negative(x + w/2.0 - r2_safe + wob_half_width, y + h + r2_safe - wob_h, r2_safe, 0f64.to_radians(), 270f64.to_radians());
-        cr.arc_negative(x + w/2.0 + r2_safe - wob_half_width, y + h + r2_safe - wob_h, r2_safe, 270f64.to_radians(), 180f64.to_radians());
-        cr.arc(x + w/2.0 - r2_safe - wob_half_width, y + h - r2_safe, r2_safe, 0f64.to_radians(), 90f64.to_radians());
-    }
-    
-    if reserved_h > 0.0 {
-        let r2_safe = if reserved_h > r2 { r2 } else { reserved_h/2.0 };
-        // dbg_println!("reserved_h: {}", reserved_h);
-        cr.arc(x + r2_safe + reserved_w, y + h - r2_safe, r2_safe, 90f64.to_radians(), 180f64.to_radians());
-        cr.arc_negative(x - r2_safe + reserved_w, y + h + r2_safe - reserved_h, r2_safe, 0f64.to_radians(), 270f64.to_radians());
-        cr.arc(x + r2, y + h - r2 - reserved_h, r2, 90f64.to_radians(), 180f64.to_radians());
-    } else {
-        cr.arc(x + r, y + h - r, r, 90f64.to_radians(), 180f64.to_radians());
-    }
-    
-    cr.arc(x + r, y + r, r, 180f64.to_radians(), 270f64.to_radians());
-    cr.close_path();
 }
 
 impl CompositorHandler for HeimdallrLayer {

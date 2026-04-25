@@ -39,7 +39,7 @@ impl ClockTrait for Clock1 {
         let ypos = (1.0 - y) * (wheight as f64);
         // dbg_println!("{} {}", y, ypos);
 
-        /* Border */
+        /* Border/shadow */
         cr.set_source_rgba(0.1, 0.1, 0.1, 1.0);
         cr.move_to((right - 24u32) as f64 + 1.0, (1.0 - y) * (wheight as f64) - 1.0);
         cr.set_font_size(17.0);
