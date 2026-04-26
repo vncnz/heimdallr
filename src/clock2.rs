@@ -25,13 +25,13 @@ impl ClockTrait for Clock2 {
     }
 
     fn draw (&mut self, cr: Context, wheight: i32, right: u32, battery_recharging: Option<bool>, battery_eta: Option<f64>) {
-        if self.background_surface.is_none() {
+        /*if self.background_surface.is_none() {
             self.draw_clock_background(wheight);
         }
         if let Some(bg) = &self.background_surface {
             cr.set_source_surface(bg, (right - 18) as f64, 0.0).unwrap();
             cr.paint().unwrap();
-        }
+        }*/
 
         let now = Local::now();
         let seconds_today =
@@ -66,8 +66,9 @@ impl ClockTrait for Clock2 {
             dbg_println!("hour_battery {hour_battery:?}");
         }
 
-
-        let step_height = wheight as f64 / 24.0;
+        let clock_height = wheight as f64 * 0.94;
+        let top_shift = (wheight as f64 - clock_height) / 2.0;
+        let step_height = clock_height / 24.0;
         let padding = 2.0;
         let xc = (right as f64) - 5.0;
         let w = 4.0;
@@ -145,7 +146,7 @@ impl ClockTrait for Clock2 {
                 }
             }
 
-            let top = wheight as f64 - drawing_hour as f64 * step_height - step_height;
+            let top = clock_height + top_shift - drawing_hour as f64 * step_height - step_height;
             rounded_rect_gradient(&cr, left, top, w, step_height - (padding*2.0), 2.0, steps, false);
         }
     }
