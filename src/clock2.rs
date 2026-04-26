@@ -1,14 +1,10 @@
-use std::cmp::min;
-
 use cairo::{Context, FontSlant};
 use chrono::Local;
 use chrono::Timelike;
 
 use crate::clock::ClockTrait;
-use crate::utils::rounded_rect;
+use crate::dbg_println;
 use crate::utils::rounded_rect_gradient;
-use crate::utils::rounded_rect_no_gradient;
-use crate::utils::{cr_text_aligned, rounded_big_hole};
 
 pub struct Clock2 {
     pub(crate) background_surface: Option<cairo::ImageSurface>
@@ -67,7 +63,7 @@ impl ClockTrait for Clock2 {
                 color_battery = color_red;
             };
             hour_battery = Some((eta / 60.0 + hour_time) % 24.0);
-            eprintln!("hour_battery {hour_battery:?}");
+            dbg_println!("hour_battery {hour_battery:?}");
         }
 
 
@@ -104,46 +100,47 @@ impl ClockTrait for Clock2 {
             let color_full = if drawing_hour % 6 > 0 { color_full_1 } else { color_full_2 };
             let color_half = if drawing_hour % 6 > 0 { color_half_1 } else { color_half_2 };
 
-            let df64 = drawing_hour as f64;
+            let start = drawing_hour as f64;
+            let end = start + 1.0;
             let bat = hour_battery.unwrap_or_else(|| hour_time);
             let initial_color = 
-                if bat < hour_time && df64 < bat { color_battery }
-                else if df64 < hour_time { color_full }
-                else if df64 < bat { color_battery }
-                else if df64 > hour_time && bat < hour_time { color_battery }
+                if bat < hour_time && start < bat { color_battery }
+                else if start < hour_time { color_full }
+                else if start < bat { color_battery }
+                else if start > hour_time && bat < hour_time { color_battery }
                 else { color_half };
             let mut steps = vec![(0.0, initial_color)];
 
             if bat > hour_time { // normal case
-                if df64 < hour_time && df64 + 1.0 > hour_time {
+                if (start..end).contains(&hour_time) {
 
-                    if df64 < bat { // to green/red
+                    if start < bat { // to green/red
                         let limit = hour_time % 1.0;
-                        eprintln!("0a: h={drawing_hour} limit={limit}");
+                        dbg_println!("0a: h={drawing_hour} limit={limit}");
                         steps.push((limit, color_battery));
                     }
                 }
-                if (df64 + 1.0) > bat { // empty
+                if (start..end).contains(&bat) { // empty
                     let limit = bat % 1.0;
-                    eprintln!("1a: h={drawing_hour} limit={limit}");
+                    dbg_println!("1a: h={drawing_hour} limit={limit}");
                     steps.push((limit, color_half));
                 }
             } else if bat < hour_time { // bat over midnight
-                if df64 < hour_time && df64 + 1.0 > hour_time {
+                if (start..end).contains(&hour_time) {
                     // to green/red
                     let limit = hour_time % 1.0;
-                    eprintln!("0b: h={drawing_hour} limit={limit}");
+                    dbg_println!("0b: h={drawing_hour} limit={limit}");
                     steps.push((limit, color_battery));
                 }
-                if df64 < bat && (df64 + 1.0) > bat {
+                if (start..end).contains(&bat) {
                     let limit = bat % 1.0;
-                    eprintln!("1b: h={drawing_hour} limit={limit}");
+                    dbg_println!("1b: h={drawing_hour} limit={limit}");
                     steps.push((limit, color_half));
                 }
             } else { // no battery
-                if df64 < hour_time && df64 + 1.0 > hour_time {
+                if (start..end).contains(&hour_time) {
                     let limit = hour_time % 1.0;
-                    eprintln!("0c: h={drawing_hour} limit={limit}");
+                    dbg_println!("0c: h={drawing_hour} limit={limit}");
                     steps.push((limit, color_half));
                 }
             }
