@@ -135,6 +135,12 @@ fn main() {
 
     // let rx = data::start_socket_watcher("/tmp/ratatoskr.sock");
 
+    let clock = match config.show_clock {
+        config::ClockCfg::Clock1 => Box::new(Clock1::new()) as Box<dyn ClockTrait>,
+        config::ClockCfg::Clock2 => Box::new(Clock2::new()) as Box<dyn ClockTrait>,
+        _ => Box::new(NoClock::new()) as Box<dyn ClockTrait>
+    };
+
     let mut app = HeimdallrLayer {
         registry_state: RegistryState::new(&globals),
         output_state: OutputState::new(&globals, &qh),
@@ -162,11 +168,7 @@ fn main() {
         animator: Animator::new(),
         frame_model: FrameModel::new(),
         is_waiting_for_frame: false,
-        clock: if config.show_clock {
-            Box::new(Clock2::new()) as Box<dyn ClockTrait>
-        } else {
-            Box::new(NoClock::new()) as Box<dyn ClockTrait>
-        }
+        clock
     };
 
     event_queue.roundtrip(&mut app).unwrap();
