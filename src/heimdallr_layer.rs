@@ -13,7 +13,7 @@ use cairo::FontSlant;
 
 use wayland_client::Dispatch;
 
-use crate::{clock::ClockTrait, clock1::Clock1, config::FrameColor, dbg_println, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, cr_text_aligned, get_color_gradient, log_to_file, rounded_big_hole}};
+use crate::{clock::ClockTrait, config::FrameColor, dbg_println, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, cr_text_aligned, get_color_gradient, log_to_file, rounded_big_hole, rounded_rect_gradient}};
 
 #[derive(PartialEq)]
 pub enum IconChange {
@@ -240,25 +240,37 @@ impl HeimdallrLayer {
         cr.fill().unwrap();
 
         // wob-like
+        let mut steps = vec![(0.0, (1.0, 1.0, 1.0, self.frame_model.wob_height))];
         let xc = (thickness + w_hole) / 2.0;
-        if wob_h != 0.0 {
+        if wob_h > 2.0 {
             match self.config.frame_color {
                 FrameColor::None => {
-                    wob_rect(&cr, xc, h - thickness, radius2, wob_h, 1.0);
-                    cr.set_source_rgba(1.0, 1.0, 1.0, 0.35);
-                    cr.fill().unwrap();
+                    // wob_rect(&cr, xc, h - thickness, radius2, wob_h, 1.0);
+                    // cr.set_source_rgba(1.0, 1.0, 1.0, 0.35);
+                    // cr.fill().unwrap();
 
-                    wob_rect(&cr, xc, h - thickness, radius2, wob_h, 1.0);
-                    cr.set_source_rgba(0.0, 0.0, 0.0, 0.5);
-                    cr.stroke().unwrap();
+                    // wob_rect(&cr, xc, h - thickness, radius2, wob_h, 1.0);
+                    // cr.set_source_rgba(0.0, 0.0, 0.0, 0.5);
+                    // cr.stroke().unwrap();
+                    steps.push((self.wob_value, (0.0, 0.0, 0.0, 0.5)));
                 },
-                _ => {}
+                _ => {
+                    steps.push((self.wob_value, (0.0, 0.0, 0.0, 0.0)));
+                }
+            }
+
+            let wob_half_width = 97.0;
+            let wob_height = wob_h - 4.0;
+            if wob_height > 0.0 {
+                let left = xc - wob_half_width;
+                let top = h - thickness - top - wob_h + 3.0;
+                rounded_rect_gradient(&cr, left, top, wob_half_width * 2.0, wob_height, wob_h.min(radius2-1.0), steps, crate::utils::GradientDirection::Horizontal, false, None);
             }
         }
 
-        wob_rect(&cr, xc, h - thickness, radius2, wob_h, self.wob_value);
-        cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
-        cr.fill().unwrap();
+        // wob_rect(&cr, xc, h - thickness, radius2, wob_h, self.wob_value);
+        // cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
+        // cr.fill().unwrap();
 
         // === Draw alarm icons ===
         
@@ -439,7 +451,7 @@ impl HeimdallrLayer { // This is for icon management, I like to keep it separate
     }
 }
 
-fn wob_rect (cr: &Context, xc: f64, yb: f64, r2: f64, wob_h: f64, wob_value: f64) {
+/* fn wob_rect (cr: &Context, xc: f64, yb: f64, r2: f64, wob_h: f64, wob_value: f64) {
     if wob_h > 0.0 {
         cr.new_sub_path();
 
@@ -452,7 +464,7 @@ fn wob_rect (cr: &Context, xc: f64, yb: f64, r2: f64, wob_h: f64, wob_value: f64
 
         cr.close_path();
     }
-}
+} */
 
 impl CompositorHandler for HeimdallrLayer {
     fn scale_factor_changed(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wayland_client::protocol::wl_surface::WlSurface, _: i32) {}
