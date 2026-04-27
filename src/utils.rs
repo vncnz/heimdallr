@@ -294,6 +294,11 @@ pub fn rounded_rect (cr: &Context, x: f64, y: f64, w: f64, h: f64, r: f64) {
     cr.close_path();
 }
 
+pub enum GradientDirection {
+    Vertical,
+    Horizontal
+}
+
 /// Rounded rect color gradient-colored
 /// 
 /// # Parameters
@@ -310,13 +315,18 @@ pub fn rounded_rect_gradient(
     h: f64,
     r: f64,
     colors: Vec<(f64, (f64, f64, f64, f64))>,
-    use_gradient: bool
+    direction: GradientDirection,
+    use_gradient: bool,
+    border_color: Option<(f64,f64,f64,f64)>
 ) {
     if colors.is_empty() {
         return;
     }
 
-    let gradient = cairo::LinearGradient::new(x, y + h, x, y);
+    let gradient = match direction {
+        GradientDirection::Vertical => cairo::LinearGradient::new(x, y + h, x, y),
+        GradientDirection::Horizontal => cairo::LinearGradient::new(x, y, x + w, y)
+    };
 
     let mut last_color: Option<(f64, f64, f64, f64)> = None;
     for (position, color) in colors {
@@ -341,10 +351,19 @@ pub fn rounded_rect_gradient(
     cr.close_path();
 
     // Riempire il rettangolo
-    cr.fill().unwrap();
+    if let Some(c) = border_color {
+        cr.fill_preserve().unwrap();
+
+        let (red, green, blue, alpha) = c;
+        cr.set_source_rgba(red, green, blue, alpha);
+        cr.set_line_width(2.0);
+        cr.stroke().unwrap();
+    } else {
+        cr.fill().unwrap();
+    }
 }
 
-pub fn rounded_rect_no_gradient (
+/* pub fn rounded_rect_no_gradient (
     cr: &Context,
     x: f64,
     y: f64,
@@ -383,4 +402,4 @@ pub fn rounded_rect_no_gradient (
         }
         prev_y = current_y;
     }
-}
+} */

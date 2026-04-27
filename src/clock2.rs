@@ -147,7 +147,7 @@ impl ClockTrait for Clock2 {
             }
 
             let top = clock_height + top_shift - drawing_hour as f64 * step_height - step_height;
-            rounded_rect_gradient(&cr, left, top, w, step_height - (padding*2.0), 2.0, steps, false);
+            rounded_rect_gradient(&cr, left, top, w, step_height - (padding*2.0), 2.0, steps, crate::utils::GradientDirection::Vertical, false, None);
         }
     }
 }
