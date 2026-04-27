@@ -36,22 +36,25 @@ Oh, if the screen looks too empty, that’s by design: I like minimalism. No sta
 
 ## Screenshots
 
-Light blue border; battery charging; high RAM, medium load, and light disk usage alarms:
+Clock1, light blue border; battery charging; high RAM, medium load, and light disk usage alarms:
 ![With border, several icons, charging](./screenshots/with_border_and_icons.png)
 
-Light blue border; battery discharging; light disk usage alarm:
+Clock1, light blue border; battery discharging; light disk usage alarm:
 ![With border, disk icon, skull](./screenshots/with_border_and_skull.png)
 
-No battery charging/discharging; no resource alarms:
+Clock2, light blue border; light high volume alarm, with different wallpaper:
+![With window](./screenshots/clock2_with_border_and_volume.png)
+
+Clock1, no battery charging/discharging; no resource alarms:
 ![Without border](./screenshots/no_icons.png)
 
-No border; battery charging; light disk usage alarm:
+Clock1, no border; battery charging; light disk usage alarm:
 ![Without border](./screenshots/without_border.png)
 
-No border; battery charging; medium load and light disk usage alarms, with different wallpaper:
+Clock1, no border; battery charging; medium load and light disk usage alarms, with different wallpaper:
 ![Another wallpaper](./screenshots/another_wallpaper.png)
 
-Light blue border; light memory pressure and light disk usage alarms, with different wallpaper and an open window:
+Clock1, light blue border; light memory pressure and light disk usage alarms, with different wallpaper and an open window:
 ![With window](./screenshots/with_window.png)
 
 ## Configuration
@@ -61,7 +64,8 @@ You can configure frame color and clock presence with a json file in ```~/.confi
 ```json
 {
     "frame_color": [red,green,blue,alpha] | "worst-resource" | "random" | null,
-    "show_clock": true | false
+    "show_clock": "clock1" / "clock2" / null,
+    "show_always_bluetooth": true / false
 }
 ```
 
@@ -70,7 +74,7 @@ For example:
 ```json
 {
     "frame_color": [0.2, 0.6, 1.0, 1.0],
-    "show_clock": true,
+    "show_clock": "clock1",
     "show_always_bluetooth": true
 }
 ```
@@ -110,6 +114,19 @@ If no colored border is configured, the indicator uses a white background with 0
 For example: ```echo "0.35" > /tmp/heimdallr_cmds```
 
 ![Wob-like example](./screenshots/wob_like.png)
+
+## Clock styles
+
+Now, Heimdallr offers two distinct clock styles to display the current time and the estimated battery charge/discharge time. Both clocks are positioned on the right edge of the screen, ensuring minimal intrusion while providing essential information at a glance.
+
+### Available Styles
+
+- **Clock1**: a sleek, minimalist design with a linear arrow indicating the current time. The battery status is represented by an icon (a green bolt for charging or a red skull for discharging) integrated into the clock’s layout. Hour numbers are shown to assist with quick time reading and markers are displayed as small triangles every 3 hours, with larger, blue triangles every 6 hours for easier orientation.
+- **Clock2**: this clock consists of notches, each representing one hour; every 6 hours, a notch is highlighted in blue for better readability. The current time is indicated by a white (or blue) fill that progresses along the notches. Battery status and eta is shown as a colored fill (green for charging, red for discharging) that extends the time indicator.
+
+You can choose between these styles, or disable the clock entirely, via the configuration file. This flexibility allows you to tailor Heimdallr’s appearance to your aesthetic preferences or functional needs.
+
+**For Developers:** The clock system is built around the ClockTrait, making it easy to extend or create custom clock styles. Fork the project and experiment with your own designs!
 
 ## TODOs
 
