@@ -25,6 +25,7 @@ mod utils;
 mod clock;
 mod clock1;
 mod clock2;
+mod battery;
 use config::Config;
 // use chrono;
 
