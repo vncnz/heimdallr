@@ -17,7 +17,7 @@ use std::thread;
 
 use colored::Colorize;
 
-use crate::{battery::BatteryStats, clock::{ClockTrait, NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, data::{BluetoothStats, DeviceKind, RatatoskrSocket}, heimdallr_layer::IconChange, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
+use crate::{battery::{BatteryState, BatteryStats}, clock::{ClockTrait, NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, data::{BluetoothStats, DeviceKind, RatatoskrSocket}, heimdallr_layer::IconChange, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
 
 mod data;
 mod config;
@@ -261,6 +261,9 @@ fn main() {
         let _ = event_queue.dispatch_pending(&mut app);
 
         if let Ok(bat) = rx_battery.try_recv() {
+            app.battery_eta = if bat.eta_minutes > 0.0 { Some(bat.eta_minutes) } else { None };
+            app.battery_recharging = Some(bat.state == BatteryState::Charging);
+            app.request_redraw(&"battery");
             eprintln!("{}", "Battery update".yellow());
             eprintln!("{:?}", bat);
         }
@@ -334,7 +337,8 @@ fn main() {
         if let Ok(data) = sock.rx.try_recv() {
             // println!("{} Ricevuto: {:?}", chrono::Local::now().format("%H:%M:%S%.3f"), data.resource);
             if data.resource == "battery" {
-                if let Some(bat) = &data.data {
+                // Now I'm trying to get battery infos internally!
+                /* if let Some(bat) = &data.data {
                     let battery_eta = app.battery_eta;
                     let battery_recharging = app.battery_recharging;
                     // {"capacity": Number(177228.0), "color": String("#55FF00"), "eta": Number(380.0978088378906), "icon": String("\u{f0079}"), "percentage": Number(100), "state": String("Discharging"), "warn": Number(0.0), "watt": Number(7.76800012588501)}
@@ -352,7 +356,7 @@ fn main() {
                     }
                     // dbg_println!("{:?}", bat);
                     // dbg_println!("battery {:?} {:?}", app.battery_recharging, app.battery_eta);
-                }
+                } */
             }
 
             // Bluetooth data has a custom management
