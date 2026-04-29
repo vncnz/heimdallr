@@ -4,7 +4,6 @@
 // Copied and edited by vncnz
 
 use std::sync::mpsc::Sender;
-use std::thread;
 use std::time::Duration;
 
 use zbus::dbus_proxy;
@@ -178,7 +177,7 @@ pub async fn start_battery_listener(tx: Sender<BatteryStats>) -> zbus::Result<()
             let mut last_state: Option<BatteryStats> = None;
             
             loop {
-                std::thread::sleep(Duration::from_secs(5));
+                std::thread::sleep(Duration::from_secs(1));
                 
                 // Fetch current battery stats
                 let current = match get_battery_stats(&upower).await {
@@ -192,8 +191,6 @@ pub async fn start_battery_listener(tx: Sender<BatteryStats>) -> zbus::Result<()
                 // Only send if state changed
                 if last_state != Some(current.clone()) {
                     last_state = Some(current.clone());
-                    let _ = tx.send(current);
-                } else {
                     let _ = tx.send(current);
                 }
             }
@@ -217,15 +214,18 @@ async fn get_battery_stats(upower: &UPowerProxy<'_>) -> zbus::Result<BatteryStat
     
     // Debug: print raw property values
     let state_val: u32 = device_proxy.get_property("State").await.unwrap_or(0);
+    let state = BatteryState::from(state_val);
     let percentage: f64 = device_proxy.get_property("Percentage").await.unwrap_or(0.0);
-    let time_to_empty: i64 = device_proxy.get_property("TimeToEmpty").await.unwrap_or(0);
-    
-    eprintln!("DEBUG battery: State={}, Percentage={}, TimeToEmpty={}", state_val, percentage, time_to_empty);
+    let eta: i64 = match state {
+        BatteryState::Charging | BatteryState::PendingCharge => device_proxy.get_property("TimeToFull").await.unwrap_or(0),
+        BatteryState::Discharging | BatteryState::PendingDischarge => device_proxy.get_property("TimeToEmpty").await.unwrap_or(0),
+        _ => 0
+    };
     
     Ok(BatteryStats {
-        state: BatteryState::from(state_val),
+        state,
         percentage,
-        eta_minutes: (time_to_empty as f64) / 60.0,
+        eta_minutes: (eta as f64) / 60.0
     })
 }
 
@@ -239,10 +239,14 @@ pub struct BatteryStats {
 impl From<u32> for BatteryState {
     fn from(value: u32) -> Self {
         match value {
+            0 => BatteryState::Unknown,
             1 => BatteryState::Charging,
             2 => BatteryState::Discharging,
-            4 => BatteryState::PendingDischarge,
-            _ => BatteryState::Unknown,
+            3 => BatteryState::Empty,
+            4 => BatteryState::FullyCharged,
+            5 => BatteryState::PendingCharge,
+            6 => BatteryState::PendingDischarge,
+            _ => BatteryState::Unknown
         }
     }
 }
