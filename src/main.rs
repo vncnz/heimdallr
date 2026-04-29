@@ -260,6 +260,11 @@ fn main() {
         // Dispatch wayland events
         let _ = event_queue.dispatch_pending(&mut app);
 
+        if let Ok(bat) = rx_battery.try_recv() {
+            eprintln!("{}", "Battery update".yellow());
+            eprintln!("{:?}", bat);
+        }
+
         if let Ok(cmd) = rx_cmds.try_recv() {
             match &*cmd {
                 "hide_notification" => {
