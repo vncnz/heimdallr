@@ -13,8 +13,11 @@ use smithay_client_toolkit::shell::WaylandSurface;
 use std::collections::HashMap;
 
 use std::panic;
+use std::thread;
 
-use crate::{clock::{ClockTrait, NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, data::{BluetoothStats, DeviceKind, RatatoskrSocket}, heimdallr_layer::IconChange, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
+use colored::Colorize;
+
+use crate::{battery::BatteryStats, clock::{ClockTrait, NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, data::{BluetoothStats, DeviceKind, RatatoskrSocket}, heimdallr_layer::IconChange, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
 
 mod data;
 mod config;
@@ -31,6 +34,7 @@ use config::Config;
 
 use crate::heimdallr_layer::HeimdallrLayer;
 use crate::notifications::start_notification_listener;
+use crate::battery::start_battery_listener;
 
 use clap::{crate_name, crate_version, Parser};
 
@@ -205,11 +209,27 @@ fn main() {
 
     let (tx, rx_notif): (Sender<Notification>, Receiver<Notification>) = mpsc::channel();
     // let rx_notif: Option<Receiver<Notification>> = None;
-    use std::thread;
+    
     thread::spawn(|| {
         futures::executor::block_on(async {
             if let Err(e) = start_notification_listener(tx).await {
                 log_to_file(format!("Notification listener error: {:?}", e));
+                let msg = format!("Notification listener error: {:?}", e).red().to_string();
+                dbg_println!("{}", msg);
+            } else {
+                dbg_println!("{}", "Notification listener OK".green().to_string());
+            }
+        });
+    });
+
+    let (tx_battery, rx_battery): (Sender<BatteryStats>, Receiver<BatteryStats>) = mpsc::channel();
+    thread::spawn(|| {
+        futures::executor::block_on(async {
+            if let Err(e) = start_battery_listener(tx_battery).await {
+                log_to_file(format!("Battery listener error: {:?}", e));
+                dbg_println!("{}", format!("Battery listener error: {:?}", e).red().to_string());
+            } else {
+                dbg_println!("{}", "Battery listener OK".green().to_string());
             }
         });
     });

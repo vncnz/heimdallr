@@ -1,56 +1,79 @@
-use zbus::{ConnectionBuilder, dbus_interface, zvariant::{self, ObjectPath, Value}};
-use std::{collections::HashMap, sync::mpsc::Sender, time::{Duration, Instant}};
-use std::sync::atomic::{AtomicU32, Ordering};
+use zbus::{Connection, Proxy};
+use std::sync::mpsc::Sender;
+use futures::StreamExt;
+use colored::Colorize;
 
-use crate::utils::log_to_file;
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum BatteryState {
-    Unknown,
-    Charging,
-    Discharging,
-    NotCharging, // Mappato da Full/PendingCharge
-    PendingDischarge,
-}
+use crate::dbg_println;
 
 #[derive(Debug, Clone)]
 pub struct BatteryStats {
     pub state: BatteryState,
     pub percentage: f64,
-    pub eta_minutes: f64, // Tempo rimanente in minuti (0.0 se non applicabile)
+    pub eta_minutes: f64,
 }
 
-
-#[derive(Clone)]
-struct BatteryServer {
-    tx: Sender<BatteryStats>
+#[derive(Debug, Clone)]
+pub enum BatteryState {
+    Unknown,
+    Charging,
+    Discharging,
+    NotCharging,
+    PendingDischarge,
 }
 
-#[dbus_interface(name = "org.freedesktop.UPower.Device")]
-impl BatteryServer {
-    fn changed (
-        &self,
-        object: ObjectPath<'_>,
-        properties: HashMap<String, Value<'_>>) {
-
-        eprintln!("Event from dbus");
+impl From<u32> for BatteryState {
+    fn from(value: u32) -> Self {
+        match value {
+            1 => BatteryState::Charging,
+            2 => BatteryState::Discharging,
+            3 => BatteryState::NotCharging,
+            4 => BatteryState::PendingDischarge,
+            _ => BatteryState::Unknown,
+        }
     }
 }
 
 pub async fn start_battery_listener(tx: Sender<BatteryStats>) -> zbus::Result<()> {
-    let server = BatteryServer {
-        // notifications: Arc::new(Mutex::new(vec![])),
-        tx
+    let connection = Connection::system().await?;
+    
+    let proxy = Proxy::new(
+        &connection,
+        "org.freedesktop.UPower",
+        "/org/freedesktop/UPower/devices/DisplayDevice",
+        "org.freedesktop.UPower.Device",
+    ).await?;
+
+    // Funzione helper sincrona
+    let get_stats = async |p: &Proxy| -> zbus::Result<BatteryStats> {
+        let state_val: u32 = p.get_property("State").await?;
+        let percentage: f64 = p.get_property("Percentage").await?;
+        let time_to_empty: i64 = p.get_property("TimeToEmpty").await?;
+        
+        let obj = BatteryStats {
+            state: BatteryState::from(state_val),
+            percentage,
+            eta_minutes: (time_to_empty as f64) / 60.0,
+        };
+        dbg_println!("{obj:?}");
+        Ok(obj)
     };
 
-    let _conn = ConnectionBuilder::session()?
-        .name("org.freedesktop.UPower.Device")?
-        .serve_at("/org/freedesktop/UPower.Device", server)?
-        .build()
-        .await?;
-
-    println!("Heimdallr is now listening to upower events!");
-    loop {
-        std::thread::park();
+    // Invio iniziale
+    if let Ok(stats) = get_stats(&proxy).await {
+        dbg_println!("{}", "Battery first info load!".yellow());
+        let _ = tx.send(stats);
     }
+
+    // Qui ascoltiamo i segnali in modo bloccante
+    // receive_signal_iterator è il metodo per le API blocking
+    let mut signal_iterator = proxy.receive_signal("PropertiesChanged").await?;
+    
+    while let Some(_) = signal_iterator.next().await {
+        dbg_println!("{}", "Battery signal!".yellow());
+        if let Ok(stats) = get_stats(&proxy).await {
+            let _ = tx.send(stats);
+        }
+    }
+
+    Ok(())
 }
