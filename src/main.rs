@@ -261,7 +261,7 @@ fn main() {
         let _ = event_queue.dispatch_pending(&mut app);
 
         if let Ok(bat) = rx_battery.try_recv() {
-            app.battery_eta = if bat.eta_minutes > 0.0 { Some(bat.eta_minutes) } else { None };
+            app.battery_eta = bat.eta_minutes;
             app.battery_recharging = Some(bat.state == BatteryState::Charging);
             app.request_redraw(&"battery");
             eprintln!("{}", "Battery update".yellow());
