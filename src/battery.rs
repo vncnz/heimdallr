@@ -4,12 +4,15 @@
 // Copied and edited by vncnz
 
 use std::sync::mpsc::Sender;
-use std::time::Duration;
+use colored::Colorize;
+use futures::stream::StreamExt;
 
-use zbus::dbus_proxy;
+use zbus::{Connection, Proxy, dbus_proxy};
 
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use zbus::zvariant::OwnedValue;
+
+use crate::dbg_println;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize_repr, Serialize_repr, OwnedValue)]
 #[repr(u32)]
@@ -21,6 +24,21 @@ pub enum BatteryState {
     FullyCharged = 4,
     PendingCharge = 5,
     PendingDischarge = 6,
+}
+
+impl From<u32> for BatteryState {
+    fn from(value: u32) -> Self {
+        match value {
+            0 => BatteryState::Unknown,
+            1 => BatteryState::Charging,
+            2 => BatteryState::Discharging,
+            3 => BatteryState::Empty,
+            4 => BatteryState::FullyCharged,
+            5 => BatteryState::PendingCharge,
+            6 => BatteryState::PendingDischarge,
+            _ => BatteryState::Unknown,
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize_repr, Serialize_repr, OwnedValue)]
@@ -49,6 +67,13 @@ pub enum BatteryLevel {
     Full = 8,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct BatteryStats {
+    pub state: BatteryState,
+    pub percentage: f64,
+    pub eta_minutes: Option<f64>,
+}
+/*
 #[dbus_proxy(
     interface = "org.freedesktop.UPower.Device",
     default_service = "org.freedesktop.UPPower",
@@ -163,8 +188,70 @@ trait UPower {
     #[dbus_proxy(property)]
     fn on_battery(&self) -> zbus::Result<bool>;
 }
-
+*/
 pub async fn start_battery_listener(tx: Sender<BatteryStats>) -> zbus::Result<()> {
+    let connection = Connection::system().await?;
+    
+    let signal_proxy = Proxy::new(
+        &connection,
+        "org.freedesktop.UPower",
+        "/org/freedesktop/UPower/devices/DisplayDevice",
+        "org.freedesktop.DBus.Properties",
+    ).await?;
+
+    let device_proxy = Proxy::new(
+        &connection,
+        "org.freedesktop.UPower",
+        "/org/freedesktop/UPower/devices/DisplayDevice",
+        "org.freedesktop.UPower.Device",
+    ).await?;
+
+    let get_stats = async |p: &Proxy| -> zbus::Result<BatteryStats> {
+        let state_val: u32 = p.get_property("State").await?;
+        let state = BatteryState::from(state_val);
+        let percentage: f64 = p.get_property("Percentage").await?;
+        let eta_seconds: Option<f64> = match state {
+            BatteryState::Charging | BatteryState::PendingCharge => Some(p.get_property("TimeToFull").await?),
+            BatteryState::Discharging | BatteryState::PendingDischarge => Some(p.get_property("TimeToEmpty").await?),
+            _ => None
+        };
+        // let time_to_empty: i64 = p.get_property("TimeToEmpty").await?;
+        
+        let obj = BatteryStats {
+            state,
+            percentage,
+            eta_minutes: if eta_seconds.is_some() { Some((eta_seconds.unwrap() as f64) / 60.0) } else { None },
+        };
+        dbg_println!("{obj:?}");
+        Ok(obj)
+    };
+
+    if let Ok(stats) = get_stats(&device_proxy).await {
+        dbg_println!("{}", "Battery first info load!".yellow());
+        let _ = tx.send(stats);
+    }
+
+    let mut signal_iterator = signal_proxy.receive_signal("PropertiesChanged").await?;
+
+    let tx = tx.clone();
+    std::thread::spawn(move || {
+        futures::executor::block_on(async {
+    
+            while let Some(_) = signal_iterator.next().await {
+                dbg_println!("{}", "Battery signal!".yellow());
+
+                if let Ok(stats) = get_stats(&device_proxy).await {
+                    dbg_println!("{}", "Sending battery signal!".yellow());
+                    let _ = tx.send(stats);
+                }
+            }
+        });
+    });
+
+    Ok(())
+}
+/*
+pub async fn start_battery_listener_poll(tx: Sender<BatteryStats>) -> zbus::Result<()> {
     let connection = zbus::Connection::system().await?;
 
     let upower = UPowerProxy::new(&connection).await?;
@@ -177,7 +264,7 @@ pub async fn start_battery_listener(tx: Sender<BatteryStats>) -> zbus::Result<()
             let mut last_state: Option<BatteryStats> = None;
             
             loop {
-                std::thread::sleep(Duration::from_secs(1));
+                std::thread::sleep(Duration::from_secs(5));
                 
                 // Fetch current battery stats
                 let current = match get_battery_stats(&upower).await {
@@ -192,14 +279,16 @@ pub async fn start_battery_listener(tx: Sender<BatteryStats>) -> zbus::Result<()
                 if last_state != Some(current.clone()) {
                     last_state = Some(current.clone());
                     let _ = tx.send(current);
+                } else {
+                    let _ = tx.send(current);
                 }
             }
         });
     });
 
     Ok(())
-}
-
+} */
+/*
 async fn get_battery_stats(upower: &UPowerProxy<'_>) -> zbus::Result<BatteryStats> {
     // Use the well-known DisplayDevice path directly
     let path_str = "/org/freedesktop/UPower/devices/DisplayDevice";
@@ -214,39 +303,15 @@ async fn get_battery_stats(upower: &UPowerProxy<'_>) -> zbus::Result<BatteryStat
     
     // Debug: print raw property values
     let state_val: u32 = device_proxy.get_property("State").await.unwrap_or(0);
-    let state = BatteryState::from(state_val);
     let percentage: f64 = device_proxy.get_property("Percentage").await.unwrap_or(0.0);
-    let eta: i64 = match state {
-        BatteryState::Charging | BatteryState::PendingCharge => device_proxy.get_property("TimeToFull").await.unwrap_or(0),
-        BatteryState::Discharging | BatteryState::PendingDischarge => device_proxy.get_property("TimeToEmpty").await.unwrap_or(0),
-        _ => 0
-    };
+    let time_to_empty: i64 = device_proxy.get_property("TimeToEmpty").await.unwrap_or(0);
+    
+    eprintln!("DEBUG battery: State={}, Percentage={}, TimeToEmpty={}", state_val, percentage, time_to_empty);
     
     Ok(BatteryStats {
-        state,
+        state: BatteryState::from(state_val),
         percentage,
-        eta_minutes: (eta as f64) / 60.0
+        eta_minutes: (time_to_empty as f64) / 60.0,
     })
 }
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct BatteryStats {
-    pub state: BatteryState,
-    pub percentage: f64,
-    pub eta_minutes: f64,
-}
-
-impl From<u32> for BatteryState {
-    fn from(value: u32) -> Self {
-        match value {
-            0 => BatteryState::Unknown,
-            1 => BatteryState::Charging,
-            2 => BatteryState::Discharging,
-            3 => BatteryState::Empty,
-            4 => BatteryState::FullyCharged,
-            5 => BatteryState::PendingCharge,
-            6 => BatteryState::PendingDischarge,
-            _ => BatteryState::Unknown
-        }
-    }
-}
+*/
