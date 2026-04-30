@@ -208,21 +208,22 @@ pub async fn start_battery_listener(tx: Sender<BatteryStats>) -> zbus::Result<()
 
     let get_stats = async |p: &Proxy| -> zbus::Result<BatteryStats> {
         let state_val: u32 = p.get_property("State").await?;
+        // eprintln!("{state_val}");
         let state = BatteryState::from(state_val);
         let percentage: f64 = p.get_property("Percentage").await?;
-        let eta_seconds: Option<f64> = match state {
-            BatteryState::Charging | BatteryState::PendingCharge => Some(p.get_property("TimeToFull").await?),
-            BatteryState::Discharging | BatteryState::PendingDischarge => Some(p.get_property("TimeToEmpty").await?),
-            _ => None
+        let eta_seconds: i64 = match state {
+            BatteryState::Charging | BatteryState::PendingCharge => { p.get_property("TimeToFull").await? },
+            BatteryState::Discharging | BatteryState::PendingDischarge => { p.get_property("TimeToEmpty").await? },
+            _ => { 0 }
         };
         // let time_to_empty: i64 = p.get_property("TimeToEmpty").await?;
         
         let obj = BatteryStats {
             state,
             percentage,
-            eta_minutes: if eta_seconds.is_some() { Some((eta_seconds.unwrap() as f64) / 60.0) } else { None },
+            eta_minutes: if eta_seconds > 0 { Some((eta_seconds as f64) / 60.0) } else { None }
         };
-        dbg_println!("{obj:?}");
+        // dbg_println!("{obj:?}");
         Ok(obj)
     };
 
@@ -240,9 +241,15 @@ pub async fn start_battery_listener(tx: Sender<BatteryStats>) -> zbus::Result<()
             while let Some(_) = signal_iterator.next().await {
                 dbg_println!("{}", "Battery signal!".yellow());
 
-                if let Ok(stats) = get_stats(&device_proxy).await {
-                    dbg_println!("{}", "Sending battery signal!".yellow());
-                    let _ = tx.send(stats);
+                let res = get_stats(&device_proxy).await;
+                match res {
+                    Ok(stats) => {
+                        dbg_println!("{}", "Sending battery signal!".yellow());
+                        let _ = tx.send(stats);
+                    },
+                    Err(err) => {
+                        eprintln!("{err:?}");
+                    }
                 }
             }
         });
