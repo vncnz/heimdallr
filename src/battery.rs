@@ -9,12 +9,13 @@ use futures::stream::StreamExt;
 
 use zbus::{Connection, Proxy, dbus_proxy};
 
-use serde_repr::{Deserialize_repr, Serialize_repr};
-use zbus::zvariant::OwnedValue;
+// use serde_repr::{Deserialize_repr, Serialize_repr};
+// use zbus::zvariant::OwnedValue;
 
 use crate::dbg_println;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize_repr, Serialize_repr, OwnedValue)]
+// #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize_repr, Serialize_repr, OwnedValue)]
+#[derive(Clone, Debug, PartialEq)]
 #[repr(u32)]
 pub enum BatteryState {
     Unknown = 0,
@@ -24,6 +25,7 @@ pub enum BatteryState {
     FullyCharged = 4,
     PendingCharge = 5,
     PendingDischarge = 6,
+    NotCharging = 100 // Custom value, no dbus-defined
 }
 
 impl From<u32> for BatteryState {
@@ -36,12 +38,13 @@ impl From<u32> for BatteryState {
             4 => BatteryState::FullyCharged,
             5 => BatteryState::PendingCharge,
             6 => BatteryState::PendingDischarge,
+            100 => BatteryState::NotCharging,
             _ => BatteryState::Unknown,
         }
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize_repr, Serialize_repr, OwnedValue)]
+/* #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize_repr, Serialize_repr, OwnedValue)]
 #[repr(u32)]
 pub enum BatteryType {
     Unknown = 0,
@@ -53,9 +56,9 @@ pub enum BatteryType {
     Keyboard = 6,
     Pda = 7,
     Phone = 8,
-}
+} */
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize_repr, Serialize_repr, OwnedValue)]
+/* #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize_repr, Serialize_repr, OwnedValue)]
 #[repr(u32)]
 pub enum BatteryLevel {
     Unknown = 0,
@@ -65,7 +68,7 @@ pub enum BatteryLevel {
     Normal = 6,
     High = 7,
     Full = 8,
-}
+} */
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BatteryStats {
@@ -189,7 +192,7 @@ trait UPower {
     fn on_battery(&self) -> zbus::Result<bool>;
 }
 */
-pub async fn start_battery_listener(tx: Sender<BatteryStats>) -> zbus::Result<()> {
+pub async fn start_battery_listener_events(tx: Sender<BatteryStats>) -> zbus::Result<()> {
     let connection = Connection::system().await?;
     
     let signal_proxy = Proxy::new(
@@ -322,3 +325,221 @@ async fn get_battery_stats(upower: &UPowerProxy<'_>) -> zbus::Result<BatteryStat
     })
 }
 */
+
+pub async fn start_battery_listener_dbus_mix_polling_and_events(tx: Sender<BatteryStats>) -> zbus::Result<()> {
+    let connection = Connection::system().await?;
+    
+    let signal_proxy = Proxy::new(
+        &connection,
+        "org.freedesktop.UPower",
+        "/org/freedesktop/UPower/devices/DisplayDevice",
+        "org.freedesktop.DBus.Properties",
+    ).await?;
+
+    let device_proxy = Proxy::new(
+        &connection,
+        "org.freedesktop.UPower",
+        "/org/freedesktop/UPower/devices/DisplayDevice",
+        "org.freedesktop.UPower.Device",
+    ).await?;
+
+    let get_stats = async |p: &Proxy| -> zbus::Result<BatteryStats> {
+        dbg_println!("{}", "get_stats started".blue());
+        let state_val: u32 = p.get_property("State").await?;
+        let state = BatteryState::from(state_val);
+        let percentage: f64 = p.get_property("Percentage").await?;
+        let eta_seconds: i64 = match state {
+            BatteryState::Charging | BatteryState::PendingCharge => { p.get_property("TimeToFull").await? },
+            BatteryState::Discharging | BatteryState::PendingDischarge => { p.get_property("TimeToEmpty").await? },
+            _ => { 0 }
+        };
+        
+        let obj = BatteryStats {
+            state,
+            percentage,
+            eta_minutes: if eta_seconds > 0 { Some((eta_seconds as f64) / 60.0) } else { None }
+        };
+        dbg_println!("{} {}", "get_stats ended".blue(), eta_seconds);
+        Ok(obj)
+    };
+
+    if let Ok(stats) = get_stats(&device_proxy).await {
+        dbg_println!("{}", "Battery first info load!".yellow());
+        let _ = tx.send(stats);
+    }
+
+    let mut signal_iterator = signal_proxy.receive_signal("PropertiesChanged").await?;
+
+    let tx_signal = tx.clone();
+    let device_proxy_signal = device_proxy.clone();
+    
+    // Thread per i segnali DBus (quando lo stato cambia)
+    std::thread::spawn(move || {
+        futures::executor::block_on(async {
+            while let Some(_) = signal_iterator.next().await {
+                dbg_println!("{}", "Battery signal!".yellow());
+
+                let res = get_stats(&device_proxy_signal).await;
+                match res {
+                    Ok(stats) => {
+                        dbg_println!("{}", "Sending battery signal!".yellow());
+                        let _ = tx_signal.send(stats);
+                    },
+                    Err(err) => {
+                        eprintln!("{err:?}");
+                    }
+                }
+            }
+        });
+    });
+
+    // Thread per il polling (solo quando si sta caricando/scaricando)
+    let tx_poll = tx.clone();
+    let device_proxy_poll = device_proxy.clone();
+    
+    std::thread::spawn(move || {
+        futures::executor::block_on(async {
+            let mut last_stats: Option<BatteryStats> = None;
+            let poll_interval = std::time::Duration::from_secs(2);
+            
+            loop {
+                std::thread::sleep(poll_interval);
+                
+                if let Ok(stats) = get_stats(&device_proxy_poll).await {
+                    // Poll if charging/discharging
+                    let should_poll = matches!(
+                        stats.state,
+                        BatteryState::Charging | BatteryState::Discharging |
+                        BatteryState::PendingCharge | BatteryState::PendingDischarge
+                    );
+                    
+                    if should_poll {
+                        // Send if eta changed
+                        let eta_changed = last_stats.as_ref().map_or(true, |last| {
+                            last.eta_minutes != stats.eta_minutes
+                        });
+                        
+                        if eta_changed {
+                            dbg_println!("{}", "Sending battery update (polling)!".yellow());
+                            let _ = tx_poll.send(stats.clone());
+                            last_stats = Some(stats);
+                        }
+                    } else if last_stats.is_some() {
+                        // Se eravamo in polling e ora lo stato è inattivo, invia un ultimo update
+                        let _ = tx_poll.send(stats.clone());
+                        last_stats = None;
+                    }
+                }
+            }
+        });
+    });
+
+    Ok(())
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+use std::fs;
+use std::fs::File;
+use std::io::{Read, Seek, SeekFrom};
+
+pub struct SysBatteryReader {
+    buffer: String,
+    path: String,
+}
+
+impl SysBatteryReader {
+    pub fn new(bat_name: &str) -> Self {
+        Self {
+            buffer: String::with_capacity(64),
+            path: format!("/sys/class/power_supply/{}/", bat_name),
+        }
+    }
+
+    fn read_val(&mut self, file_name: &str) -> f64 {
+        self.buffer.clear();
+        if let Ok(mut f) = File::open(format!("{}{}", self.path, file_name)) {
+            let _ = f.read_to_string(&mut self.buffer);
+            self.buffer.trim().parse::<f64>().unwrap_or(0.0)
+        } else {
+            0.0
+        }
+    }
+
+    pub fn get_stats(&mut self) -> BatteryStats {
+        let state = self.get_battery_state();
+        let percentage = self.read_val("capacity");
+
+        if state == BatteryState::Charging || state == BatteryState::Discharging {
+            let energy = self.read_val("energy_now");
+            let power = self.read_val("power_now");
+            let full = self.read_val("energy_full");
+
+            let eta_minutes = if state == BatteryState::Discharging && power > 0.0 {
+                Some((energy / power) * 60.0)
+            } else if state == BatteryState::Charging && power > 0.0 {
+                Some(((full - energy) / power) * 60.0)
+            } else {
+                None
+            };
+            return BatteryStats { state, percentage, eta_minutes };
+        } else {
+            BatteryStats { state, percentage, eta_minutes: None }
+        }
+    }
+
+    pub fn get_battery_state(&mut self) -> BatteryState {
+        let status_str = fs::read_to_string(format!("{}/status", self.path))
+            .unwrap_or_else(|_| "Unknown".to_string());
+
+        match status_str.trim() {
+            "Charging" => BatteryState::Charging,
+            "Discharging" => BatteryState::Discharging,
+            "Not charging" => BatteryState::NotCharging,
+            "Full" => BatteryState::FullyCharged,
+            _ => BatteryState::Unknown,
+        }
+    }
+}
+
+pub async fn start_battery_listener(tx: Sender<BatteryStats>) -> zbus::Result<()> {
+    let mut bat = SysBatteryReader::new("BAT0");
+    std::thread::spawn(move || {
+        futures::executor::block_on(async {
+            let poll_interval = std::time::Duration::from_secs(2);
+            
+            loop {
+                let new_stats = bat.get_stats();
+                dbg_println!("{} {:?}", "Sending battery signal!".blue(), new_stats);
+                let _ = tx.send(new_stats);
+                std::thread::sleep(poll_interval);
+            }
+        });
+    });
+    Ok(())
+}
