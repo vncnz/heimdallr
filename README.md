@@ -132,7 +132,7 @@ You can choose between these styles, or disable the clock entirely, via the conf
 
 - Optional ratatoskr:
   - Choose to show/hide icon of disconnection in config
-  - Check battery status in Heimdallr if ratatoskr is disconnected?
+  - ~~Check battery status in Heimdallr~~ Done!
 - Publish on AUR
 - Publish as Nix flake?
 - Create a GIF?
