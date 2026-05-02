@@ -471,6 +471,9 @@ use std::io::{Read, Seek, SeekFrom};
 pub struct SysBatteryReader {
     buffer: String,
     path: String,
+    eta_history: [f64; 3],
+    eta_history_len: usize,
+    eta_history_pos: usize
 }
 
 impl SysBatteryReader {
@@ -478,7 +481,28 @@ impl SysBatteryReader {
         Self {
             buffer: String::with_capacity(64),
             path: format!("/sys/class/power_supply/{}/", bat_name),
+            eta_history: [0.0; 3],
+            eta_history_len: 0,
+            eta_history_pos: 0
         }
+    }
+
+    // TODO: Exponential moving average (EMA) can be used instead of a moving window
+    // ema_new = alpha * current + (1.0 - alpha) * ema_old
+    // with alpha something like 0.15?
+    fn record_eta(&mut self, eta: f64) -> f64 {
+        self.eta_history[self.eta_history_pos] = eta;
+        self.eta_history_pos = (self.eta_history_pos + 1) % 3;
+        self.eta_history_len = usize::min(self.eta_history_len + 1, 3);
+
+        let sum: f64 = self.eta_history[..self.eta_history_len].iter().sum();
+        sum / self.eta_history_len as f64
+    }
+
+    fn reset_eta(&mut self) {
+        self.eta_history = [0.0; 3];
+        self.eta_history_len = 0;
+        self.eta_history_pos = 0;
     }
 
     fn read_val(&mut self, file_name: &str) -> f64 {
@@ -500,13 +524,19 @@ impl SysBatteryReader {
             let power = self.read_val("power_now");
             let full = self.read_val("energy_full");
 
-            let eta_minutes = if state == BatteryState::Discharging && power > 0.0 {
+            let mut eta_minutes = if state == BatteryState::Discharging && power > 0.0 {
                 Some((energy / power) * 60.0)
             } else if state == BatteryState::Charging && power > 0.0 {
                 Some(((full - energy) / power) * 60.0)
             } else {
                 None
             };
+            if let Some(e) = eta_minutes {
+                eta_minutes = Some(self.record_eta(e));
+            } else {
+                self.reset_eta();
+            }
+
             return BatteryStats { state, percentage, eta_minutes };
         } else {
             BatteryStats { state, percentage, eta_minutes: None }
