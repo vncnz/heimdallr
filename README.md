@@ -160,6 +160,7 @@ You can choose between these styles, or disable the clock entirely, via the conf
 - Force a red frame border when battery is low, regardless of the settings?
 - Custom hooks for events?
 - Plugin system?
+- Show again last notification on cmd retrieving?
 
 ## Known bugs
 
