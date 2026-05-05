@@ -17,7 +17,7 @@ use std::thread;
 
 use colored::Colorize;
 
-use crate::{battery::{BatteryState, BatteryStats}, clock::{ClockTrait, NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, data::{BluetoothStats, DeviceKind, RatatoskrSocket}, heimdallr_layer::IconChange, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
+use crate::{battery::{BatteryState, BatteryStats}, clock::{ClockTrait, NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, data::{BluetoothStats, DeviceKind, RatatoskrSocket}, heimdallr_layer::IconChange, notifications::Notification, security::{MicCameraStatus, start_pw_monitor}, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
 
 mod data;
 mod config;
@@ -29,6 +29,7 @@ mod clock;
 mod clock1;
 mod clock2;
 mod battery;
+mod security;
 use config::Config;
 // use chrono;
 
@@ -243,7 +244,18 @@ fn main() {
             }
         });
     });
-    // let rx_notif = start_notification_listener().await;
+
+    let (tx_pipewire, rx_pipewire): (Sender<MicCameraStatus>, Receiver<MicCameraStatus>) = mpsc::channel();
+    thread::spawn(|| {
+        futures::executor::block_on(async {
+            if let Err(e) = start_pw_monitor(tx_pipewire) {
+                log_to_file(format!("PipeWire listener error: {:?}", e));
+                dbg_println!("{}", format!("PipeWire listener error: {:?}", e).red().to_string());
+            } else {
+                dbg_println!("{}", "PipeWire listener OK".green().to_string());
+            }
+        });
+    });
 
     loop {
         let _ = event_queue.dispatch_pending(&mut app);
@@ -276,6 +288,14 @@ fn main() {
             app.request_redraw(&"battery");
             eprintln!("{}", "Battery update".yellow());
             eprintln!("{:?}", bat);
+        }
+
+        if let Ok(status) = rx_pipewire.try_recv() {
+            // app.mic_active = status.mic_active;
+            // app.camera_active = status.camera_active;
+            // app.request_redraw(&"pipewire");
+            // eprintln!("{}", "PipeWire update".bright_blue());
+            // eprintln!("{:?}", status);
         }
 
         if let Ok(cmd) = rx_cmds.try_recv() {
