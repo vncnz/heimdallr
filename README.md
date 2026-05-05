@@ -115,7 +115,7 @@ You can browse and remove notifications with following commands:
 - echo prev_notification > /tmp/heimdallr_cmds
 - echo next_notification > /tmp/heimdallr_cmds
 
-You don't need to create /tmp/heimdallr_cmds file, it is created automatically by Heimdallr and it is a named pipe (aka a fifo special file): you write in it you command and it's all.
+You don't need to create /tmp/heimdallr_cmds file, it is created automatically by Heimdallr and it is a named pipe (aka a fifo special file): you write in it your command and it's all.
 
 Notification example:
 ![Notification example](./screenshots/notif.png)
