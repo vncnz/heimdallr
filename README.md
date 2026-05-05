@@ -25,7 +25,11 @@ On the right side, there is a “linear clock” with an arrow indicating the cu
 
 All this information takes virtually no useful space on the screen.
 
-Resource data is retrieved via a Linux socket from another of my projects, called Ratatoskr, which is also available on GitHub.
+Resource data (such as CPU, RAM, and disk usage) is retrieved via a Unix socket from another of my projects, Ratatoskr, which is also available on [GitHub](https://github.com/vncnz/ratatoskr).
+
+Ratatoskr is optional: if you choose not to run it, Heimdallr will not display resource warnings (e.g., high CPU/RAM usage).
+
+Battery status, level, and estimated time remaining are collected by Heimdallr itself, so you will always have access to this information.
 
 Initially, I implemented this system using the Ignis framework (Python + GTK), but it was consuming about 176 MB of RAM. So I rewrote the UI in Rust, communicating directly with Wayland and avoiding the GTK toolkit. With this approach, memory usage dropped to approximately 34 MB on my laptop.
 The impact on average load is around 0.01, so really small. I measured the impact on average load as the ratio between the time spent with the Heimdallr process in "Running" or "disk-sleep" status and the total measurement time.
@@ -65,7 +69,8 @@ You can configure frame color and clock presence with a json file in ```~/.confi
 {
     "frame_color": [red,green,blue,alpha] | "worst-resource" | "random" | null,
     "show_clock": "clock1" / "clock2" / null,
-    "show_always_bluetooth": true / false
+    "show_always_bluetooth": true / false,
+    "hide_missing_ratatoskr": true / false
 }
 ```
 
@@ -75,12 +80,25 @@ For example:
 {
     "frame_color": [0.2, 0.6, 1.0, 1.0],
     "show_clock": "clock1",
-    "show_always_bluetooth": true
+    "show_always_bluetooth": true,
+    "hide_missing_ratatoskr": true
 }
 ```
 
 If you set "worst-resource" as frame_color, in absence of resource warnings the frame will have no border.
-If you ser false as show_always_bluetooth, you'll see icons for your bluetooth peripherals only if their battery runs low.
+If you set false as show_always_bluetooth, you'll see icons for your bluetooth peripherals only if their battery runs low.
+If you set false as hide_missing_ratatoskr, heimdallr won't show a warning icon if ratatoskr is disconnected; in fact, ratatoskr is now optional.
+
+Default values are the following:
+
+```json
+{
+    "frame_color": null,
+    "show_clock": null,
+    "show_always_bluetooth": true,
+    "hide_missing_ratatoskr": false
+}
+```
 
 ## Notifications
 

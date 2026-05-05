@@ -176,6 +176,16 @@ fn main() {
         clock
     };
 
+    if !config.hide_missing_ratatoskr {
+        app.add_icon("ratatoskr", "󰠗", get_color_gradient(1.0), 1.0);
+        app.animator.animate_property(
+            &app.frame_model,
+            AnimationKey::IconsHeight,
+            app.icons.len() as f64,
+            200
+        );
+    }
+
     event_queue.roundtrip(&mut app).unwrap();
     // event_queue.dispatch_pending(&mut app).unwrap();
     // let chosen_output = choose_output(&globals, &qh);
@@ -405,6 +415,28 @@ fn main() {
                 let new_ratatoskr_status = data.warning < 0.5;
                 if app.ratatoskr_connected != new_ratatoskr_status {
                     app.ratatoskr_connected = new_ratatoskr_status;
+                    if !new_ratatoskr_status {
+                        app.icons.clear();
+                        /* let keys: Vec<String> = app.icons.keys().cloned().collect();
+                        for iconkey in keys {
+                            app.remove_icon(&iconkey);
+                        } */
+                        if !config.hide_missing_ratatoskr { app.add_icon("ratatoskr", "󰠗", get_color_gradient(1.0), 1.0); }
+                        app.animator.animate_property(
+                            &app.frame_model,
+                            AnimationKey::IconsHeight,
+                            app.icons.len() as f64,
+                            200
+                        );
+                    } else {
+                        app.remove_icon("ratatoskr");
+                        app.animator.animate_property(
+                            &app.frame_model,
+                            AnimationKey::IconsHeight,
+                            app.icons.len() as f64,
+                            200
+                        );
+                    }
                     app.request_redraw("ratatoskr");
                 }
             } else if data.warning < 0.3 {

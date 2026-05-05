@@ -218,7 +218,7 @@ impl HeimdallrLayer {
         let mut y_offset = self.height as f64 - 8.0; // parte dal basso
         let res_w = 24.0;
         // let res_h = if self.ratatoskr_connected { (self.icons.len() as f64) * 30.0 } else { 30.0 };
-        let res_h = if self.ratatoskr_connected { self.frame_model.icons_ratio * 24.0 } else { 24.0 };
+        let res_h = self.frame_model.icons_ratio * 24.0;
         let wob_h = 24.0 * self.frame_model.wob_height;
 
         // Draw rounded rectangle frame
@@ -276,19 +276,19 @@ impl HeimdallrLayer {
         
         cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
         cr.set_font_size(16.0);
-        if self.ratatoskr_connected {
+        // if self.ratatoskr_connected {
             for icon in self.icons.values() {
                 cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
                 cr.move_to(4.0, y_offset);
                 cr.show_text(&icon.symbol).unwrap();
                 y_offset -= 24.0;
             }
-        } else {
+        /* } else if !self.config.hide_missing_ratatoskr {
             let red = get_color_gradient(1.0);
             cr.set_source_rgba(red.0, red.1, red.2, red.3);
             // cr.move_to(4.0, y_offset);
             cr_text_aligned(cr.clone(), "󰠗".to_string(), 12.0, y_offset, 0.5, 0.5);
-        }
+        } */
 
         // === Draw colored border ===
         if let Some((r, g, b, a)) = match self.config.frame_color {
