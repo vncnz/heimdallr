@@ -148,8 +148,8 @@ You can choose between these styles, or disable the clock entirely, via the conf
 
 ## TODOs
 
-- Optional ratatoskr:
-  - Choose to show/hide icon of disconnection in config
+- ~~Optional ratatoskr:~~ Done!
+  - ~~Choose to show/hide icon of disconnection in config~~ Done!
   - ~~Check battery status in Heimdallr~~ Done!
 - Publish on AUR
 - Publish as Nix flake?
