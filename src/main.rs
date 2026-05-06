@@ -174,7 +174,8 @@ fn main() {
         animator: Animator::new(),
         frame_model: FrameModel::new(),
         is_waiting_for_frame: false,
-        clock
+        clock,
+        security: MicCameraStatus { mic_active: vec!(), camera_active: vec!() }
     };
 
     if !config.hide_missing_ratatoskr {
@@ -296,6 +297,8 @@ fn main() {
             // app.request_redraw(&"pipewire");
             // eprintln!("{}", "PipeWire update".bright_blue());
             log_to_file(format!("{:?}", status).to_string());
+            app.security = status;
+            app.request_redraw("security");
         }
 
         if let Ok(cmd) = rx_cmds.try_recv() {
