@@ -295,7 +295,7 @@ fn main() {
             // app.camera_active = status.camera_active;
             // app.request_redraw(&"pipewire");
             // eprintln!("{}", "PipeWire update".bright_blue());
-            // eprintln!("{:?}", status);
+            log_to_file(format!("{:?}", status).to_string());
         }
 
         if let Ok(cmd) = rx_cmds.try_recv() {
