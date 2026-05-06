@@ -209,8 +209,8 @@ impl HeimdallrLayer {
     }
 
     fn draw_security (&mut self, cr: Context) {
-        let draw_mic = self.security.mic_active.len() == 0;
-        let draw_cam = self.security.camera_active.len() == 0;
+        let draw_mic = self.security.mic_active.len() > 0;
+        let draw_cam = self.security.camera_active.len() > 0;
         if draw_mic || draw_cam {
             let x = 1.0;
             let y = 1.0;
