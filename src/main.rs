@@ -17,7 +17,7 @@ use std::thread;
 
 use colored::Colorize;
 
-use crate::{battery::{BatteryState, BatteryStats}, clock::{ClockTrait, NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, data::{BluetoothStats, DeviceKind, RatatoskrSocket}, heimdallr_layer::IconChange, notifications::Notification, security::{MicCameraStatus, is_camera_in_use, start_pw_monitor}, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
+use crate::{battery::{BatteryState, BatteryStats}, clock::{ClockTrait, NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, data::{BluetoothStats, DeviceKind, RatatoskrSocket}, heimdallr_layer::IconChange, notifications::Notification, security::{MicCameraStatus, is_camera_in_use, start_security_monitor, start_pw_monitor}, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
 
 mod data;
 mod config;
@@ -249,7 +249,7 @@ fn main() {
     let (tx_pipewire, rx_pipewire): (Sender<MicCameraStatus>, Receiver<MicCameraStatus>) = mpsc::channel();
     thread::spawn(|| {
         futures::executor::block_on(async {
-            if let Err(e) = start_pw_monitor(tx_pipewire) {
+            if let Err(e) = start_security_monitor(tx_pipewire) {
                 log_to_file(format!("PipeWire listener error: {:?}", e));
                 dbg_println!("{}", format!("PipeWire listener error: {:?}", e).red().to_string());
             } else {
@@ -291,9 +291,9 @@ fn main() {
             eprintln!("{:?}", bat);
         }
 
-        if is_camera_in_use() {
+        /* if is_camera_in_use() {
             eprintln!("{}", "Camera in use!".red());
-        }
+        } */
 
         if let Ok(status) = rx_pipewire.try_recv() {
             // app.mic_active = status.mic_active;
@@ -301,6 +301,7 @@ fn main() {
             // app.request_redraw(&"pipewire");
             // eprintln!("{}", "PipeWire update".bright_blue());
             log_to_file(format!("{:?}", status).to_string());
+            println!("{}", format!("{:?}", status).red());
             app.security = status;
             app.request_redraw("security");
         }

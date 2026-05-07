@@ -131,3 +131,150 @@ pub fn is_camera_in_use() -> bool {
     }
     false
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// NEW SYSTEM
+
+use std::collections::{/*HashMap, */HashSet};
+// use std::fs;
+// use std::process::Command;
+use std::sync::mpsc::{self/*, Sender*/};
+use std::time::Duration;
+use glob::glob;
+
+pub fn start_security_monitor(tx: Sender<MicCameraStatus>) -> Result<(), Box<dyn std::error::Error>> {
+    // Internal channel to get data from the PipeWire event thread
+    let (pw_tx, pw_rx) = mpsc::channel::<MicCameraStatus>();
+    
+    // 1. Launch the PipeWire Event Listener (Reactive)
+    // This is the logic we refined earlier using pw-dump --monitor
+    start_pw_monitor(pw_tx);
+
+    // 2. Launch the Hardware Polling Thread (Proactive Security)
+    std::thread::spawn(move || {
+        let mut last_sent_status: Option<MicCameraStatus> = None;
+        let mut pw_context = MicCameraStatus { mic_active: vec![], camera_active: vec![] };
+        let mut trusted_pids = HashSet::new();
+
+        loop {
+            // Update metadata from PipeWire if available (non-blocking)
+            while let Ok(update) = pw_rx.try_recv() {
+                pw_context = update;
+            }
+
+            let mut current_status = MicCameraStatus {
+                mic_active: Vec::new(),
+                camera_active: Vec::new(),
+            };
+
+            // --- PART A: ABSOLUTE MIC TRUTH (/proc/asound) ---
+            // Check if any hardware capture device is physically RUNNING
+            let mut hw_mic_active = false;
+            if let Ok(paths) = glob("/proc/asound/card*/pcm*c/sub*/status") {
+                for path in paths.flatten() {
+                    if let Ok(content) = fs::read_to_string(path) {
+                        if content.contains("state: RUNNING") {
+                            hw_mic_active = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // --- PART B: PROCESS SCAN (/proc/[pid]/fd) ---
+            let mut direct_mic_pids = Vec::new();
+            let mut direct_cam_pids = Vec::new();
+
+            if let Ok(entries) = fs::read_dir("/proc") {
+                for entry in entries.flatten() {
+                    let pid_str = entry.file_name().to_string_lossy().into_owned();
+                    if !pid_str.chars().all(|c| c.is_numeric()) { continue; }
+                    
+                    let pid: u32 = pid_str.parse().unwrap_or(0);
+                    let fd_path = format!("/proc/{}/fd", pid_str);
+
+                    if let Ok(fds) = fs::read_dir(fd_path) {
+                        for fd in fds.flatten() {
+                            if let Ok(target) = fs::read_link(fd.path()) {
+                                let target_str = target.to_string_lossy();
+                                
+                                // Check for Camera hardware
+                                if target_str.contains("/dev/video") {
+                                    direct_cam_pids.push(pid);
+                                }
+                                // Check for ALSA Audio hardware
+                                if target_str.contains("/dev/snd/pcm") && target_str.ends_with('c') {
+                                    direct_mic_pids.push(pid);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // --- PART C: ATTRIBUTION & SECURITY LOGIC ---
+            
+            // Resolve Camera
+            for pid in direct_cam_pids {
+                let name = get_process_name(pid, &mut trusted_pids);
+                current_status.camera_active.push(name);
+            }
+
+            // Resolve Mic: If HW is running but no one owns the FD, it's a ghost/rootkit
+            if hw_mic_active && direct_mic_pids.is_empty() {
+                current_status.mic_active.push("Kernel-level/Hidden Recorder!".to_string());
+            } else {
+                for pid in direct_mic_pids {
+                    let name = get_process_name(pid, &mut trusted_pids);
+                    // If it's a known sound server, use PipeWire's rich metadata
+                    if name == "pipewire" || name == "wireplumber" {
+                        current_status.mic_active.extend(pw_context.mic_active.clone());
+                    } else {
+                        current_status.mic_active.push(format!("{} (ALSA Bypass)", name));
+                    }
+                }
+            }
+
+            // Clean duplicates (e.g. multiple FDs from same process)
+            current_status.mic_active.sort();
+            current_status.mic_active.dedup();
+            current_status.camera_active.sort();
+            current_status.camera_active.dedup();
+
+            // Only notify if state changed
+            if Some(&current_status) != last_sent_status.as_ref() {
+                let _ = tx.send(current_status.clone());
+                last_sent_status = Some(current_status);
+            }
+
+            std::thread::sleep(Duration::from_secs(2));
+        }
+    });
+
+    Ok(())
+}
+
+fn get_process_name(pid: u32, trusted: &mut HashSet<u32>) -> String {
+    if trusted.contains(&pid) {
+        // We know these PIDs are system services, return a placeholder to save IO
+        // but in a real app, you might want the actual comm name once.
+    }
+    fs::read_to_string(format!("/proc/{}/comm", pid))
+        .map(|s| s.trim().to_string())
+        .unwrap_or_else(|_| format!("PID {}", pid))
+}
