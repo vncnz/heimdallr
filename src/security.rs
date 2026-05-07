@@ -121,6 +121,7 @@ pub fn is_camera_in_use() -> bool {
                     let target_str = target.to_string_lossy();
                     for dev in &camera_devices {
                         if target_str == *dev {
+                          eprintln!("Camera {} in use by PID {}: {}", dev, s_name, target_str);
                             return true; // Found a match!
                         }
                     }

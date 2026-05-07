@@ -17,7 +17,7 @@ use std::thread;
 
 use colored::Colorize;
 
-use crate::{battery::{BatteryState, BatteryStats}, clock::{ClockTrait, NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, data::{BluetoothStats, DeviceKind, RatatoskrSocket}, heimdallr_layer::IconChange, notifications::Notification, security::{MicCameraStatus, start_pw_monitor}, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
+use crate::{battery::{BatteryState, BatteryStats}, clock::{ClockTrait, NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, data::{BluetoothStats, DeviceKind, RatatoskrSocket}, heimdallr_layer::IconChange, notifications::Notification, security::{MicCameraStatus, is_camera_in_use, start_pw_monitor}, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
 
 mod data;
 mod config;
@@ -289,6 +289,10 @@ fn main() {
             app.request_redraw(&"battery");
             eprintln!("{}", "Battery update".yellow());
             eprintln!("{:?}", bat);
+        }
+
+        if is_camera_in_use() {
+            eprintln!("{}", "Camera in use!".red());
         }
 
         if let Ok(status) = rx_pipewire.try_recv() {
