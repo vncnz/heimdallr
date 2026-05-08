@@ -377,7 +377,7 @@ fn add_notch(cr: &Context, side: Side, center: f64, edge_pos: f64, width: f64, d
     }
 }
 
-pub fn draw_frame(cr: &Context, x: f64, y: f64, w: f64, h: f64, r_base: f64, r_notch: f64, spaces: &[ReservedSpace]) {
+/*pub fn draw_frame(cr: &Context, x: f64, y: f64, w: f64, h: f64, r_base: f64, r_notch: f64, spaces: &[ReservedSpace]) {
     cr.new_sub_path();
 
     // 1. Angolo Top-Left -> Top-Right
@@ -406,6 +406,7 @@ pub fn draw_frame(cr: &Context, x: f64, y: f64, w: f64, h: f64, r_base: f64, r_n
 
     cr.close_path();
 }
+*/
 
 pub fn draw_smart_border(
     cr: &Context, 
@@ -456,11 +457,14 @@ pub fn draw_smart_border(
         add_notch(cr, Side::Bottom, x + w/2.0, y + h, s.width, s.height, r_notch);
     }
 
-    if let Some(s) = get_s(Anchor::BottomLeft) {
-        cr.line_to(x + s.width + r_notch, y + h);
-        cr.line_to(x + s.width, y + h - s.height);
-        cr.line_to(x, y + h - s.height);
+   if let Some(s) = get_s(Anchor::BottomLeft) {
+        let r2_safe = if s.height > r_notch { r_notch } else { s.height/2.0 };
+        // dbg_println!("reserved_h: {}", reserved_h);
+        cr.arc(x + s.width + r2_safe, y + h - r2_safe, r2_safe, 90f64.to_radians(), 180f64.to_radians());
+        cr.arc_negative(x - r2_safe + s.width, y + h + r2_safe - s.height, r2_safe, 0f64.to_radians(), 270f64.to_radians());
+        cr.arc(x + r2_safe, y + h - r2_safe - s.height, r2_safe, 90f64.to_radians(), 180f64.to_radians());
     } else {
+        //cr.arc(x + r, y + h - r, r, 90f64.to_radians(), 180f64.to_radians());
         cr.arc(x + r_base, y + h - r_base, r_base, 0.5 * PI, PI);
     }
 
