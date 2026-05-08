@@ -308,7 +308,7 @@ impl HeimdallrLayer {
             let wob_height = wob_h - 4.0;
             if wob_height > 0.0 {
                 let left = xc - wob_half_width + 1.0;
-                let top = h - thickness - top - wob_h + 3.0;
+                let top = h - thickness - (thickness / 2.0) - wob_h + 3.0;
                 rounded_rect_gradient(&cr, left, top, wob_half_width * 2.0, wob_height, wob_h.min(radius2-1.0), steps, crate::utils::GradientDirection::Horizontal, false, None);
             }
         }
