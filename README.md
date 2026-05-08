@@ -146,6 +146,22 @@ You can choose between these styles, or disable the clock entirely, via the conf
 
 **For Developers:** The clock system is built around the ClockTrait, making it easy to extend or create custom clock styles. Fork the project and experiment with your own designs!
 
+## Security warning feature
+
+Heimdallr is also a lightweight, hardware-aware security monitor for Linux that ensures your microphone and camera are never active without your knowledge.
+
+Unlike standard desktop indicators that rely solely on software notifications, Heimdallr operates on a zero-trust model, as close as possible to the kernel and the hardware. It cross-references high-level PipeWire events with the absolute truth of the Linux kernel (/proc filesystem).
+
+### Why
+
+While many laptops have a hardware-wired LED for the camera, most microphones have no physical indicator. Furthermore, sophisticated software can sometimes bypass firmware-controlled LEDs. Heimdallr acts as your digital "status light" for these peripherals.
+
+Most software indicators only show what the sound server (PipeWire/PulseAudio) reports. Heimdallr detects "stealth" processes that access your hardware directly via ALSA or V4L2, bypassing standard security layers.
+
+### How
+
+By monitoring the physical RUNNING state of your audio cards in /proc/asound and checking accesses to your mic and camera devices in /dev, Heimdallr eliminates false positives from "suspended" apps while catching actual recording in real-time.
+
 ## TODOs
 
 - ~~Optional ratatoskr:~~ Done!
