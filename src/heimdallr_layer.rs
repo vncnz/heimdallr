@@ -274,10 +274,13 @@ impl HeimdallrLayer {
         cr.set_fill_rule(cairo::FillRule::EvenOdd);
         // rounded_big_hole(&cr, thickness / 2.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h, wob_h);
 
-
-        let spaces = vec![
-            ReservedSpace { anchor: Anchor::BottomCenter, width: 200.0, height: 40.0 }
+        let mut spaces = vec![
+            ReservedSpace { anchor: Anchor::BottomLeft, width: res_w, height: res_h },
+            // ReservedSpace { anchor: Anchor::BottomCenter, width: 200.0, height: 40.0 }
         ];
+        if wob_h > 0.0 {
+            spaces.push(ReservedSpace { anchor: Anchor::BottomCenter, width: 200.0, height: wob_h });
+        }
         draw_smart_border(&cr, thickness / 2.0, top, w_hole, h - thickness - top, radius, radius2, &&spaces);
 
 
