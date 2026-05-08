@@ -208,6 +208,10 @@ impl HeimdallrLayer {
         }
     }
 
+    fn build_security_text (&self) -> (String, String) {
+        (self.security.mic_active.join(" · "), self.security.camera_active.join(" · "))
+    }
+
     fn draw_security (&mut self, cr: Context) {
         let draw_mic = self.security.mic_active.len() > 0;
         let draw_cam = self.security.camera_active.len() > 0;
@@ -221,6 +225,20 @@ impl HeimdallrLayer {
             let cam_color = (0.2, 0.78, 0.35, 1.0);
             let steps = if draw_mic && draw_cam { vec![(0.0, mic_color), (1.0, cam_color)] } else if draw_mic { vec![(0.0, mic_color)] } else { vec![(0.0, cam_color)] };
             rounded_rect_gradient(&cr, x, y, w, h, r, steps, crate::utils::GradientDirection::Horizontal, true, None);
+
+            cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
+            cr.set_font_size(10.0);
+            cr.set_source_rgba(mic_color.0, mic_color.1, mic_color.2, mic_color.3);
+            let (mic, cam) = self.build_security_text();
+            // cr.move_to(14.0, 9.0);
+            // cr.show_text(&mic).unwrap();
+            cr_text_aligned(cr.clone(), mic.into(), self.width as f64 / 2.0, 2.0, 0.5, 0.0);
+            /* for app in self.security.mic_active.clone().into_iter() {
+                cr.move_to(14.0, 9.0);
+                cr.show_text(&app).unwrap();
+                // let w = cr.text_extents(&text).unwrap().width();
+                // cr_text_aligned(cr.clone(), app.into(), self.width / 2.0, 0.5, 0.0);
+            } */
         }
     }
 
