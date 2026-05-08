@@ -189,7 +189,7 @@ By monitoring the physical RUNNING state of your audio cards in /proc/asound and
 - ~~Add an alert icon for "reboot recommended" situation~~ Done!
 - ~~Animation system?~~ Done!
 - ~~Wob-like functionality~~ Done!
-- Monitor and indicate mic/camera accesses
+- ~~Monitor and indicate mic/camera accesses~~ Done!
 - Add output configuration both on config file and as parameter
 - Show a resources resume for some time after receiving a dedicated command (something like [AVG 0.9 1.27 1.41] [MEM 73% / SWP 14%] [DSK 49%] and so on)?
 - Force a red frame border when battery is low, regardless of the settings?
