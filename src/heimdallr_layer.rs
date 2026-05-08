@@ -281,16 +281,11 @@ impl HeimdallrLayer {
         }
         draw_smart_border(&cr, thickness / 2.0, top, w_hole, h - thickness - top, radius, radius2, &&spaces);
 
-        // cr.save();
-
         cr.set_fill_rule(cairo::FillRule::EvenOdd);
         cr.rectangle(-1.0, -1.0, w + 2.0, h + 2.0);
 
         cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
         cr.fill_preserve().unwrap();
-
-        // cr.rectangle(1.0, 1.0, w - 2.0, h - 2.0);
-        // cr.clip();
 
         if let Some((r, g, b, a)) = match self.config.frame_color {
             FrameColor::Rgba(r, g, b, a) => Some((r, g, b, a)),
@@ -307,25 +302,12 @@ impl HeimdallrLayer {
             cr.stroke().unwrap();
         }
 
-        // cr.restore().unwrap();
-
-        
-
-        
-
         // wob-like
         let mut steps = vec![(0.0, (1.0, 1.0, 1.0, self.frame_model.wob_height))];
         let xc = (thickness + w_hole) / 2.0;
         if wob_h > 2.0 {
             match self.config.frame_color {
                 FrameColor::None => {
-                    // wob_rect(&cr, xc, h - thickness, radius2, wob_h, 1.0);
-                    // cr.set_source_rgba(1.0, 1.0, 1.0, 0.35);
-                    // cr.fill().unwrap();
-
-                    // wob_rect(&cr, xc, h - thickness, radius2, wob_h, 1.0);
-                    // cr.set_source_rgba(0.0, 0.0, 0.0, 0.5);
-                    // cr.stroke().unwrap();
                     steps.push((self.wob_value, (0.0, 0.0, 0.0, 0.5)));
                 },
                 _ => {
@@ -342,27 +324,16 @@ impl HeimdallrLayer {
             }
         }
 
-        // wob_rect(&cr, xc, h - thickness, radius2, wob_h, self.wob_value);
-        // cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
-        // cr.fill().unwrap();
-
         // === Draw alarm icons ===
         
         cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
         cr.set_font_size(16.0);
-        // if self.ratatoskr_connected {
-            for icon in self.icons.values() {
-                cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
-                cr.move_to(4.0, y_offset);
-                cr.show_text(&icon.symbol).unwrap();
-                y_offset -= 24.0;
-            }
-        /* } else if !self.config.hide_missing_ratatoskr {
-            let red = get_color_gradient(1.0);
-            cr.set_source_rgba(red.0, red.1, red.2, red.3);
-            // cr.move_to(4.0, y_offset);
-            cr_text_aligned(cr.clone(), "󰠗".to_string(), 12.0, y_offset, 0.5, 0.5);
-        } */
+        for icon in self.icons.values() {
+            cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
+            cr.move_to(4.0, y_offset);
+            cr.show_text(&icon.symbol).unwrap();
+            y_offset -= 24.0;
+        }
 
     }
 
