@@ -261,7 +261,7 @@ impl HeimdallrLayer {
         // Draw rounded rectangle frame
         let thickness = 1.0;
         let radius = 25.0;
-        let radius2 = 14.0;
+        let radius2 = 4.0;
 
         let w = self.width as f64;
         let h = self.height as f64;
@@ -269,9 +269,7 @@ impl HeimdallrLayer {
 
         let top = thickness / 2.0 + /*if self.notifications.len() > 0 { 24.0 } else { 0.0 }*/24.0 * self.frame_model.notif_height_ratio;
 
-        // Outer black border
-        cr.rectangle(0.0, 0.0, w, h);
-        cr.set_fill_rule(cairo::FillRule::EvenOdd);
+        // Outer black border + fill
         // rounded_big_hole(&cr, thickness / 2.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h, wob_h);
 
         let mut spaces = vec![
@@ -283,9 +281,37 @@ impl HeimdallrLayer {
         }
         draw_smart_border(&cr, thickness / 2.0, top, w_hole, h - thickness - top, radius, radius2, &&spaces);
 
+        // cr.save();
 
-        cr.set_source_rgba(0.5, 0.0, 0.0, 0.3);
-        cr.fill().unwrap();
+        cr.set_fill_rule(cairo::FillRule::EvenOdd);
+        cr.rectangle(-1.0, -1.0, w + 2.0, h + 2.0);
+
+        cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
+        cr.fill_preserve().unwrap();
+
+        // cr.rectangle(1.0, 1.0, w - 2.0, h - 2.0);
+        // cr.clip();
+
+        if let Some((r, g, b, a)) = match self.config.frame_color {
+            FrameColor::Rgba(r, g, b, a) => Some((r, g, b, a)),
+            FrameColor::WorstResource => self
+                .icons
+                .values()
+                .max_by(|a, b| a.warn.partial_cmp(&b.warn).unwrap_or(std::cmp::Ordering::Equal))
+                .map(|icon| icon.color),
+            FrameColor::None /* | FrameColor::Random */ => None,
+        } {
+            cr.set_line_width(1.0);
+            cr.set_source_rgba(r, g, b, a);
+            // rounded_big_hole(&cr, thickness / 2.0 + 1.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h, wob_h);
+            cr.stroke().unwrap();
+        }
+
+        // cr.restore().unwrap();
+
+        
+
+        
 
         // wob-like
         let mut steps = vec![(0.0, (1.0, 1.0, 1.0, self.frame_model.wob_height))];
@@ -337,22 +363,6 @@ impl HeimdallrLayer {
             // cr.move_to(4.0, y_offset);
             cr_text_aligned(cr.clone(), "󰠗".to_string(), 12.0, y_offset, 0.5, 0.5);
         } */
-
-        // === Draw colored border ===
-        if let Some((r, g, b, a)) = match self.config.frame_color {
-            FrameColor::Rgba(r, g, b, a) => Some((r, g, b, a)),
-            FrameColor::WorstResource => self
-                .icons
-                .values()
-                .max_by(|a, b| a.warn.partial_cmp(&b.warn).unwrap_or(std::cmp::Ordering::Equal))
-                .map(|icon| icon.color),
-            FrameColor::None /* | FrameColor::Random */ => None,
-        } {
-            cr.set_line_width(1.0);
-            cr.set_source_rgba(r, g, b, a);
-            rounded_big_hole(&cr, thickness / 2.0 + 1.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h, wob_h);
-            cr.stroke().unwrap();
-        }
 
     }
 
