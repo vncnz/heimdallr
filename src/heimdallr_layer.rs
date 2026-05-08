@@ -13,7 +13,7 @@ use cairo::FontSlant;
 
 use wayland_client::Dispatch;
 
-use crate::{clock::ClockTrait, config::FrameColor, dbg_println, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, cr_text_aligned, get_color_gradient, log_to_file, rounded_big_hole, rounded_rect_gradient}};
+use crate::{clock::ClockTrait, config::FrameColor, dbg_println, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, cr_text_aligned, get_color_gradient, log_to_file, rounded_big_hole, draw_smart_border, rounded_rect_gradient, Anchor, ReservedSpace}};
 
 #[derive(PartialEq)]
 pub enum IconChange {
@@ -261,7 +261,7 @@ impl HeimdallrLayer {
         // Draw rounded rectangle frame
         let thickness = 1.0;
         let radius = 25.0;
-        let radius2 = 4.0;
+        let radius2 = 14.0;
 
         let w = self.width as f64;
         let h = self.height as f64;
@@ -272,8 +272,16 @@ impl HeimdallrLayer {
         // Outer black border
         cr.rectangle(0.0, 0.0, w, h);
         cr.set_fill_rule(cairo::FillRule::EvenOdd);
-        rounded_big_hole(&cr, thickness / 2.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h, wob_h);
-        cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
+        // rounded_big_hole(&cr, thickness / 2.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h, wob_h);
+
+
+        let spaces = vec![
+            ReservedSpace { anchor: Anchor::BottomCenter, width: 200.0, height: 40.0 }
+        ];
+        draw_smart_border(&cr, thickness / 2.0, top, w_hole, h - thickness - top, radius, radius2, &&spaces);
+
+
+        cr.set_source_rgba(0.5, 0.0, 0.0, 0.3);
         cr.fill().unwrap();
 
         // wob-like
