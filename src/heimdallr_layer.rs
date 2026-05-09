@@ -230,11 +230,11 @@ impl HeimdallrLayer {
             let steps = if draw_mic && draw_cam { vec![(0.0, mic_color), (1.0, cam_color)] } else if draw_mic { vec![(0.0, mic_color)] } else { vec![(0.0, cam_color)] };
             rounded_rect_gradient(&cr, x, y, w, h, r, steps, crate::utils::GradientDirection::Horizontal, true, None); */
 
-            cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
+            cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
             cr.set_font_size(10.0);
             let security_text = self.build_security_text();
             let wtext = if let Ok(ext) = cr.text_extents(&security_text) {
-                ext.width() + 4.0
+                ext.width() + 6.0
             } else {
                 0.0
             }; // TODO: cache this
@@ -295,10 +295,10 @@ impl HeimdallrLayer {
         }
         if self.security.mic_active.len() > 0 || self.security.camera_active.len() > 0 {
             cr.set_font_size(10.0);
-            cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
+            cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
             let security_text = self.build_security_text();
             let w = if let Ok(ext) = cr.text_extents(&security_text) {
-                ext.width() + 4.0
+                ext.width() + 6.0
             } else {
                 0.0
             };
