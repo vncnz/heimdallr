@@ -220,15 +220,15 @@ impl HeimdallrLayer {
         let draw_mic = self.security.mic_active.len() > 0;
         let draw_cam = self.security.camera_active.len() > 0;
         if draw_mic || draw_cam {
-            let x = 1.0;
+            let r = 4.0;
+            let mic_color = (1.0, 0.58, 0.0, 1.0);
+            // let cam_color = (0.2, 0.78, 0.35, 1.0);
+            /* let x = 1.0;
             let y = 1.0;
             let w = 10.0;
             let h = 10.0;
-            let r = 4.0;
-            let mic_color = (1.0, 0.58, 0.0, 1.0);
-            let cam_color = (0.2, 0.78, 0.35, 1.0);
             let steps = if draw_mic && draw_cam { vec![(0.0, mic_color), (1.0, cam_color)] } else if draw_mic { vec![(0.0, mic_color)] } else { vec![(0.0, cam_color)] };
-            rounded_rect_gradient(&cr, x, y, w, h, r, steps, crate::utils::GradientDirection::Horizontal, true, None);
+            rounded_rect_gradient(&cr, x, y, w, h, r, steps, crate::utils::GradientDirection::Horizontal, true, None); */
 
             cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
             cr.set_font_size(10.0);
