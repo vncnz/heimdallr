@@ -228,8 +228,18 @@ impl HeimdallrLayer {
 
             cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
             cr.set_font_size(10.0);
-            cr.set_source_rgba(mic_color.0, mic_color.1, mic_color.2, mic_color.3);
             let (mic, cam) = self.build_security_text();
+            let wtext = if let Ok(ext) = cr.text_extents(&mic) {
+                ext.width() + 4.0
+            } else {
+                0.0
+            }; // TODO: cache this
+            // eprintln!("text width 1: {}", wtext);
+
+            let steps = vec![(0.0, (mic_color.0, mic_color.1, mic_color.2, mic_color.3))];
+            rounded_rect_gradient(&cr, (self.width as f64 - wtext) / 2.0, 0.0, wtext, 12.0, r, steps, crate::utils::GradientDirection::Horizontal, false, None);
+
+            cr.set_source_rgba(0.0, 0.0, 0.0 ,1.0);
             // cr.move_to(14.0, 9.0);
             // cr.show_text(&mic).unwrap();
             cr_text_aligned(cr.clone(), mic.into(), self.width as f64 / 2.0, 2.0, 0.5, 0.0);
@@ -273,13 +283,25 @@ impl HeimdallrLayer {
         // rounded_big_hole(&cr, thickness / 2.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h, wob_h);
 
         let mut spaces = vec![
-            ReservedSpace { anchor: Anchor::BottomLeft, width: res_w, height: res_h },
-            // ReservedSpace { anchor: Anchor::BottomCenter, width: 200.0, height: 40.0 }
+            ReservedSpace { anchor: Anchor::BottomLeft, width: res_w, height: res_h }
+            // ReservedSpace { anchor: Anchor::TopCenter, width: 2.0, height: 20.0 }
         ];
         if wob_h > 0.0 {
             spaces.push(ReservedSpace { anchor: Anchor::BottomCenter, width: 200.0, height: wob_h });
         }
-        draw_smart_border(&cr, thickness / 2.0, top, w_hole, h - thickness - top, radius, radius2, &&spaces);
+        if self.security.mic_active.len() > 0 || self.security.camera_active.len() > 0 {
+            cr.set_font_size(10.0);
+            cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
+            let (mic, cam) = self.build_security_text();
+            let w = if let Ok(ext) = cr.text_extents(&mic) {
+                ext.width() + 4.0
+            } else {
+                0.0
+            };
+            // eprintln!("text width 2: {}", w);
+            spaces.push(ReservedSpace { anchor: Anchor::TopCenter, width: w + 2.0, height: 13.0 });
+        }
+        draw_smart_border(&cr, thickness / 2.0, top, w_hole, h - thickness - top, w / 2.0, h / 2.0, radius, radius2, &&spaces);
 
         cr.set_fill_rule(cairo::FillRule::EvenOdd);
         cr.rectangle(-1.0, -1.0, w + 2.0, h + 2.0);
@@ -304,7 +326,7 @@ impl HeimdallrLayer {
 
         // wob-like
         let mut steps = vec![(0.0, (1.0, 1.0, 1.0, self.frame_model.wob_height))];
-        let xc = (thickness + w_hole) / 2.0;
+        let xc = (self.width as f64) / 2.0;
         if wob_h > 2.0 {
             match self.config.frame_color {
                 FrameColor::None => {

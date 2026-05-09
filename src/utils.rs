@@ -410,7 +410,7 @@ fn add_notch(cr: &Context, side: Side, center: f64, edge_pos: f64, width: f64, d
 
 pub fn draw_smart_border(
     cr: &Context, 
-    x: f64, y: f64, w: f64, h: f64, 
+    x: f64, y: f64, w: f64, h: f64, xc: f64, yc: f64,
     r_base: f64, 
     r_notch: f64, 
     spaces: &[ReservedSpace]
@@ -428,7 +428,8 @@ pub fn draw_smart_border(
     }
 
     if let Some(s) = spaces.iter().find(|s| s.anchor == Anchor::TopCenter) {
-        add_notch(cr, Side::Top, x + w/2.0, y, s.width, s.height, r_notch);
+        add_notch(cr, Side::Top, xc, y, s.width, s.height, r_notch);
+        // eprintln!("Notch TopCenter: x {}, w {}, width {}, height {}", x, w, s.width, s.height);
     }
 
     if let Some(s) = get_s(Anchor::TopRight) {
@@ -441,7 +442,7 @@ pub fn draw_smart_border(
     }
 
     if let Some(s) = spaces.iter().find(|s| s.anchor == Anchor::RightCenter) {
-        add_notch(cr, Side::Right, y + h/2.0, x + w, s.height, s.width, r_notch);
+        add_notch(cr, Side::Right, yc, x + w, s.height, s.width, r_notch);
     }
 
     if let Some(s) = get_s(Anchor::BottomRight) {
@@ -454,7 +455,7 @@ pub fn draw_smart_border(
     }
 
     if let Some(s) = spaces.iter().find(|s| s.anchor == Anchor::BottomCenter) {
-        add_notch(cr, Side::Bottom, x + w/2.0, y + h, s.width, s.height, r_notch);
+        add_notch(cr, Side::Bottom, xc, y + h, s.width, s.height, r_notch);
     }
 
    if let Some(s) = get_s(Anchor::BottomLeft) {
@@ -469,7 +470,7 @@ pub fn draw_smart_border(
     }
 
     if let Some(s) = spaces.iter().find(|s| s.anchor == Anchor::LeftCenter) {
-        add_notch(cr, Side::Left, y + h/2.0, x, s.height, s.width, r_notch);
+        add_notch(cr, Side::Left, yc, x, s.height, s.width, r_notch);
     }
 
     cr.close_path();
