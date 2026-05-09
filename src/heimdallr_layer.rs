@@ -208,8 +208,12 @@ impl HeimdallrLayer {
         }
     }
 
-    fn build_security_text (&self) -> (String, String) {
-        (self.security.mic_active.join(" · "), self.security.camera_active.join(" · "))
+    fn build_security_text (&self) -> String {
+        /* (
+            self.security.mic_active.clone().into_iter().map(|s| format!("MIC {s}")).collect::<Vec<_>>().join("  ·  "), 
+            self.security.camera_active.clone().into_iter().map(|s| format!("CAM {s}")).collect::<Vec<_>>().join("  ·  ")
+        ) */
+       self.security.mic_active.clone().into_iter().map(|s| format!("MIC {s}")).chain(self.security.camera_active.clone().into_iter().map(|s| format!("CAM {s}"))).collect::<Vec<_>>().join("  ·  ")
     }
 
     fn draw_security (&mut self, cr: Context) {
@@ -228,8 +232,8 @@ impl HeimdallrLayer {
 
             cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
             cr.set_font_size(10.0);
-            let (mic, cam) = self.build_security_text();
-            let wtext = if let Ok(ext) = cr.text_extents(&mic) {
+            let security_text = self.build_security_text();
+            let wtext = if let Ok(ext) = cr.text_extents(&security_text) {
                 ext.width() + 4.0
             } else {
                 0.0
@@ -242,7 +246,7 @@ impl HeimdallrLayer {
             cr.set_source_rgba(0.0, 0.0, 0.0 ,1.0);
             // cr.move_to(14.0, 9.0);
             // cr.show_text(&mic).unwrap();
-            cr_text_aligned(cr.clone(), mic.into(), self.width as f64 / 2.0, 2.0, 0.5, 0.0);
+            cr_text_aligned(cr.clone(), security_text.into(), self.width as f64 / 2.0, 2.0, 0.5, 0.0);
             /* for app in self.security.mic_active.clone().into_iter() {
                 cr.move_to(14.0, 9.0);
                 cr.show_text(&app).unwrap();
@@ -292,8 +296,8 @@ impl HeimdallrLayer {
         if self.security.mic_active.len() > 0 || self.security.camera_active.len() > 0 {
             cr.set_font_size(10.0);
             cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
-            let (mic, cam) = self.build_security_text();
-            let w = if let Ok(ext) = cr.text_extents(&mic) {
+            let security_text = self.build_security_text();
+            let w = if let Ok(ext) = cr.text_extents(&security_text) {
                 ext.width() + 4.0
             } else {
                 0.0
