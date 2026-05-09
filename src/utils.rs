@@ -106,7 +106,8 @@ use cairo::Context;
 pub enum AnimationKey {
     NotificationHeight,
     IconsHeight,
-    WobHeightRatio
+    WobHeightRatio,
+    SecurityNotchRatio
 }
 
 pub struct Animation {
@@ -197,7 +198,8 @@ impl Animator {
 pub struct FrameModel {
     pub(crate) notif_height_ratio: f64,
     pub(crate) icons_ratio: f64,
-    pub(crate) wob_height: f64
+    pub(crate) wob_height: f64,
+    pub(crate) security_height: f64
 }
 
 impl FrameModel {
@@ -205,7 +207,8 @@ impl FrameModel {
         FrameModel {
             notif_height_ratio: 0.0,
             icons_ratio: 0.0,
-            wob_height: 0.0
+            wob_height: 0.0,
+            security_height: 0.0
         }
     }
 
@@ -213,7 +216,8 @@ impl FrameModel {
         match id {
             AnimationKey::NotificationHeight => self.notif_height_ratio = val,
             AnimationKey::IconsHeight => self.icons_ratio = val,
-            AnimationKey::WobHeightRatio => self.wob_height = val
+            AnimationKey::WobHeightRatio => self.wob_height = val,
+            AnimationKey::SecurityNotchRatio => self.security_height = val
         }
     }
 
@@ -221,7 +225,8 @@ impl FrameModel {
         match id {
             AnimationKey::NotificationHeight => self.notif_height_ratio,
             AnimationKey::IconsHeight => self.icons_ratio,
-            AnimationKey::WobHeightRatio => self.wob_height
+            AnimationKey::WobHeightRatio => self.wob_height,
+            AnimationKey::SecurityNotchRatio => self.security_height
         }
     }
 }

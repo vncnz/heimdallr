@@ -59,7 +59,9 @@ pub struct HeimdallrLayer {
     pub(crate) frame_model: FrameModel,
     pub(crate) is_waiting_for_frame: bool,
     pub(crate) clock: Box<dyn ClockTrait>,
-    pub(crate) security: crate::security::MicCameraStatus
+    pub(crate) security: crate::security::MicCameraStatus,
+    pub(crate) last_security_width: f64,
+    pub(crate) last_security_text: String
 }
 
 impl HeimdallrLayer {
@@ -170,6 +172,7 @@ impl HeimdallrLayer {
                     .unwrap()
                 };
                 let cr = Context::new(&surface).unwrap();
+                self.check_security_data(&cr);
 
                 self.draw_myframe(cr.clone());
                 self.clock.draw(cr.clone(), self.height as i32, self.width, self.battery_recharging, self.battery_eta);
@@ -216,12 +219,36 @@ impl HeimdallrLayer {
        self.security.mic_active.clone().into_iter().map(|s| format!("MIC {s}")).chain(self.security.camera_active.clone().into_iter().map(|s| format!("CAM {s}"))).collect::<Vec<_>>().join("  ·  ")
     }
 
+    fn check_security_data(&mut self, cr: &Context) {
+        if self.security.pristine {
+            self.security.pristine = false;
+            let text = self.build_security_text();
+            self.last_security_text = text;
+            self.animator.animate_property(
+                &self.frame_model,
+                AnimationKey::SecurityNotchRatio,
+                if self.last_security_text.is_empty() { 0.0 } else { 1.0 },
+                200
+            );
+            if self.last_security_text.is_empty() {
+                return;
+            }
+            cr.set_font_size(10.0);
+            cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
+            if let Ok(ext) = cr.text_extents(&self.last_security_text) {
+                self.last_security_width = ext.width() + 6.0;
+            } else {
+                self.last_security_width = 0.0;
+            }
+        }
+    }
+
     fn draw_security (&mut self, cr: Context) {
         let draw_mic = self.security.mic_active.len() > 0;
         let draw_cam = self.security.camera_active.len() > 0;
         if draw_mic || draw_cam {
             let r = 4.0;
-            let mic_color = (1.0, 0.58, 0.0, 1.0);
+            let mic_color = (1.0, 0.58, 0.0, self.frame_model.security_height);
             // let cam_color = (0.2, 0.78, 0.35, 1.0);
             /* let x = 1.0;
             let y = 1.0;
@@ -232,21 +259,14 @@ impl HeimdallrLayer {
 
             cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
             cr.set_font_size(10.0);
-            let security_text = self.build_security_text();
-            let wtext = if let Ok(ext) = cr.text_extents(&security_text) {
-                ext.width() + 6.0
-            } else {
-                0.0
-            }; // TODO: cache this
-            // eprintln!("text width 1: {}", wtext);
 
             let steps = vec![(0.0, (mic_color.0, mic_color.1, mic_color.2, mic_color.3))];
-            rounded_rect_gradient(&cr, (self.width as f64 - wtext) / 2.0, 0.0, wtext, 12.0, r, steps, crate::utils::GradientDirection::Horizontal, false, None);
+            rounded_rect_gradient(&cr, (self.width as f64 - self.last_security_width) / 2.0, 0.0, self.last_security_width, 12.0, r, steps, crate::utils::GradientDirection::Horizontal, false, None);
 
             cr.set_source_rgba(0.0, 0.0, 0.0 ,1.0);
             // cr.move_to(14.0, 9.0);
             // cr.show_text(&mic).unwrap();
-            cr_text_aligned(cr.clone(), security_text.into(), self.width as f64 / 2.0, 2.0, 0.5, 0.0);
+            cr_text_aligned(cr.clone(), self.last_security_text.clone(), self.width as f64 / 2.0, 2.0, 0.5, 0.0);
             /* for app in self.security.mic_active.clone().into_iter() {
                 cr.move_to(14.0, 9.0);
                 cr.show_text(&app).unwrap();
@@ -293,17 +313,10 @@ impl HeimdallrLayer {
         if wob_h > 0.0 {
             spaces.push(ReservedSpace { anchor: Anchor::BottomCenter, width: 200.0, height: wob_h });
         }
-        if self.security.mic_active.len() > 0 || self.security.camera_active.len() > 0 {
+        if self.frame_model.security_height > 0.0 /* && (self.security.mic_active.len() > 0 || self.security.camera_active.len() > 0) */ {
             cr.set_font_size(10.0);
             cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
-            let security_text = self.build_security_text();
-            let w = if let Ok(ext) = cr.text_extents(&security_text) {
-                ext.width() + 6.0
-            } else {
-                0.0
-            };
-            // eprintln!("text width 2: {}", w);
-            spaces.push(ReservedSpace { anchor: Anchor::TopCenter, width: w + 2.0, height: 13.0 });
+            spaces.push(ReservedSpace { anchor: Anchor::TopCenter, width: self.last_security_width + 2.0, height: 14.0 * self.frame_model.security_height });
         }
         draw_smart_border(&cr, thickness / 2.0, top, w_hole, h - thickness - top, w / 2.0, h / 2.0, radius, radius2, &&spaces);
 

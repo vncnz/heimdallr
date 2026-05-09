@@ -175,7 +175,9 @@ fn main() {
         frame_model: FrameModel::new(),
         is_waiting_for_frame: false,
         clock,
-        security: MicCameraStatus { mic_active: vec!(), camera_active: vec!() }
+        security: MicCameraStatus { mic_active: vec!(), camera_active: vec!(), pristine: false },
+        last_security_width: 0.0,
+        last_security_text: "".to_string()
     };
 
     if !config.hide_missing_ratatoskr {
@@ -303,7 +305,7 @@ fn main() {
             log_to_file(format!("{:?}", status).to_string());
             println!("{}", format!("{:?}", status).red());
             app.security = status;
-            app.request_redraw("security");
+            app.request_redraw("security updated");
         }
 
         if let Ok(cmd) = rx_cmds.try_recv() {

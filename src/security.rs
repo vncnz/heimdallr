@@ -11,6 +11,7 @@ use crate::utils::log_to_file;
 pub struct MicCameraStatus {
     pub mic_active: Vec<String>,
     pub camera_active: Vec<String>,
+    pub pristine: bool
 }
 
 pub fn start_pw_monitor(tx: Sender<MicCameraStatus>) -> Result<(), Box<dyn std::error::Error>> {
@@ -71,6 +72,7 @@ pub fn start_pw_monitor(tx: Sender<MicCameraStatus>) -> Result<(), Box<dyn std::
                     let current_status = MicCameraStatus {
                         mic_active: active_mics.values().cloned().collect(),
                         camera_active: active_cameras.values().cloned().collect(),
+                        pristine: true
                     };
                     log_to_file(format!("{:?}", current_status));
                     
@@ -168,7 +170,7 @@ pub fn start_security_monitor(tx: Sender<MicCameraStatus>) -> Result<(), Box<dyn
     // 2. Launch the Hardware Polling Thread (Proactive Security)
     std::thread::spawn(move || {
         let mut last_sent_status: Option<MicCameraStatus> = None;
-        let mut pw_context = MicCameraStatus { mic_active: vec![], camera_active: vec![] };
+        let mut pw_context = MicCameraStatus { mic_active: vec![], camera_active: vec![], pristine: false };
         let mut trusted_pids = HashSet::new();
 
         loop {
@@ -180,6 +182,7 @@ pub fn start_security_monitor(tx: Sender<MicCameraStatus>) -> Result<(), Box<dyn
             let mut current_status = MicCameraStatus {
                 mic_active: Vec::new(),
                 camera_active: Vec::new(),
+                pristine: true
             };
 
             // --- PART A: ABSOLUTE MIC TRUTH (/proc/asound) ---
@@ -258,7 +261,9 @@ pub fn start_security_monitor(tx: Sender<MicCameraStatus>) -> Result<(), Box<dyn
 
             // Only notify if state changed
             if Some(&current_status) != last_sent_status.as_ref() {
-                let _ = tx.send(current_status.clone());
+                if last_sent_status.is_some() || current_status.mic_active.is_empty() == false || current_status.camera_active.is_empty() == false { // avoid first event if useless
+                    let _ = tx.send(current_status.clone());
+                }
                 last_sent_status = Some(current_status);
             }
 
