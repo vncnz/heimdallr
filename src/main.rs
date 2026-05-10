@@ -420,8 +420,12 @@ fn main() {
                                 let iconkey = format!("bt-{}", dev.name);
                                 let icon = match dev.kind {
                                     DeviceKind::Mouse => "󰦋",
+                                    DeviceKind::Phone => "󱆏",
+                                    DeviceKind::Tablet => "",
+                                    DeviceKind::RemoteControl => "󰻅",
+                                    DeviceKind::Speakers => "󰦢",
                                     DeviceKind::Headphones => "󰥰",
-                                    DeviceKind::Gamepad => "󱤙",
+                                    DeviceKind::GamingInput => "󱤙",
                                     DeviceKind::Keyboard => "󰌌",
                                     _ => "󰂱"
                                 };

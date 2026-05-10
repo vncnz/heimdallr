@@ -23,11 +23,35 @@ pub struct BatteryDevice {
 
 #[derive(Debug, Clone, Deserialize)]
 pub enum DeviceKind {
+    Unknown,
+    LinePower,
+    Battery,
+    Ups,
+    Monitor,
     Mouse,
     Keyboard,
+    Pda,
+    Phone,
+    MediaPlayer,
+    Tablet,
+    Computer,
+    GamingInput,
+    Pen,
+    Touchpad,
+    Modem,
+    Network,
+    Headset,
+    Speakers,
     Headphones,
-    Gamepad,
-    Unknown,
+    Video,
+    OtherAudio,
+    RemoteControl,
+    Printer,
+    Scanner,
+    Camera,
+    Wearable,
+    Toy,
+    BluetoothGeneric,
 }
 
 #[derive(Default, Deserialize, Debug)]
