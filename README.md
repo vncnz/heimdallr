@@ -177,6 +177,7 @@ By monitoring the physical RUNNING state of your audio cards in /proc/asound and
 - ~~Move logs to file and check why sometime heimdallr dies~~ Done!
 - ~~Force embedded screen in laptops~~ Done!
 - ~~Make buffer size depending on output size~~ Done!
+- Different UI for the batteries of the devices?
 - Send battery signal only if something is changed
 - Evaluate a modular system in which each component keeps a cache and private infos
 - Put temporary notification always before important ones (because the latter doesn't expire!)
