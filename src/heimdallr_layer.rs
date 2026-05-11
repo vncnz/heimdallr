@@ -13,7 +13,7 @@ use cairo::FontSlant;
 
 use wayland_client::Dispatch;
 
-use crate::{clock::ClockTrait, config::FrameColor, dbg_println, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, cr_text_aligned, get_color_gradient, log_to_file, rounded_big_hole, draw_smart_border, rounded_rect_gradient, Anchor, ReservedSpace}};
+use crate::{clock::ClockTrait, config::FrameColor, dbg_println, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, cr_text_aligned, log_to_file, draw_smart_border, rounded_rect_gradient, Anchor, ReservedSpace}};
 
 #[derive(PartialEq)]
 pub enum IconChange {

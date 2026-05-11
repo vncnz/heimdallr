@@ -5,9 +5,9 @@
 
 use std::sync::mpsc::Sender;
 use colored::Colorize;
-use futures::stream::StreamExt;
+// use futures::stream::StreamExt;
 
-use zbus::{Connection, Proxy, dbus_proxy};
+// use zbus::{Connection, Proxy};
 
 // use serde_repr::{Deserialize_repr, Serialize_repr};
 // use zbus::zvariant::OwnedValue;
@@ -192,7 +192,7 @@ trait UPower {
     fn on_battery(&self) -> zbus::Result<bool>;
 }
 */
-pub async fn start_battery_listener_events(tx: Sender<BatteryStats>) -> zbus::Result<()> {
+/* pub async fn start_battery_listener_events(tx: Sender<BatteryStats>) -> zbus::Result<()> {
     let connection = Connection::system().await?;
     
     let signal_proxy = Proxy::new(
@@ -259,7 +259,7 @@ pub async fn start_battery_listener_events(tx: Sender<BatteryStats>) -> zbus::Re
     });
 
     Ok(())
-}
+} */
 /*
 pub async fn start_battery_listener_poll(tx: Sender<BatteryStats>) -> zbus::Result<()> {
     let connection = zbus::Connection::system().await?;
@@ -326,7 +326,7 @@ async fn get_battery_stats(upower: &UPowerProxy<'_>) -> zbus::Result<BatteryStat
 }
 */
 
-pub async fn start_battery_listener_dbus_mix_polling_and_events(tx: Sender<BatteryStats>) -> zbus::Result<()> {
+/* pub async fn start_battery_listener_dbus_mix_polling_and_events(tx: Sender<BatteryStats>) -> zbus::Result<()> {
     let connection = Connection::system().await?;
     
     let signal_proxy = Proxy::new(
@@ -435,7 +435,7 @@ pub async fn start_battery_listener_dbus_mix_polling_and_events(tx: Sender<Batte
     });
 
     Ok(())
-}
+} */
 
 
 
@@ -466,7 +466,7 @@ pub async fn start_battery_listener_dbus_mix_polling_and_events(tx: Sender<Batte
 
 use std::fs;
 use std::fs::File;
-use std::io::{Read, Seek, SeekFrom};
+use std::io::Read;
 
 pub struct SysBatteryReader {
     buffer: String,

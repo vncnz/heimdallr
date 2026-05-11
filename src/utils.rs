@@ -260,6 +260,7 @@ pub fn cr_text_aligned (cr: Context, text: String, x: f64, y: f64, dx: f64, dy: 
     (extents.width(), extents.height())
 }
 
+/* Replace by more general method draw_smart_border
 pub fn rounded_big_hole (cr: &Context, x: f64, y: f64, w: f64, h: f64, r: f64, r2: f64, reserved_w: f64, reserved_h: f64, wob_h: f64) {
     cr.new_sub_path();
     cr.arc(x + w - r, y + r, r, -90f64.to_radians(), 0.0);
@@ -286,9 +287,9 @@ pub fn rounded_big_hole (cr: &Context, x: f64, y: f64, w: f64, h: f64, r: f64, r
     
     cr.arc(x + r, y + r, r, 180f64.to_radians(), 270f64.to_radians());
     cr.close_path();
-}
+} */
 
-pub fn rounded_rect (cr: &Context, x: f64, y: f64, w: f64, h: f64, r: f64) {
+/* pub fn rounded_rect (cr: &Context, x: f64, y: f64, w: f64, h: f64, r: f64) {
     cr.new_sub_path();
     cr.arc(x + w - r, y + r, r, -90f64.to_radians(), 0.0);
     cr.arc(x + w - r, y + h - r, r, 0.0, 90f64.to_radians());
@@ -297,7 +298,7 @@ pub fn rounded_rect (cr: &Context, x: f64, y: f64, w: f64, h: f64, r: f64) {
     
     cr.arc(x + r, y + r, r, 180f64.to_radians(), 270f64.to_radians());
     cr.close_path();
-}
+} */
 
 
 

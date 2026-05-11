@@ -1,4 +1,4 @@
-use cairo::{Context, FontSlant};
+use cairo::Context;
 use chrono::Local;
 use chrono::Timelike;
 
@@ -7,13 +7,13 @@ use crate::dbg_println;
 use crate::utils::rounded_rect_gradient;
 
 pub struct Clock2 {
-    pub(crate) background_surface: Option<cairo::ImageSurface>
+    // pub(crate) background_surface: Option<cairo::ImageSurface>
 }
 
 impl Clock2 {
     pub fn new () -> Self {
         Clock2 {
-            background_surface: None
+            // background_surface: None
         }
     }
 }
@@ -55,7 +55,7 @@ impl ClockTrait for Clock2 {
         let hour_time = y * 24.0;
         let mut hour_battery: Option<f64> = None;
         
-        if let (Some(rec), Some(mut eta)) = (battery_recharging, battery_eta) {
+        if let (Some(rec), Some(eta)) = (battery_recharging, battery_eta) {
             // eta = 10.0;
             if rec {
                 color_battery = color_green;
@@ -153,7 +153,7 @@ impl ClockTrait for Clock2 {
 }
 
 impl Clock2 {
-    fn draw_clock_background(&mut self, wheight: i32) {
+    /* fn draw_clock_background(&mut self, wheight: i32) {
         let width = 18;
         let height = wheight;
         let surface = cairo::ImageSurface::create(cairo::Format::ARgb32, width, height).unwrap();
@@ -162,30 +162,6 @@ impl Clock2 {
         cr.set_source_rgba(0.0, 0.0, 0.0, 0.0);
         cr.paint().unwrap();
 
-        // cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
-
-        /* for h in 1..24 {
-            let y = (1.0 - (h as f64 / 24.0)) * height as f64;
-            let mut symb = "".to_string(); // (h % 10).to_string();
-            let mut x = 15.0;
-            if h % 6 == 0 {
-                cr.set_source_rgba(0.6, 0.9, 1.0, 1.0);
-                cr.set_font_size(20.0);
-                x = 12.0;
-                cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
-                symb = "".into();
-            } else if h % 3 == 0 {
-                cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
-                cr.set_font_size(12.0);
-                cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
-            } else {
-                cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
-                cr.set_font_size(10.0);
-                cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
-            }
-            cr_text_aligned(cr.clone(), symb, x, y, 0.5, 0.5);
-        } */
-
         self.background_surface = Some(surface);
-    }
+    } */
 }

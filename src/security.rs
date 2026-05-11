@@ -1,9 +1,9 @@
 use std::process::{Command, Stdio};
-use std::io::{BufRead, BufReader};
+use std::io::BufReader;
 use std::sync::mpsc::Sender;
 use serde_json::Value;
 use std::collections::HashMap;
-use colored::Colorize;
+// use colored::Colorize;
 
 use crate::utils::log_to_file;
 
@@ -93,9 +93,8 @@ pub fn start_pw_monitor(tx: Sender<MicCameraStatus>) -> Result<(), Box<dyn std::
 // Pipewire can manage cameras, but several systems and applications might access the camera directly, so this method can serve as a complementary check to ensure we catch all active camera usage.
 
 use std::fs;
-use std::path::Path;
 
-pub fn is_camera_in_use() -> bool {
+/* pub fn is_camera_in_use() -> bool {
     // Webcams are usually /dev/video0, video2, etc.
     let camera_devices = ["/dev/video0", "/dev/video1", "/dev/video2", "/dev/video4"];
     
@@ -132,7 +131,7 @@ pub fn is_camera_in_use() -> bool {
         }
     }
     false
-}
+} */
 
 
 
@@ -165,7 +164,7 @@ pub fn start_security_monitor(tx: Sender<MicCameraStatus>) -> Result<(), Box<dyn
     
     // 1. Launch the PipeWire Event Listener (Reactive)
     // This is the logic we refined earlier using pw-dump --monitor
-    start_pw_monitor(pw_tx);
+    let _ = start_pw_monitor(pw_tx);
 
     // 2. Launch the Hardware Polling Thread (Proactive Security)
     std::thread::spawn(move || {
