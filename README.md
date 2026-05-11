@@ -177,11 +177,11 @@ By monitoring the physical RUNNING state of your audio cards in /proc/asound and
 - ~~Move logs to file and check why sometime heimdallr dies~~ Done!
 - ~~Force embedded screen in laptops~~ Done!
 - ~~Make buffer size depending on output size~~ Done!
-- Different UI for the batteries of the devices?
-- Send battery signal only if something is changed
-- Evaluate a modular system in which each component keeps a cache and private infos
-- Put temporary notification always before important ones (because the latter doesn't expire!)
-- Manage those situations where the "unmounted" notification arrives instants before the "mounting" notification
+- (UI) Different UI for the batteries of the devices?
+- (performance) Send battery signal only if something is changed
+- (code) Evaluate a modular system in which each component keeps a cache and private infos
+- (UX) Put temporary notification always before important ones (because the latter doesn't expire!)
+- (UX) Manage those situations where the "unmounted" notification arrives instants before the "mounting" notification
 - ~~Reduce quantity of damaged surface (wl_surface.damage_buffer only for changed areas)~~ it's not worth it
 
 ### New functionalities

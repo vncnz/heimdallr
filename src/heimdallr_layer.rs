@@ -467,7 +467,7 @@ impl HeimdallrLayer {
     }
 }
 
-impl HeimdallrLayer { // This is for icon management, I like to keep it separated, for now
+impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like to keep it separated
     pub fn add_icon(&mut self, id: &str, symbol: &str, color: (f64, f64, f64, f64), warn: f64) -> IconChange {
 
         let mut already_present = false;
