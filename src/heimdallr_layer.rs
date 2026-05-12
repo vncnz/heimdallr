@@ -307,6 +307,7 @@ impl HeimdallrLayer {
         // rounded_big_hole(&cr, thickness / 2.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h, wob_h);
 
         let mut spaces = vec![
+            ReservedSpace { anchor: Anchor::BottomRight, width: 100.0, height: 40.0 }
             // ReservedSpace { anchor: Anchor::BottomLeft, width: res_w, height: res_h }
             // ReservedSpace { anchor: Anchor::TopCenter, width: 2.0, height: 20.0 }
         ];
