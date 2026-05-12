@@ -23,7 +23,7 @@ impl ClockTrait for Clock1 {
         8.0
     }
 
-    fn draw (&mut self, cr: Context, wheight: i32, right: u32, battery_recharging: Option<bool>, battery_eta: Option<f64>) {
+    fn draw (&mut self, cr: Context, wheight: i32, right: u32, battery_integrated: Option<crate::battery::BatteryStats>) {
         if self.background_surface.is_none() {
             self.draw_clock_background(wheight);
         }
@@ -53,19 +53,19 @@ impl ClockTrait for Clock1 {
         cr.set_font_size(15.0);
         cr_text_aligned(cr.clone(), "".into(), right as f64 - 5.0, ypos, 1.0, 0.0);
 
-        if let Some(rec) = battery_recharging {
+        if let Some(bat) = battery_integrated {
             // dbg_println!("Battery moving");
-            let bat_symb: String = if rec { "󱐋".into() } else { "󰯆".into() };
+            let bat_symb: String = if bat.state == crate::battery::BatteryState::Charging { "󱐋".into() } else { "󰯆".into() };
             let font_size: f64;
             let color: (f64, f64, f64, f64);
-            if rec {
+            if bat.state == crate::battery::BatteryState::Charging {
                 font_size = 20.0;
                 color = (0.1, 1.0, 0.2, 1.0);
             } else {
                 font_size = 14.0;
                 color = (1.0, 0.1, 0.2, 1.0);
             };
-            if let Some(eta) = battery_eta {
+            if let Some(eta) = bat.eta_minutes {
                 let bpos = (ypos - (eta / 1440.0 * wheight as f64) + wheight as f64) % wheight as f64;
                 
                 /* Border */

@@ -42,8 +42,7 @@ pub struct HeimdallrLayer {
     pub(crate) first_configure: bool,
     // pub(crate) input_region: Option<wl_region::WlRegion>,
     pub(crate) icons: HashMap<String, AlarmIcon>,
-    pub(crate) battery_eta: Option<f64>,
-    pub(crate) battery_recharging: Option<bool>,
+    pub(crate) battery_integrated: Option<crate::battery::BatteryStats>,
     pub(crate) needs_redraw: bool,
     pub(crate) last_redraw: Instant,
     pub(crate) redraw_interval: [Duration; 2],
@@ -175,7 +174,7 @@ impl HeimdallrLayer {
                 self.check_security_data(&cr);
 
                 self.draw_myframe(cr.clone());
-                self.clock.draw(cr.clone(), self.height as i32, self.width, self.battery_recharging, self.battery_eta);
+                self.clock.draw(cr.clone(), self.height as i32, self.width, self.battery_integrated.clone());
                 if self.notifications.len() > 0 { self.draw_notification(cr.clone()) }
 
                 self.draw_security(cr.clone());

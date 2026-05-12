@@ -159,8 +159,7 @@ fn main() {
         // input_region: Some(empty_region),
         icons: HashMap::new(),
         ratatoskr_connected: false,
-        battery_eta: None,
-        battery_recharging: None,
+        battery_integrated: None,
         needs_redraw: true,
         last_redraw: Instant::now(),
         redraw_interval: [Duration::from_millis(1_000), Duration::from_millis(60_000)],
@@ -286,11 +285,10 @@ fn main() {
         let _ = event_queue.dispatch_pending(&mut app);
 
         if let Ok(bat) = rx_battery.try_recv() {
-            app.battery_eta = bat.eta_minutes;
-            app.battery_recharging = Some(bat.state == BatteryState::Charging);
+            eprintln!("{:?}", bat);
+            app.battery_integrated = Some(bat);
             app.request_redraw(&"battery");
             eprintln!("{}", "Battery update".yellow());
-            eprintln!("{:?}", bat);
         }
 
         /* if is_camera_in_use() {

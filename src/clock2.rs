@@ -24,7 +24,7 @@ impl ClockTrait for Clock2 {
         10.0
     }
 
-    fn draw (&mut self, cr: Context, wheight: i32, right: u32, battery_recharging: Option<bool>, battery_eta: Option<f64>) {
+    fn draw (&mut self, cr: Context, wheight: i32, right: u32, battery_integrated: Option<crate::battery::BatteryStats>) {
         /*if self.background_surface.is_none() {
             self.draw_clock_background(wheight);
         }
@@ -55,14 +55,14 @@ impl ClockTrait for Clock2 {
         let hour_time = y * 24.0;
         let mut hour_battery: Option<f64> = None;
         
-        if let (Some(rec), Some(eta)) = (battery_recharging, battery_eta) {
+        if let Some(bat) = battery_integrated {
             // eta = 10.0;
-            if rec {
+            if bat.state == crate::battery::BatteryState::Charging {
                 color_battery = color_green;
             } else {
                 color_battery = color_red;
             };
-            hour_battery = Some((eta / 60.0 + hour_time) % 24.0);
+            hour_battery = Some((bat.eta_minutes.unwrap_or(0.0) / 60.0 + hour_time) % 24.0);
             dbg_println!("hour_battery {hour_battery:?}");
         }
 
