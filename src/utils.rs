@@ -454,7 +454,7 @@ pub fn draw_smart_border(
     if let Some(s) = get_s(Anchor::BottomRight) {
         let r2_safe = if s.height > r_notch { r_notch } else { s.height/2.0 };
         cr.arc(x + w - r2_safe, y + h - s.height - r2_safe, r2_safe, 0f64.to_radians(), 90f64.to_radians());
-        cr.arc_negative(x + w - s.width - r2_safe, y + h - s.height, r2_safe, 90f64.to_radians(), 180f64.to_radians());
+        cr.arc_negative(x + w - s.width + r2_safe, y + h - s.height + r2_safe, r2_safe, 270f64.to_radians(), 180f64.to_radians());
         cr.arc(x + w - r2_safe - s.width, y + h - r2_safe, r2_safe, 0f64.to_radians(), 90f64.to_radians());
     } else {
         cr.arc(x + w - r_base, y + h - r_base, r_base, 0.0, 0.5 * PI);
