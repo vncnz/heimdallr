@@ -15,14 +15,16 @@ pub struct BluetoothStats {
 #[derive(Debug, Clone, Deserialize)]
 pub struct BatteryDevice {
     pub name: String,
-    pub kind: DeviceKind,
-    #[allow(unused)]
+    pub kind: UPowerDeviceKind,
     pub percentage: f64,
-    pub warn: f64
+    pub warn: f64,
+    pub address: String,
+    pub is_bluetooth: bool,
+    // pub connected: bool
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub enum DeviceKind {
+pub enum UPowerDeviceKind {
     Unknown,
     LinePower,
     Battery,

@@ -17,7 +17,7 @@ use std::thread;
 
 use colored::Colorize;
 
-use crate::{battery::{BatteryState, BatteryStats}, clock::{ClockTrait, NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, data::{BluetoothStats, DeviceKind, RatatoskrSocket}, heimdallr_layer::IconChange, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
+use crate::{battery::BatteryStats, clock::{ClockTrait, NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, data::{BluetoothStats, UPowerDeviceKind, RatatoskrSocket}, heimdallr_layer::IconChange, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
 
 mod data;
 mod config;
@@ -413,18 +413,18 @@ fn main() {
                                 app.remove_icon(&iconkey);
                             }
 
-                            for dev in b.devices {
+                            for dev in b.devices.iter().filter(|dv| dv.is_bluetooth) {
                                 // println!("device extracted: {:?}", dev);
                                 let iconkey = format!("bt-{}", dev.name);
                                 let icon = match dev.kind {
-                                    DeviceKind::Mouse => "󰦋",
-                                    DeviceKind::Phone => "󱆏",
-                                    DeviceKind::Tablet => "",
-                                    DeviceKind::RemoteControl => "󰻅",
-                                    DeviceKind::Speakers => "󰦢",
-                                    DeviceKind::Headphones => "󰥰",
-                                    DeviceKind::GamingInput => "󱤙",
-                                    DeviceKind::Keyboard => "󰌌",
+                                    UPowerDeviceKind::Mouse => "󰦋",
+                                    UPowerDeviceKind::Phone => "󱆏",
+                                    UPowerDeviceKind::Tablet => "",
+                                    UPowerDeviceKind::RemoteControl => "󰻅",
+                                    UPowerDeviceKind::Speakers => "󰦢",
+                                    UPowerDeviceKind::Headphones => "󰥰",
+                                    UPowerDeviceKind::GamingInput => "󱤙",
+                                    UPowerDeviceKind::Keyboard => "󰌌",
                                     _ => "󰂱"
                                 };
                                 if config.show_always_bluetooth || dev.warn >= 0.3 {
