@@ -401,7 +401,7 @@ fn main() {
             if data.resource == "bt-batteries" {
                 // dbg_println!("{:?}", data);
                 log_to_file(format!("{:?}", data));
-                if data.warning >= 0.3 || config.show_always_bluetooth {
+                if config.show_always_bluetooth {
                     if let Some(blue) = &data.data {
                         if let Ok(b) = BluetoothStats::deserialize(blue.clone()) {
                             let keys: Vec<String> = app.icons
