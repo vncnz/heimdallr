@@ -107,7 +107,8 @@ pub enum AnimationKey {
     NotificationHeight,
     IconsHeight,
     WobHeightRatio,
-    SecurityNotchRatio
+    SecurityNotchRatio,
+    BatteriesNotchRatio
 }
 
 pub struct Animation {
@@ -199,7 +200,8 @@ pub struct FrameModel {
     pub(crate) notif_height_ratio: f64,
     pub(crate) icons_ratio: f64,
     pub(crate) wob_height: f64,
-    pub(crate) security_height: f64
+    pub(crate) security_height: f64,
+    pub(crate) batteries_height: f64
 }
 
 impl FrameModel {
@@ -208,7 +210,8 @@ impl FrameModel {
             notif_height_ratio: 0.0,
             icons_ratio: 0.0,
             wob_height: 0.0,
-            security_height: 0.0
+            security_height: 0.0,
+            batteries_height: 0.0
         }
     }
 
@@ -217,7 +220,8 @@ impl FrameModel {
             AnimationKey::NotificationHeight => self.notif_height_ratio = val,
             AnimationKey::IconsHeight => self.icons_ratio = val,
             AnimationKey::WobHeightRatio => self.wob_height = val,
-            AnimationKey::SecurityNotchRatio => self.security_height = val
+            AnimationKey::SecurityNotchRatio => self.security_height = val,
+            AnimationKey::BatteriesNotchRatio => self.batteries_height = val
         }
     }
 
@@ -226,7 +230,8 @@ impl FrameModel {
             AnimationKey::NotificationHeight => self.notif_height_ratio,
             AnimationKey::IconsHeight => self.icons_ratio,
             AnimationKey::WobHeightRatio => self.wob_height,
-            AnimationKey::SecurityNotchRatio => self.security_height
+            AnimationKey::SecurityNotchRatio => self.security_height,
+            AnimationKey::BatteriesNotchRatio => self.batteries_height
         }
     }
 }
@@ -258,6 +263,29 @@ pub fn cr_text_aligned (cr: Context, text: String, x: f64, y: f64, dx: f64, dy: 
     // }
     cr.show_text(&text).ok();
     (extents.width(), extents.height())
+}
+
+use cairo::Error;
+
+pub fn cr_text_rotated(cr: &Context, text: &str, x: f64, y: f64, dx: f64, dy: f64, angle: f64) -> Result<(f64, f64), Error> {
+    let extents = cr.text_extents(text)?;
+
+    cr.save()?;
+
+    cr.translate(x, y);
+
+    cr.rotate(angle.to_radians());
+
+    let local_x = -extents.width() * dx;
+    let local_y = -(extents.height() * dy + extents.y_bearing());
+
+    cr.move_to(local_x, local_y);
+    cr.show_text(text)?;
+
+    cr.restore()?;
+
+    // Restituiamo le dimensioni del testo "dritto", coerentemente con il primo metodo
+    Ok((extents.width(), extents.height()))
 }
 
 /* Replace by more general method draw_smart_border

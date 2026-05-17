@@ -13,7 +13,7 @@ use cairo::FontSlant;
 
 use wayland_client::Dispatch;
 
-use crate::{clock::ClockTrait, config::FrameColor, dbg_println, notifications::Notification, utils::{AnimationKey, Animator, FrameModel, cr_text_aligned, log_to_file, draw_smart_border, rounded_rect_gradient, Anchor, ReservedSpace}};
+use crate::{clock::ClockTrait, config::FrameColor, data::BatteryDevice, dbg_println, notifications::Notification, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, cr_text_rotated, draw_smart_border, log_to_file, rounded_rect_gradient}};
 
 #[derive(PartialEq)]
 pub enum IconChange {
@@ -60,7 +60,11 @@ pub struct HeimdallrLayer {
     pub(crate) clock: Box<dyn ClockTrait>,
     pub(crate) security: crate::security::MicCameraStatus,
     pub(crate) last_security_width: f64,
-    pub(crate) last_security_text: String
+    pub(crate) last_security_text: String,
+    pub(crate) batteries: Vec<BatteryDevice>,
+    pub(crate) last_batteries_width: f64,
+    pub(crate) last_batteries_text: String,
+    pub(crate) batteries_pristine: bool
 }
 
 impl HeimdallrLayer {
@@ -171,12 +175,14 @@ impl HeimdallrLayer {
                     .unwrap()
                 };
                 let cr = Context::new(&surface).unwrap();
+                self.check_batteries_data(&cr);
                 self.check_security_data(&cr);
 
                 self.draw_myframe(cr.clone());
                 self.clock.draw(cr.clone(), self.height as i32, self.width, self.battery_integrated.clone());
                 if self.notifications.len() > 0 { self.draw_notification(cr.clone()) }
 
+                self.draw_batteries(cr.clone());
                 self.draw_security(cr.clone());
 
                 let layer = self.layer.clone().unwrap();
@@ -210,6 +216,35 @@ impl HeimdallrLayer {
         }
     }
 
+    fn build_batteries_text (&self) -> String {
+        // TODO: save a copy, as done with security_text and update only when changed
+        self.batteries.iter().map(|b| format!("{}: {:.0}%", b.name, b.percentage)).collect::<Vec<_>>().join("  ·  ")
+    }
+
+    fn check_batteries_data(&mut self, cr: &Context) {
+        if self.batteries_pristine {
+            self.batteries_pristine = false;
+            let text = self.build_batteries_text();
+            self.last_batteries_text = text;
+            self.animator.animate_property(
+                &self.frame_model,
+                AnimationKey::BatteriesNotchRatio,
+                if self.last_batteries_text.is_empty() { 0.0 } else { 1.0 },
+                200
+            );
+            if self.last_batteries_text.is_empty() {
+                return;
+            }
+            cr.set_font_size(10.0);
+            cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
+            if let Ok(ext) = cr.text_extents(&self.last_batteries_text) {
+                self.last_batteries_width = ext.width() + 6.0;
+            } else {
+                self.last_batteries_width = 0.0;
+            }
+        }
+    }
+    
     fn build_security_text (&self) -> String {
         /* (
             self.security.mic_active.clone().into_iter().map(|s| format!("MIC {s}")).collect::<Vec<_>>().join("  ·  "), 
@@ -239,6 +274,19 @@ impl HeimdallrLayer {
             } else {
                 self.last_security_width = 0.0;
             }
+        }
+    }
+
+    fn draw_batteries (&mut self, cr: Context) {
+        if self.last_batteries_text.len() > 0 {
+            let color = (1.0, 1.0, 1.0, self.frame_model.batteries_height);
+            let x = 2.0;
+            let y = self.height as f64 / 2.0;
+
+            cr.set_source_rgba(color.0, color.1, color.2, color.3);
+            cr.set_font_size(10.0);
+            cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
+            let (wt, ht) = cr_text_rotated(&cr, &self.last_batteries_text, x, y, 0.5, 0.0, -90.0).unwrap();
         }
     }
 
@@ -308,8 +356,12 @@ impl HeimdallrLayer {
         let mut spaces = vec![
             // ReservedSpace { anchor: Anchor::BottomRight, width: 100.0, height: 40.0 }
             // ReservedSpace { anchor: Anchor::BottomLeft, width: res_w, height: res_h }
-            // ReservedSpace { anchor: Anchor::TopCenter, width: 2.0, height: 20.0 }
+            // ReservedSpace { anchor: Anchor::TopRight, width: 90.0, height: 20.0 }
         ];
+        // if let Some(bat) = &self.battery_integrated {
+        if self.last_batteries_text.len() > 0 {
+            spaces.push(ReservedSpace { anchor: Anchor::LeftCenter, width: 14.0, height: self.last_batteries_width });
+        }
         if res_h > 0.0 {
             spaces.push(ReservedSpace { anchor: Anchor::BottomLeft, width: res_w, height: res_h });
         }
@@ -365,6 +417,53 @@ impl HeimdallrLayer {
                 rounded_rect_gradient(&cr, left, top, wob_half_width * 2.0, wob_height, wob_h.min(radius2-1.0), steps, crate::utils::GradientDirection::Horizontal, false, None);
             }
         }
+
+
+        // Draw battery level if integrated battery is present
+
+        /* if let Some(bat) = &self.battery_integrated {
+            let x = self.width as f64 - 2.0;
+            let y = self.height as f64 - 0.0;
+            cr.set_source_rgba(1.0, 1.0, 1.0 ,1.0);
+            cr.set_font_size(9.0);
+
+            cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
+            let (wt, ht) = cr_text_rotated(&cr, &*format!("{:.0}%", bat.percentage), x, y - 2.0, 1.0, 0.0, 90.0).unwrap();
+
+            cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
+            let _ = cr_text_rotated(&cr, "󰌢", x, y - wt - 2.0, 1.0,0.0, 90.0);
+        } */
+
+        let mut x = self.width as f64 - self.clock.get_reserved_width() - 2.0 - 42.0;
+        let mut y = 2.0; // self.height as f64 - 2.0
+        if let Some(bat) = &self.battery_integrated {
+            // spaces.push(ReservedSpace { anchor: Anchor::BottomRight, width: 60.0, height: 20.0 });
+            if bat.state == crate::battery::BatteryState::Charging {
+                cr.set_source_rgba(0.1, 1.0, 0.2, 1.0);
+            } else if bat.state == crate::battery::BatteryState::Discharging {
+                cr.set_source_rgba(1.0, 0.1, 0.2, 1.0);
+            } else {
+                cr.set_source_rgba(1.0, 1.0, 1.0 ,1.0);
+            }
+            cr.set_font_size(10.0);
+
+            cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
+            cr_text_aligned(cr.clone(), "󰌢".to_string(), x, y, 0.0, 0.0);
+
+            cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
+            cr_text_aligned(cr.clone(), format!("{:.0}%", bat.percentage), x + 14.0, y, 0.0, 0.0);
+        }
+
+        y += 14.0;
+        cr.set_source_rgba(1.0, 1.0, 1.0 ,1.0);
+        cr.set_font_size(10.0);
+
+        cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
+        cr_text_aligned(cr.clone(), "󰦋".to_string(), x, y, 0.0, 0.0);
+
+        cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
+        cr_text_aligned(cr.clone(), format!("{:.0}%", 90.0), x + 14.0, y, 0.0, 0.0);
+        
 
         // === Draw alarm icons ===
         

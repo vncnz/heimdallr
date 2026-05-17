@@ -176,7 +176,11 @@ fn main() {
         clock,
         security: MicCameraStatus { mic_active: vec!(), camera_active: vec!(), pristine: false },
         last_security_width: 0.0,
-        last_security_text: "".to_string()
+        last_security_text: "".to_string(),
+        batteries: vec![],
+        last_batteries_width: 0.0,
+        last_batteries_text: "".to_string(),
+        batteries_pristine: false
     };
 
     if !config.hide_missing_ratatoskr {
@@ -401,9 +405,9 @@ fn main() {
             if data.resource == "bt-batteries" {
                 // dbg_println!("{:?}", data);
                 log_to_file(format!("{:?}", data));
-                if config.show_always_bluetooth {
-                    if let Some(blue) = &data.data {
-                        if let Ok(b) = BluetoothStats::deserialize(blue.clone()) {
+                if let Some(blue) = &data.data {
+                    if let Ok(b) = BluetoothStats::deserialize(blue.clone()) {
+                        if config.show_always_bluetooth {
                             let keys: Vec<String> = app.icons
                                 .keys()
                                 .filter(|k| k.starts_with("bt-"))
@@ -413,7 +417,7 @@ fn main() {
                                 app.remove_icon(&iconkey);
                             }
 
-                            for dev in b.devices.iter().filter(|dv| dv.is_bluetooth) {
+                            for dev in b.devices.clone().iter().filter(|dv| dv.is_bluetooth) {
                                 // println!("device extracted: {:?}", dev);
                                 let iconkey = format!("bt-{}", dev.name);
                                 let icon = match dev.kind {
@@ -438,6 +442,10 @@ fn main() {
                                 200
                             );
                         }
+                        // TODO: maybe update only changed devices instead of refreshing all? Or update only the ones that changed?
+                        app.batteries = b.devices;
+                        app.batteries_pristine = true;
+                        app.request_redraw("bt-batteries");
                         // PartialMsg { resource: "bt-batteries", warning: 0.0, icon: "", data: Some(Object {"devices": Array [Object {"kind": String("Mouse"), "name": String("MX Anywhere 2S"), "percentage": Number(90.0), "warn": Number(0.0)}], "icon": String(""), "warn": Number(0.0)}) }
                     }
                 }
