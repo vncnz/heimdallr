@@ -113,6 +113,10 @@ impl HeimdallrLayer {
 
         // qui fai il rendering vero e proprio:
         self.draw(qh);
+
+        if self.security_notch.need_redraw() {
+            self.request_redraw("security notch animating");
+        }
     }
 
     fn acquire_buffer(buffers: &mut [Option<Buffer>; 2], width: u32, height: u32, current_buffer_idx: usize, pool: &mut SlotPool) -> Option<usize> {
@@ -178,21 +182,16 @@ impl HeimdallrLayer {
                 };
                 let cr = Context::new(&surface).unwrap();
                 self.check_batteries_data(&cr);
-                if let Some(new_anim_value) = self.security_notch.update_data(&cr) {
-                    self.animator.animate_property(
-                        &self.frame_model,
-                        AnimationKey::SecurityNotchRatio,
-                        new_anim_value,
-                        200
-                    );
-                }
+                self.security_notch.update_data(&cr);
 
                 self.draw_myframe(cr.clone());
                 self.clock.draw(cr.clone(), self.height as i32, self.width, self.battery_integrated.clone());
                 if self.notifications.len() > 0 { self.draw_notification(cr.clone()) }
 
                 self.draw_batteries(cr.clone());
-                self.security_notch.draw(cr.clone(), self.width as f64 / 2.0, 0.0, self.frame_model.security_height);
+                if self.security_notch.is_active() {
+                    self.security_notch.draw(cr.clone(), self.width as f64 / 2.0, 0.0);
+                }
 
                 let layer = self.layer.clone().unwrap();
                 let buffer = self.buffers[buffer_idx].as_ref().unwrap();
@@ -311,8 +310,8 @@ impl HeimdallrLayer {
         if wob_h > 0.0 {
             spaces.push(ReservedSpace { anchor: Anchor::BottomCenter, width: 200.0, height: wob_h });
         }
-        if self.frame_model.security_height > 0.0 /* && (self.security.mic_active.len() > 0 || self.security.camera_active.len() > 0) */ {
-            spaces.push(ReservedSpace { anchor: self.security_notch.get_position(), width: self.security_notch.get_width() + 2.0, height: self.security_notch.get_height() * self.frame_model.security_height + 1.0 });
+        if self.security_notch.is_active() {
+            spaces.push(ReservedSpace { anchor: self.security_notch.get_position(), width: self.security_notch.get_width() + 2.0, height: self.security_notch.get_height() + 1.0 });
         }
         draw_smart_border(&cr, thickness / 2.0, top, w_hole, h - thickness - top, w / 2.0, h / 2.0, radius, radius2, &&spaces);
 

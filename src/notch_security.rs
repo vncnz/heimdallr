@@ -1,23 +1,69 @@
+use std::time::Instant;
+
 use cairo::{Context, FontSlant};
 
 use crate::{security::MicCameraStatus, utils::{Anchor, cr_text_aligned, rounded_rect_gradient}};
+
+// TODO: improve animation system with easing logic and with a robust way to handle last drawing!
+
+// #[derive(Default)]
+struct AnimationNew {
+    start_value: f64,
+    end_value: f64,
+    duration: u64,
+    start_time: Instant
+}
+impl AnimationNew {
+    pub fn get_current_value (self: &Self) -> f64 {
+        let elapsed = self.start_time.elapsed().as_millis() as u64;
+        if elapsed >= self.duration {
+            self.end_value
+        } else {
+            let progress = elapsed as f64 / self.duration as f64;
+            self.start_value + (self.end_value - self.start_value) * progress
+        }
+    }
+
+    pub fn animate_property (self: &mut Self, end_value: f64, duration: u64) {
+        self.start_value = self.get_current_value();
+        self.end_value = end_value;
+        self.duration = duration;
+        self.start_time = Instant::now();
+    }
+
+    pub fn new (value: f64) -> Self {
+        AnimationNew { start_value: 0.0, end_value: value, duration: 0, start_time: Instant::now() }
+    }
+
+    pub fn is_active (&self) -> bool {
+        self.start_time.elapsed().as_millis() as u64  <= self.duration
+    }
+}
+
+
+
+
+
 
 
 
 pub trait NotchTrait {
     fn new () -> Self;
-    fn update_data (&mut self, cr: &Context) -> Option<f64>;
-    fn draw (&mut self, cr: Context, x: f64, y: f64, anim_ratio: f64);
+    fn update_data (&mut self, cr: &Context) -> bool;
+    fn draw (&mut self, cr: Context, x: f64, y: f64);
+    fn need_redraw(&self) -> bool;
     // fn get_area (&self) -> ReservedSpace;
     fn get_position (&self) -> Anchor;
     fn get_width (&self) -> f64;
     fn get_height (&self) -> f64;
+    fn is_active (&self) -> bool;
 }
 
 pub struct SecurityNotch {
     pub(crate) security: crate::security::MicCameraStatus,
     pub(crate) last_width: f64,
-    pub(crate) last_text: String
+    pub(crate) last_text: String,
+    height_animator: AnimationNew
 }
 
 impl SecurityNotch {
@@ -32,13 +78,21 @@ impl SecurityNotch {
 
 impl NotchTrait for SecurityNotch {
 
-    
     fn new () -> Self {
         SecurityNotch {
             security: MicCameraStatus { mic_active: vec!(), camera_active: vec!(), pristine: false },
             last_width: 0.0,
-            last_text: "".to_string()
+            last_text: "".to_string(),
+            height_animator: AnimationNew::new(0.0)
         }
+    }
+
+    fn is_active (&self) -> bool {
+        self.height_animator.get_current_value() > 0.0
+    }
+
+    fn need_redraw(&self) -> bool {
+        self.height_animator.is_active()
     }
 
     /* fn get_area(&self) -> ReservedSpace {
@@ -52,10 +106,10 @@ impl NotchTrait for SecurityNotch {
         self.last_width + 2.0
     }
     fn get_height (&self) -> f64 {
-        12.0
+        12.0 * self.height_animator.get_current_value()
     }
 
-    fn update_data(&mut self, cr: &Context) -> Option<f64> {
+    fn update_data(&mut self, cr: &Context) -> bool {
         if self.security.pristine {
             self.security.pristine = false;
             let text = self.build_security_text();
@@ -66,6 +120,10 @@ impl NotchTrait for SecurityNotch {
                 if self.last_text.is_empty() { 0.0 } else { 1.0 },
                 200
             ); */
+            self.height_animator.animate_property(
+                if self.last_text.is_empty() { 0.0 } else { 1.0 },
+                1200
+            );
             if !self.last_text.is_empty() {
                 cr.set_font_size(10.0);
                 cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
@@ -75,20 +133,20 @@ impl NotchTrait for SecurityNotch {
                     self.last_width = 0.0;
                 }
             }
-            Some(if self.last_text.is_empty() { 0.0 } else { 1.0 })
+            true
         } else {
-            None
+            false
         }
     }
 
     // x0: (self.width as f64 - self.last_width) / 2.0, y0: 0.0
     // (x,y) depends on declared anchor
-    fn draw (&mut self, cr: Context, x: f64, y: f64, anim_ratio: f64) {
+    fn draw (&mut self, cr: Context, x: f64, y: f64) {
         let draw_mic = self.security.mic_active.len() > 0;
         let draw_cam = self.security.camera_active.len() > 0;
         if draw_mic || draw_cam {
             let r = 4.0;
-            let mic_color = (1.0, 0.58, 0.0, anim_ratio);
+            let mic_color = (1.0, 0.58, 0.0, self.height_animator.get_current_value());
             // let cam_color = (0.2, 0.78, 0.35, 1.0);
             /* let x = 1.0;
             let y = 1.0;

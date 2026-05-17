@@ -165,7 +165,7 @@ fn main() {
         battery_integrated: None,
         needs_redraw: true,
         last_redraw: Instant::now(),
-        redraw_interval: [Duration::from_millis(1_000), Duration::from_millis(60_000)],
+        redraw_interval: [Duration::from_millis(16), Duration::from_millis(60_000)],
         buffers: [None, None],
         current_buffer_idx: 0,
         config: config.clone(),
