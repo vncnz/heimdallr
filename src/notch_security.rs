@@ -6,6 +6,25 @@ use crate::{security::MicCameraStatus, utils::{Anchor, cr_text_aligned, rounded_
 
 // TODO: improve animation system with easing logic and with a robust way to handle last drawing!
 
+pub enum Easing {
+    #[allow(unused)]
+    Linear,
+    #[allow(unused)]
+    Smooth,
+    #[allow(unused)]
+    Smoother,
+    EaseOutCubic,
+}
+fn ease(e: Easing, t: f64) -> f64 {
+    let x = t.clamp(0.0, 1.0);
+    match e {
+        Easing::Linear => x,
+        Easing::Smooth => x * x * (3.0 - 2.0 * x),
+        Easing::Smoother => x * x * x * (x * (x * 6.0 - 15.0) + 10.0),
+        Easing::EaseOutCubic => 1.0 - (1.0 - x).powi(3),
+    }
+}
+
 // #[derive(Default)]
 struct AnimationNew {
     start_value: f64,
@@ -20,7 +39,9 @@ impl AnimationNew {
             self.end_value
         } else {
             let progress = elapsed as f64 / self.duration as f64;
-            self.start_value + (self.end_value - self.start_value) * progress
+            // let linear_value = self.start_value + (self.end_value - self.start_value) * progress;
+            let eased = ease(Easing::EaseOutCubic, progress);
+            self.start_value + (self.end_value - self.start_value) * eased
         }
     }
 
@@ -139,14 +160,14 @@ impl NotchTrait for SecurityNotch {
         }
     }
 
-    // x0: (self.width as f64 - self.last_width) / 2.0, y0: 0.0
     // (x,y) depends on declared anchor
     fn draw (&mut self, cr: Context, x: f64, y: f64) {
-        let draw_mic = self.security.mic_active.len() > 0;
-        let draw_cam = self.security.camera_active.len() > 0;
-        if draw_mic || draw_cam {
+        // let draw_mic = self.security.mic_active.len() > 0;
+        // let draw_cam = self.security.camera_active.len() > 0;
+        // if draw_mic || draw_cam {
+        let anim_value = self.height_animator.get_current_value();
             let r = 4.0;
-            let mic_color = (1.0, 0.58, 0.0, self.height_animator.get_current_value());
+            let mic_color = (1.0, 0.58, 0.0, anim_value);
             // let cam_color = (0.2, 0.78, 0.35, 1.0);
             /* let x = 1.0;
             let y = 1.0;
@@ -159,7 +180,7 @@ impl NotchTrait for SecurityNotch {
             cr.set_font_size(10.0);
 
             let steps = vec![(0.0, (mic_color.0, mic_color.1, mic_color.2, mic_color.3))];
-            rounded_rect_gradient(&cr, x - (self.last_width / 2.0), y, self.last_width, 12.0, r, steps, crate::utils::GradientDirection::Horizontal, false, None);
+            rounded_rect_gradient(&cr, x - (self.last_width / 2.0), y, self.last_width, 12.0 * anim_value, r, steps, crate::utils::GradientDirection::Horizontal, false, None);
 
             cr.set_source_rgba(0.0, 0.0, 0.0 ,1.0);
             // cr.move_to(14.0, 9.0);
@@ -171,6 +192,6 @@ impl NotchTrait for SecurityNotch {
                 // let w = cr.text_extents(&text).unwrap().width();
                 // cr_text_aligned(cr.clone(), app.into(), self.width / 2.0, 0.5, 0.0);
             } */
-        }
+        // }
     }
 }
