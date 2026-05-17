@@ -557,23 +557,20 @@ impl SysBatteryReader {
     }
 }
 
-pub async fn start_battery_listener(tx: Sender<BatteryStats>) -> zbus::Result<()> {
+pub fn start_battery_listener(tx: Sender<BatteryStats>) {
     let mut bat = SysBatteryReader::new("BAT0");
     std::thread::spawn(move || {
-        futures::executor::block_on(async {
-            let poll_interval = std::time::Duration::from_secs(2);
-            let mut last_stats: Option<BatteryStats> = None;
-            
-            loop {
-                let new_stats = bat.get_stats();
-                if last_stats.as_ref() != Some(&new_stats) {
-                    dbg_println!("{} {:?}", "Sending battery signal!".blue(), new_stats);
-                    last_stats = Some(new_stats.clone());
-                    let _ = tx.send(new_stats);
-                }
-                std::thread::sleep(poll_interval);
+        let poll_interval = std::time::Duration::from_secs(2);
+        let mut last_stats: Option<BatteryStats> = None;
+        
+        loop {
+            let new_stats = bat.get_stats();
+            if last_stats.as_ref() != Some(&new_stats) {
+                dbg_println!("{} {:?}", "Sending battery signal!".blue(), new_stats);
+                last_stats = Some(new_stats.clone());
+                let _ = tx.send(new_stats);
             }
-        });
+            std::thread::sleep(poll_interval);
+        }
     });
-    Ok(())
 }

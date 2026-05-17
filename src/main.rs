@@ -241,14 +241,8 @@ fn main() {
 
     let (tx_battery, rx_battery): (Sender<BatteryStats>, Receiver<BatteryStats>) = mpsc::channel();
     thread::spawn(|| {
-        futures::executor::block_on(async {
-            if let Err(e) = start_battery_listener(tx_battery).await {
-                log_to_file(format!("Battery listener error: {:?}", e));
-                dbg_println!("{}", format!("Battery listener error: {:?}", e).red().to_string());
-            } else {
-                dbg_println!("{}", "Battery listener OK".green().to_string());
-            }
-        });
+        start_battery_listener(tx_battery);
+        dbg_println!("{}", "Battery listener OK".green().to_string());
     });
 
     let (tx_pipewire, rx_pipewire): (Sender<MicCameraStatus>, Receiver<MicCameraStatus>) = mpsc::channel();
