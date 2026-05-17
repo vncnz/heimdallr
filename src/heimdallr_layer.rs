@@ -434,7 +434,7 @@ impl HeimdallrLayer {
             let _ = cr_text_rotated(&cr, "󰌢", x, y - wt - 2.0, 1.0,0.0, 90.0);
         } */
 
-        let mut x = self.width as f64 - self.clock.get_reserved_width() - 2.0 - 42.0;
+        /* let mut x = self.width as f64 - self.clock.get_reserved_width() - 2.0 - 42.0;
         let mut y = 2.0; // self.height as f64 - 2.0
         if let Some(bat) = &self.battery_integrated {
             // spaces.push(ReservedSpace { anchor: Anchor::BottomRight, width: 60.0, height: 20.0 });
@@ -463,7 +463,7 @@ impl HeimdallrLayer {
 
         cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
         cr_text_aligned(cr.clone(), format!("{:.0}%", 90.0), x + 14.0, y, 0.0, 0.0);
-        
+        */
 
         // === Draw alarm icons ===
         
