@@ -17,7 +17,7 @@ use std::thread;
 
 use colored::Colorize;
 
-use crate::{battery::BatteryStats, clock::{ClockTrait, NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, data::{BluetoothStats, UPowerDeviceKind, RatatoskrSocket}, heimdallr_layer::IconChange, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
+use crate::{battery::BatteryStats, clock::{ClockTrait, NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, data::{BluetoothStats, RatatoskrSocket, UPowerDeviceKind}, heimdallr_layer::IconChange, notch_security::NotchTrait, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
 
 mod data;
 mod config;
@@ -30,12 +30,15 @@ mod clock1;
 mod clock2;
 mod battery;
 mod security;
+mod notch_security;
 use config::Config;
 // use chrono;
 
 use crate::heimdallr_layer::HeimdallrLayer;
 use crate::notifications::start_notification_listener;
 use crate::battery::start_battery_listener;
+
+use crate::notch_security::SecurityNotch;
 
 use clap::{crate_name, crate_version, Parser};
 
@@ -182,6 +185,8 @@ fn main() {
         last_batteries_text: "".to_string(),
         batteries_pristine: false
     };
+
+    let _ = SecurityNotch::new();
 
     if !config.hide_missing_ratatoskr {
         app.add_icon("ratatoskr", "󰠗", get_color_gradient(1.0), 1.0);
