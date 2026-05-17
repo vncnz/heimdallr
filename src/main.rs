@@ -177,16 +177,15 @@ fn main() {
         frame_model: FrameModel::new(),
         is_waiting_for_frame: false,
         clock,
-        security: MicCameraStatus { mic_active: vec!(), camera_active: vec!(), pristine: false },
-        last_security_width: 0.0,
-        last_security_text: "".to_string(),
+        // security: MicCameraStatus { mic_active: vec!(), camera_active: vec!(), pristine: false },
+        // last_security_width: 0.0,
+        // last_security_text: "".to_string(),
         batteries: vec![],
         last_batteries_width: 0.0,
         last_batteries_text: "".to_string(),
-        batteries_pristine: false
+        batteries_pristine: false,
+        security_notch: SecurityNotch::new()
     };
-
-    let _ = SecurityNotch::new();
 
     if !config.hide_missing_ratatoskr {
         app.add_icon("ratatoskr", "󰠗", get_color_gradient(1.0), 1.0);
@@ -305,7 +304,7 @@ fn main() {
             // eprintln!("{}", "PipeWire update".bright_blue());
             log_to_file(format!("{:?}", status).to_string());
             println!("{}", format!("{:?}", status).red());
-            app.security = status;
+            app.security_notch.security = status;
             app.request_redraw("security updated");
         }
 

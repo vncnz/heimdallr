@@ -14,7 +14,7 @@ use cairo::FontSlant;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{clock::ClockTrait, config::FrameColor, data::BatteryDevice, dbg_println, notifications::Notification, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, cr_text_rotated, draw_smart_border, log_to_file, rounded_rect_gradient}};
+use crate::{clock::ClockTrait, config::FrameColor, data::BatteryDevice, dbg_println, notch_security::NotchTrait, notifications::Notification, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, cr_text_rotated, draw_smart_border, log_to_file, rounded_rect_gradient}};
 
 #[derive(PartialEq)]
 pub enum IconChange {
@@ -59,13 +59,14 @@ pub struct HeimdallrLayer {
     pub(crate) frame_model: FrameModel,
     pub(crate) is_waiting_for_frame: bool,
     pub(crate) clock: Box<dyn ClockTrait>,
-    pub(crate) security: crate::security::MicCameraStatus,
-    pub(crate) last_security_width: f64,
-    pub(crate) last_security_text: String,
+    // pub(crate) security: crate::security::MicCameraStatus,
+    // pub(crate) last_security_width: f64,
+    // pub(crate) last_security_text: String,
     pub(crate) batteries: Vec<BatteryDevice>,
     pub(crate) last_batteries_width: f64,
     pub(crate) last_batteries_text: String,
-    pub(crate) batteries_pristine: bool
+    pub(crate) batteries_pristine: bool,
+    pub(crate) security_notch: crate::notch_security::SecurityNotch
 }
 
 impl HeimdallrLayer {
@@ -177,14 +178,21 @@ impl HeimdallrLayer {
                 };
                 let cr = Context::new(&surface).unwrap();
                 self.check_batteries_data(&cr);
-                self.check_security_data(&cr);
+                if let Some(new_anim_value) = self.security_notch.update_data(&cr) {
+                    self.animator.animate_property(
+                        &self.frame_model,
+                        AnimationKey::SecurityNotchRatio,
+                        new_anim_value,
+                        200
+                    );
+                }
 
                 self.draw_myframe(cr.clone());
                 self.clock.draw(cr.clone(), self.height as i32, self.width, self.battery_integrated.clone());
                 if self.notifications.len() > 0 { self.draw_notification(cr.clone()) }
 
                 self.draw_batteries(cr.clone());
-                self.draw_security(cr.clone());
+                self.security_notch.draw(cr.clone(), self.width as f64 / 2.0, 0.0, self.frame_model.security_height);
 
                 let layer = self.layer.clone().unwrap();
                 let buffer = self.buffers[buffer_idx].as_ref().unwrap();
@@ -244,38 +252,6 @@ impl HeimdallrLayer {
             }
         }
     }
-    
-    fn build_security_text (&self) -> String {
-        /* (
-            self.security.mic_active.clone().into_iter().map(|s| format!("MIC {s}")).collect::<Vec<_>>().join("  ·  "), 
-            self.security.camera_active.clone().into_iter().map(|s| format!("CAM {s}")).collect::<Vec<_>>().join("  ·  ")
-        ) */
-       self.security.mic_active.clone().into_iter().map(|s| format!("MIC {s}")).chain(self.security.camera_active.clone().into_iter().map(|s| format!("CAM {s}"))).collect::<Vec<_>>().join("  ·  ")
-    }
-
-    fn check_security_data(&mut self, cr: &Context) {
-        if self.security.pristine {
-            self.security.pristine = false;
-            let text = self.build_security_text();
-            self.last_security_text = text;
-            self.animator.animate_property(
-                &self.frame_model,
-                AnimationKey::SecurityNotchRatio,
-                if self.last_security_text.is_empty() { 0.0 } else { 1.0 },
-                200
-            );
-            if self.last_security_text.is_empty() {
-                return;
-            }
-            cr.set_font_size(10.0);
-            cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
-            if let Ok(ext) = cr.text_extents(&self.last_security_text) {
-                self.last_security_width = ext.width() + 6.0;
-            } else {
-                self.last_security_width = 0.0;
-            }
-        }
-    }
 
     fn draw_batteries (&mut self, cr: Context) {
         if self.last_batteries_text.len() > 0 {
@@ -287,39 +263,6 @@ impl HeimdallrLayer {
             cr.set_font_size(10.0);
             cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
             let (wt, ht) = cr_text_rotated(&cr, &self.last_batteries_text, x, y, 0.5, 0.0, -90.0).unwrap();
-        }
-    }
-
-    fn draw_security (&mut self, cr: Context) {
-        let draw_mic = self.security.mic_active.len() > 0;
-        let draw_cam = self.security.camera_active.len() > 0;
-        if draw_mic || draw_cam {
-            let r = 4.0;
-            let mic_color = (1.0, 0.58, 0.0, self.frame_model.security_height);
-            // let cam_color = (0.2, 0.78, 0.35, 1.0);
-            /* let x = 1.0;
-            let y = 1.0;
-            let w = 10.0;
-            let h = 10.0;
-            let steps = if draw_mic && draw_cam { vec![(0.0, mic_color), (1.0, cam_color)] } else if draw_mic { vec![(0.0, mic_color)] } else { vec![(0.0, cam_color)] };
-            rounded_rect_gradient(&cr, x, y, w, h, r, steps, crate::utils::GradientDirection::Horizontal, true, None); */
-
-            cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
-            cr.set_font_size(10.0);
-
-            let steps = vec![(0.0, (mic_color.0, mic_color.1, mic_color.2, mic_color.3))];
-            rounded_rect_gradient(&cr, (self.width as f64 - self.last_security_width) / 2.0, 0.0, self.last_security_width, 12.0, r, steps, crate::utils::GradientDirection::Horizontal, false, None);
-
-            cr.set_source_rgba(0.0, 0.0, 0.0 ,1.0);
-            // cr.move_to(14.0, 9.0);
-            // cr.show_text(&mic).unwrap();
-            cr_text_aligned(cr.clone(), self.last_security_text.clone(), self.width as f64 / 2.0, 2.0, 0.5, 0.0);
-            /* for app in self.security.mic_active.clone().into_iter() {
-                cr.move_to(14.0, 9.0);
-                cr.show_text(&app).unwrap();
-                // let w = cr.text_extents(&text).unwrap().width();
-                // cr_text_aligned(cr.clone(), app.into(), self.width / 2.0, 0.5, 0.0);
-            } */
         }
     }
 
@@ -369,9 +312,7 @@ impl HeimdallrLayer {
             spaces.push(ReservedSpace { anchor: Anchor::BottomCenter, width: 200.0, height: wob_h });
         }
         if self.frame_model.security_height > 0.0 /* && (self.security.mic_active.len() > 0 || self.security.camera_active.len() > 0) */ {
-            cr.set_font_size(10.0);
-            cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
-            spaces.push(ReservedSpace { anchor: Anchor::TopCenter, width: self.last_security_width + 2.0, height: 14.0 * self.frame_model.security_height });
+            spaces.push(ReservedSpace { anchor: self.security_notch.get_position(), width: self.security_notch.get_width() + 2.0, height: self.security_notch.get_height() * self.frame_model.security_height + 1.0 });
         }
         draw_smart_border(&cr, thickness / 2.0, top, w_hole, h - thickness - top, w / 2.0, h / 2.0, radius, radius2, &&spaces);
 
