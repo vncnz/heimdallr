@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use cairo::FontSlant;
 
 use wayland_client::Dispatch;
+use colored::Colorize;
 
 use crate::{clock::ClockTrait, config::FrameColor, data::BatteryDevice, dbg_println, notifications::Notification, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, cr_text_rotated, draw_smart_border, log_to_file, rounded_rect_gradient}};
 
@@ -79,7 +80,7 @@ impl HeimdallrLayer {
     
     pub fn request_redraw(&mut self, _reason: &str) {
         self.needs_redraw = true;
-        dbg_println!("Redraw requested by {}", _reason);
+        dbg_println!("{}", format!("Redraw requested by {}", _reason).yellow());
     }
 
     pub fn maybe_redraw(&mut self, qh: &QueueHandle<Self>) {

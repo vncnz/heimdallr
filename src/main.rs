@@ -442,10 +442,13 @@ fn main() {
                                 200
                             );
                         }
-                        // TODO: maybe update only changed devices instead of refreshing all? Or update only the ones that changed?
-                        app.batteries = b.devices;
-                        app.batteries_pristine = true;
-                        app.request_redraw("bt-batteries");
+                        if app.batteries != b.devices {
+                            app.batteries = b.devices;
+                            app.batteries_pristine = true;
+                            app.request_redraw("bt-batteries");
+                        } else {
+                            dbg_println!("{}", format!("Bluetooth battery status unchanged").yellow());
+                        }
                         // PartialMsg { resource: "bt-batteries", warning: 0.0, icon: "", data: Some(Object {"devices": Array [Object {"kind": String("Mouse"), "name": String("MX Anywhere 2S"), "percentage": Number(90.0), "warn": Number(0.0)}], "icon": String(""), "warn": Number(0.0)}) }
                     }
                 }

@@ -63,7 +63,7 @@ impl ClockTrait for Clock2 {
                 color_battery = color_red;
             };
             hour_battery = Some((bat.eta_minutes.unwrap_or(0.0) / 60.0 + hour_time) % 24.0);
-            dbg_println!("hour_battery {hour_battery:?}");
+            // dbg_println!("hour_battery {hour_battery:?}");
         }
 
         let clock_height = wheight as f64 * 0.94;
@@ -141,7 +141,7 @@ impl ClockTrait for Clock2 {
             } else { // no battery
                 if (start..end).contains(&hour_time) {
                     let limit = hour_time % 1.0;
-                    dbg_println!("0c: h={drawing_hour} limit={limit}");
+                    // dbg_println!("0c: h={drawing_hour} limit={limit}");
                     steps.push((limit, color_half));
                 }
             }
