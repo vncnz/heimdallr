@@ -18,8 +18,8 @@ env_logger = "0.11.8"
 
 cairo-rs = { version = "0.18", features = ["use_glib"] }
 log = "0.4"
-pango = "0.14"
-pangocairo = "0.14"
+pango = "0.18"
+pangocairo = "0.18"
 
 notify = "8"
 chrono = "0.4"

@@ -217,7 +217,6 @@ impl HeimdallrLayer {
     }
 
     fn build_batteries_text (&self) -> String {
-        // TODO: save a copy, as done with security_text and update only when changed
         self.batteries.iter().map(|b| format!("{}: {:.0}%", b.name, b.percentage)).collect::<Vec<_>>().join("  ·  ")
     }
 

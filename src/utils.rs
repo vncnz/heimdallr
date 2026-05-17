@@ -279,6 +279,17 @@ pub fn cr_text_rotated(cr: &Context, text: &str, x: f64, y: f64, dx: f64, dy: f6
     let local_x = -extents.width() * dx;
     let local_y = -(extents.height() * dy + extents.y_bearing());
 
+    /* let layout = pangocairo::functions::create_layout(cr);
+
+    let mut font_desc = pango::FontDescription::new();
+    font_desc.set_family(""); // O "Iosevka", o lasci il default
+    font_desc.set_absolute_size(10.0 * pango::SCALE as f64);
+    layout.set_font_description(Some(&font_desc));
+    layout.set_text(text);
+
+    cr.move_to(local_x, local_y);
+    pangocairo::functions::show_layout(cr, &layout); */
+
     cr.move_to(local_x, local_y);
     cr.show_text(text)?;
 
