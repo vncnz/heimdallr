@@ -287,10 +287,18 @@ fn main() {
         let _ = event_queue.dispatch_pending(&mut app);
 
         if let Ok(bat) = rx_battery.try_recv() {
-            eprintln!("{:?}", bat);
-            app.battery_integrated = Some(bat);
-            app.request_redraw(&"battery");
-            eprintln!("{}", "Battery update".yellow());
+            dbg_println!("{}", format!("Last bat data {:?}", bat).bright_black());
+            let mut changed = true;
+            if let Some(ref prev) = app.battery_integrated {
+                changed = prev.state != bat.state || (prev.eta_minutes.unwrap_or(0.0) - bat.eta_minutes.unwrap_or(0.0)).abs() > 1.0;
+            }
+            if changed {
+                app.battery_integrated = Some(bat);
+                app.request_redraw(&"battery");
+                dbg_println!("{}", "Battery update".yellow());
+            } else {
+                dbg_println!("{}", "No appreciable differences in battery data".yellow());
+            }
         }
 
         /* if is_camera_in_use() {

@@ -566,7 +566,7 @@ pub fn start_battery_listener(tx: Sender<BatteryStats>) {
         loop {
             let new_stats = bat.get_stats();
             if last_stats.as_ref() != Some(&new_stats) {
-                dbg_println!("{} {:?}", "Sending battery signal!".blue(), new_stats);
+                // dbg_println!("{} {:?}", "Sending battery signal!".blue(), new_stats);
                 last_stats = Some(new_stats.clone());
                 let _ = tx.send(new_stats);
             }
