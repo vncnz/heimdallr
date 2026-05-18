@@ -190,7 +190,8 @@ impl HeimdallrLayer {
 
                 self.draw_batteries(cr.clone());
                 if self.security_notch.is_active() {
-                    self.security_notch.draw(cr.clone(), self.width as f64 / 2.0, 0.0);
+                    let top = 0.0 + /*if self.notifications.len() > 0 { 24.0 } else { 0.0 }*/24.0 * self.frame_model.notif_height_ratio;
+                    self.security_notch.draw(cr.clone(), self.width as f64 / 2.0, top);
                 }
 
                 let layer = self.layer.clone().unwrap();
