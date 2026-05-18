@@ -143,7 +143,7 @@ impl NotchTrait for SecurityNotch {
             ); */
             self.height_animator.animate_property(
                 if self.last_text.is_empty() { 0.0 } else { 1.0 },
-                1200
+                200
             );
             if !self.last_text.is_empty() {
                 cr.set_font_size(10.0);
