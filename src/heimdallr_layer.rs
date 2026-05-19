@@ -185,7 +185,7 @@ impl HeimdallrLayer {
                 self.security_notch.update_data(&cr);
 
                 self.draw_myframe(cr.clone());
-                self.clock.draw(cr.clone(), self.width as f64 - self.clock.get_reserved_width(), 0.0, self.clock.get_reserved_width(), self.height as f64, self.battery_integrated.clone());
+                self.clock.draw(cr.clone(), 0.0, self.height as f64 - self.clock.get_reserved_height(), 24.0, self.clock.get_reserved_height(), self.battery_integrated.clone());
                 if self.notifications.len() > 0 { self.draw_notification(cr.clone()) }
 
                 self.draw_batteries(cr.clone());
@@ -277,14 +277,14 @@ impl HeimdallrLayer {
 
         // icons space reserved
         let mut y_offset = self.height as f64 - 8.0; // parte dal basso
-        let res_w = 24.0;
+        // let res_w = 24.0;
         // let res_h = if self.ratatoskr_connected { (self.icons.len() as f64) * 30.0 } else { 30.0 };
         let resources_height = self.frame_model.icons_ratio * 24.0;
         let wob_h = 24.0 * self.frame_model.wob_height;
 
         // Draw rounded rectangle frame
         let thickness = 1.0;
-        let radius = 25.0;
+        let radius = 15.0;
         let radius2 = 4.0;
 
         let w = self.width as f64;

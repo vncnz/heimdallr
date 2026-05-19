@@ -17,7 +17,7 @@ use std::thread;
 
 use colored::Colorize;
 
-use crate::{battery::BatteryStats, clock::{ClockTrait, NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, data::{BluetoothStats, RatatoskrSocket, UPowerDeviceKind}, heimdallr_layer::IconChange, notch_security::NotchTrait, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
+use crate::{battery::BatteryStats, clock::{ClockTrait, NoClock}, clock1::Clock1, clock2::Clock2, clock3::Clock3, commands::start_command_listener, data::{BluetoothStats, RatatoskrSocket, UPowerDeviceKind}, heimdallr_layer::IconChange, notch_security::NotchTrait, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
 
 mod data;
 mod config;
@@ -28,6 +28,7 @@ mod utils;
 mod clock;
 mod clock1;
 mod clock2;
+mod clock3;
 mod battery;
 mod security;
 mod notch_security;
@@ -147,6 +148,7 @@ fn main() {
     let clock = match config.show_clock {
         config::ClockCfg::Clock1 => Box::new(Clock1::new()) as Box<dyn ClockTrait>,
         config::ClockCfg::Clock2 => Box::new(Clock2::new()) as Box<dyn ClockTrait>,
+        config::ClockCfg::Clock3 => Box::new(Clock3::new()) as Box<dyn ClockTrait>,
         _ => Box::new(NoClock::new()) as Box<dyn ClockTrait>
     };
 
