@@ -58,7 +58,7 @@ pub struct HeimdallrLayer {
     pub(crate) animator: Animator,
     pub(crate) frame_model: FrameModel,
     pub(crate) is_waiting_for_frame: bool,
-    pub(crate) clock: Box<dyn ClockTrait>,
+    pub(crate) clock: Box<dyn NotchTrait>,
     // pub(crate) security: crate::security::MicCameraStatus,
     // pub(crate) last_security_width: f64,
     // pub(crate) last_security_text: String,
@@ -185,13 +185,13 @@ impl HeimdallrLayer {
                 self.security_notch.update_data(&cr);
 
                 self.draw_myframe(cr.clone());
-                self.clock.draw(cr.clone(), self.height as i32, self.width, self.battery_integrated.clone());
+                self.clock.draw(cr.clone(), self.width as f64 - self.clock.get_width(), 0.0, self.clock.get_width(), self.height as f64); // self.battery_integrated.clone());
                 if self.notifications.len() > 0 { self.draw_notification(cr.clone()) }
 
                 self.draw_batteries(cr.clone());
                 if self.security_notch.is_active() {
                     let top = 0.0 + /*if self.notifications.len() > 0 { 24.0 } else { 0.0 }*/24.0 * self.frame_model.notif_height_ratio;
-                    self.security_notch.draw(cr.clone(), self.width as f64 / 2.0, top);
+                    self.security_notch.draw(cr.clone(), self.width as f64 / 2.0, top, 0.0, 0.0); // sec notch doesn't use size
                 }
 
                 let layer = self.layer.clone().unwrap();
@@ -289,7 +289,8 @@ impl HeimdallrLayer {
 
         let w = self.width as f64;
         let h = self.height as f64;
-        let w_hole = w - thickness - self.clock.get_width() - 2.0;
+        let right_margin = if self.clock.get_position() == Anchor::RightFull { self.clock.get_width() } else { 0.0 };
+        let w_hole = w - thickness - right_margin - 2.0;
 
         let top = thickness / 2.0 + /*if self.notifications.len() > 0 { 24.0 } else { 0.0 }*/24.0 * self.frame_model.notif_height_ratio;
 

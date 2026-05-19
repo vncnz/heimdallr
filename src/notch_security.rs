@@ -69,9 +69,9 @@ impl AnimationNew {
 
 
 pub trait NotchTrait {
-    fn new () -> Self;
+    // fn new () -> Self;
     fn update_data (&mut self, cr: &Context) -> bool;
-    fn draw (&mut self, cr: Context, x: f64, y: f64);
+    fn draw (&mut self, cr: Context, x: f64, y: f64, w: f64, h: f64);
     fn need_redraw(&self) -> bool;
     // fn get_area (&self) -> ReservedSpace;
     fn get_position (&self) -> Anchor;
@@ -95,11 +95,8 @@ impl SecurityNotch {
         ) */
        self.security.mic_active.clone().into_iter().map(|s| format!("MIC {s}")).chain(self.security.camera_active.clone().into_iter().map(|s| format!("CAM {s}"))).collect::<Vec<_>>().join("  ·  ")
     }
-}
 
-impl NotchTrait for SecurityNotch {
-
-    fn new () -> Self {
+    pub fn new () -> Self {
         SecurityNotch {
             security: MicCameraStatus { mic_active: vec!(), camera_active: vec!(), pristine: false },
             last_width: 0.0,
@@ -107,6 +104,11 @@ impl NotchTrait for SecurityNotch {
             height_animator: AnimationNew::new(0.0)
         }
     }
+}
+
+impl NotchTrait for SecurityNotch {
+
+    
 
     fn is_active (&self) -> bool {
         self.height_animator.get_current_value() > 0.0
@@ -161,7 +163,7 @@ impl NotchTrait for SecurityNotch {
     }
 
     // (x,y) depends on declared anchor
-    fn draw (&mut self, cr: Context, x: f64, y: f64) {
+    fn draw (&mut self, cr: Context, x: f64, y: f64, _w: f64, _h: f64) {
         // let draw_mic = self.security.mic_active.len() > 0;
         // let draw_cam = self.security.camera_active.len() > 0;
         // if draw_mic || draw_cam {

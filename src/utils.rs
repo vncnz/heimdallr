@@ -350,7 +350,8 @@ pub enum Anchor {
     BottomRight, BottomCenter, BottomLeft,
     LeftCenter,
     RightCenter,
-    RightFull
+    RightFull,
+    None
 }
 
 pub struct ReservedSpace {

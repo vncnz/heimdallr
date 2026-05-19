@@ -13,25 +13,23 @@ pub struct Clock2 {
 
 impl NotchTrait for Clock2 {
 
-    fn new () -> Self {
-        Clock2 {
-            // background_surface: None
-        }
-    }
-
     fn is_active (&self) -> bool { true }
     fn get_position (&self) -> crate::utils::Anchor { crate::utils::Anchor::RightFull }
     fn get_height (&self) -> f64 { 0.0 } // unused, RightFull gets all the available height
     fn update_data (&mut self, cr: &Context) -> bool { false } // Clock has no data to be computed and cached
     fn need_redraw(&self) -> bool {
         // TODO: Check if a second has passed
+        true
     }
 
     fn get_width (&self) -> f64 {
         10.0
     }
 
-    fn draw (&mut self, cr: Context, wheight: i32, right: u32, battery_integrated: Option<crate::battery::BatteryStats>) {
+    fn draw (&mut self, cr: Context, x: f64, y: f64, w: f64, h: f64) { // battery_integrated: Option<crate::battery::BatteryStats>
+        let battery_integrated: Option<crate::battery::BatteryStats> = None;
+        let wheight = h;
+        let right = x + w;
         /*if self.background_surface.is_none() {
             self.draw_clock_background(wheight);
         }

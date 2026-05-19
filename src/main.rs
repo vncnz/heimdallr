@@ -17,7 +17,7 @@ use std::thread;
 
 use colored::Colorize;
 
-use crate::{battery::BatteryStats, clock::{ClockTrait, NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, data::{BluetoothStats, RatatoskrSocket, UPowerDeviceKind}, heimdallr_layer::IconChange, notch_security::NotchTrait, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
+use crate::{battery::BatteryStats, clock::{NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, data::{BluetoothStats, RatatoskrSocket, UPowerDeviceKind}, heimdallr_layer::IconChange, notch_security::NotchTrait, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
 
 mod data;
 mod config;
@@ -145,9 +145,9 @@ fn main() {
     // let rx = data::start_socket_watcher("/tmp/ratatoskr.sock");
 
     let clock = match config.show_clock {
-        config::ClockCfg::Clock1 => Box::new(Clock1::new()) as Box<dyn ClockTrait>,
-        config::ClockCfg::Clock2 => Box::new(Clock2::new()) as Box<dyn ClockTrait>,
-        _ => Box::new(NoClock::new()) as Box<dyn ClockTrait>
+        // config::ClockCfg::Clock1 => Box::new(Clock1::new()) as Box<dyn NotchTrait>,
+        config::ClockCfg::Clock2 => Box::new(Clock2{}) as Box<dyn NotchTrait>,
+        _ => Box::new(NoClock{}) as Box<dyn NotchTrait>
     };
 
     let mut app = HeimdallrLayer {
