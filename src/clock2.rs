@@ -4,23 +4,30 @@ use chrono::Timelike;
 
 use crate::clock::ClockTrait;
 use crate::dbg_println;
+use crate::notch_security::NotchTrait;
 use crate::utils::rounded_rect_gradient;
 
 pub struct Clock2 {
     // pub(crate) background_surface: Option<cairo::ImageSurface>
 }
 
-impl Clock2 {
-    pub fn new () -> Self {
+impl NotchTrait for Clock2 {
+
+    fn new () -> Self {
         Clock2 {
             // background_surface: None
         }
     }
-}
 
-impl ClockTrait for Clock2 {
+    fn is_active (&self) -> bool { true }
+    fn get_position (&self) -> crate::utils::Anchor { crate::utils::Anchor::RightFull }
+    fn get_height (&self) -> f64 { 0.0 } // unused, RightFull gets all the available height
+    fn update_data (&mut self, cr: &Context) -> bool { false } // Clock has no data to be computed and cached
+    fn need_redraw(&self) -> bool {
+        // TODO: Check if a second has passed
+    }
 
-    fn get_reserved_width (&self) -> f64 {
+    fn get_width (&self) -> f64 {
         10.0
     }
 

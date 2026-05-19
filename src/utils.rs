@@ -347,9 +347,10 @@ use std::f64::consts::PI;
 #[derive(PartialEq)]
 pub enum Anchor {
     TopLeft, TopCenter, TopRight,
-    RightCenter,
     BottomRight, BottomCenter, BottomLeft,
     LeftCenter,
+    RightCenter,
+    RightFull
 }
 
 pub struct ReservedSpace {

@@ -19,7 +19,7 @@ impl Clock1 {
 
 impl ClockTrait for Clock1 {
 
-    fn get_reserved_width (&self) -> f64 {
+    fn get_width (&self) -> f64 {
         8.0
     }
 
