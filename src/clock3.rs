@@ -5,19 +5,19 @@ use chrono::Timelike;
 use crate::clock::ClockTrait;
 use crate::utils::cr_text_aligned;
 
-pub struct Clock1 {
+pub struct Clock3 {
     pub(crate) background_surface: Option<cairo::ImageSurface>
 }
 
-impl Clock1 {
+impl Clock3 {
     pub fn new () -> Self {
-        Clock1 {
+        Clock3 {
             background_surface: None
         }
     }
 }
 
-impl ClockTrait for Clock1 {
+impl ClockTrait for Clock3 {
 
     fn get_reserved_width (&self) -> f64 {
         8.0
@@ -95,7 +95,7 @@ impl ClockTrait for Clock1 {
     }
 }
 
-impl Clock1 {
+impl Clock3 {
     fn draw_clock_background(&mut self, wheight: i32) {
         let width = 18;
         let height = wheight;

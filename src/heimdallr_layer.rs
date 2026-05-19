@@ -185,7 +185,7 @@ impl HeimdallrLayer {
                 self.security_notch.update_data(&cr);
 
                 self.draw_myframe(cr.clone());
-                self.clock.draw(cr.clone(), self.height as i32, self.width, self.battery_integrated.clone());
+                self.clock.draw(cr.clone(), self.width as f64 - self.clock.get_reserved_width(), 0.0, self.clock.get_reserved_width(), self.height as f64, self.battery_integrated.clone());
                 if self.notifications.len() > 0 { self.draw_notification(cr.clone()) }
 
                 self.draw_batteries(cr.clone());
@@ -279,7 +279,7 @@ impl HeimdallrLayer {
         let mut y_offset = self.height as f64 - 8.0; // parte dal basso
         let res_w = 24.0;
         // let res_h = if self.ratatoskr_connected { (self.icons.len() as f64) * 30.0 } else { 30.0 };
-        let res_h = self.frame_model.icons_ratio * 24.0;
+        let resources_height = self.frame_model.icons_ratio * 24.0;
         let wob_h = 24.0 * self.frame_model.wob_height;
 
         // Draw rounded rectangle frame
@@ -289,7 +289,8 @@ impl HeimdallrLayer {
 
         let w = self.width as f64;
         let h = self.height as f64;
-        let w_hole = w - thickness - self.clock.get_reserved_width() - 2.0;
+        let left_margin = 24.0;
+        let w_hole = w - thickness/* - self.clock.get_reserved_width()*/ - 2.0 - left_margin;
 
         let top = thickness / 2.0 + /*if self.notifications.len() > 0 { 24.0 } else { 0.0 }*/24.0 * self.frame_model.notif_height_ratio;
 
@@ -305,16 +306,16 @@ impl HeimdallrLayer {
         if self.last_batteries_text.len() > 0 {
             spaces.push(ReservedSpace { anchor: Anchor::LeftCenter, width: 14.0, height: self.last_batteries_width });
         }
-        if res_h > 0.0 {
-            spaces.push(ReservedSpace { anchor: Anchor::BottomLeft, width: res_w, height: res_h });
-        }
+        /* if resources_height > 0.0 {
+            spaces.push(ReservedSpace { anchor: Anchor::BottomLeft, width: res_w, height: resources_height });
+        } */
         if wob_h > 0.0 {
             spaces.push(ReservedSpace { anchor: Anchor::BottomCenter, width: 200.0, height: wob_h });
         }
         if self.security_notch.is_active() {
             spaces.push(ReservedSpace { anchor: self.security_notch.get_position(), width: self.security_notch.get_width() + 2.0, height: self.security_notch.get_height() + 1.0 });
         }
-        draw_smart_border(&cr, thickness / 2.0, top, w_hole, h - thickness - top, w / 2.0, h / 2.0, radius, radius2, &&spaces);
+        draw_smart_border(&cr, thickness / 2.0 + left_margin, top, w_hole, h - thickness - top, w / 2.0, h / 2.0, radius, radius2, &&spaces);
 
         cr.set_fill_rule(cairo::FillRule::EvenOdd);
         cr.rectangle(-1.0, -1.0, w + 2.0, h + 2.0);

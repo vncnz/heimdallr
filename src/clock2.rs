@@ -24,7 +24,13 @@ impl ClockTrait for Clock2 {
         10.0
     }
 
-    fn draw (&mut self, cr: Context, wheight: i32, right: u32, battery_integrated: Option<crate::battery::BatteryStats>) {
+    fn get_reserved_height (&self) -> f64 {
+        0.0
+    }
+
+    fn draw (&mut self, cr: Context, x: f64, y: f64, w: f64, h: f64, battery_integrated: Option<crate::battery::BatteryStats>) {
+        let right = (x + w) as u32;
+        let wheight = h as i32;
         /*if self.background_surface.is_none() {
             self.draw_clock_background(wheight);
         }
