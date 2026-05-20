@@ -191,12 +191,12 @@ fn main() {
 
     if !config.hide_missing_ratatoskr {
         app.add_icon("ratatoskr", "󰠗", get_color_gradient(1.0), 1.0);
-        app.animator.animate_property(
+        /* app.animator.animate_property(
             &app.frame_model,
             AnimationKey::IconsHeight,
             app.icons.len() as f64,
             200
-        );
+        ); */
     }
 
     event_queue.roundtrip(&mut app).unwrap();
@@ -443,12 +443,12 @@ fn main() {
                                     let _added = app.add_icon(&iconkey, icon, get_color_gradient(dev.warn), dev.warn);
                                 }
                             }
-                            app.animator.animate_property(
+                            /* app.animator.animate_property(
                                 &app.frame_model,
                                 AnimationKey::IconsHeight,
                                 app.icons.len() as f64,
                                 200
-                            );
+                            ); */
                         }
                         if app.batteries != b.devices {
                             app.batteries = b.devices;
@@ -473,31 +473,31 @@ fn main() {
                             app.remove_icon(&iconkey);
                         } */
                         if !config.hide_missing_ratatoskr { app.add_icon("ratatoskr", "󰠗", get_color_gradient(1.0), 1.0); }
-                        app.animator.animate_property(
+                        /* app.animator.animate_property(
                             &app.frame_model,
                             AnimationKey::IconsHeight,
                             app.icons.len() as f64,
                             200
-                        );
+                        ); */
                     } else {
                         app.remove_icon("ratatoskr");
-                        app.animator.animate_property(
+                        /* app.animator.animate_property(
                             &app.frame_model,
                             AnimationKey::IconsHeight,
                             app.icons.len() as f64,
                             200
-                        );
+                        ); */
                     }
                     app.request_redraw("ratatoskr");
                 }
             } else if data.warning < 0.3 {
                 if app.remove_icon(&data.resource) {
-                    app.animator.animate_property(
+                    /* app.animator.animate_property(
                         &app.frame_model,
                         AnimationKey::IconsHeight,
                         app.icons.len() as f64,
                         200
-                    );
+                    ); */
                     app.request_redraw(&"data.resource");
                 }
             }
@@ -531,12 +531,12 @@ fn main() {
                     if change != IconChange::None {
                         if change == IconChange::Added {
                             dbg_println!("Icon added");
-                            app.animator.animate_property(
+                            /* app.animator.animate_property(
                                 &app.frame_model,
                                 AnimationKey::IconsHeight,
                                 app.icons.len() as f64,
                                 200
-                            );
+                            ); */
                         } else {
                             dbg_println!("Icon changed");
                         }
