@@ -303,9 +303,9 @@ impl HeimdallrLayer {
             // ReservedSpace { anchor: Anchor::TopRight, width: 90.0, height: 20.0 }
         ];
         // if let Some(bat) = &self.battery_integrated {
-        if self.last_batteries_text.len() > 0 {
+        /* if self.last_batteries_text.len() > 0 {
             spaces.push(ReservedSpace { anchor: Anchor::LeftCenter, width: 14.0, height: self.last_batteries_width });
-        }
+        } */
         /* if resources_height > 0.0 {
             spaces.push(ReservedSpace { anchor: Anchor::BottomLeft, width: res_w, height: resources_height });
         } */
