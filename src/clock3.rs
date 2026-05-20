@@ -1,6 +1,5 @@
 use cairo::{Context, FontSlant};
 use chrono::Local;
-use chrono::Timelike;
 
 use crate::clock::ClockTrait;
 use crate::utils::cr_text_aligned;
@@ -25,7 +24,7 @@ impl ClockTrait for Clock3 {
         200.0
     }
 
-    fn draw (&mut self, cr: Context, x: f64, y: f64, w: f64, h: f64, battery_integrated: Option<crate::battery::BatteryStats>) {
+    fn draw (&mut self, cr: Context, x: f64, y: f64, w: f64, _h: f64, battery_integrated: Option<crate::battery::BatteryStats>) -> (f64, f64) {
         let xc = x + w / 2.0;
         let mut top = y;
 
@@ -38,7 +37,7 @@ impl ClockTrait for Clock3 {
         cr.set_font_size(18.0);
 
         cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
-        let (w_hours, h_hours) = cr_text_aligned(cr.clone(), hours, xc, y, 0.5, 0.0);
+        let (_w_hours, h_hours) = cr_text_aligned(cr.clone(), hours, xc, y, 0.5, 0.0);
         top += h_hours + 2.0;
 
         // eprint!("{}+{} ", w_hours, y);
@@ -51,7 +50,7 @@ impl ClockTrait for Clock3 {
         top += 2.0;
 
         cr.set_font_size(16.0);
-        let (w_minutes, h_minutes) = cr_text_aligned(cr.clone(), minutes, xc, top, 0.5, 0.0);
+        let (_w_minutes, h_minutes) = cr_text_aligned(cr.clone(), minutes, xc, top, 0.5, 0.0);
         top += h_minutes + 2.0;
 
         if let Some(bat) = battery_integrated {
@@ -78,8 +77,8 @@ impl ClockTrait for Clock3 {
 
                 cr.set_source_rgba(color.0, color.1, color.2, color.3);
                 cr.set_font_size(16.0);
-                let (w_eta, h_eta) = cr_text_aligned(cr.clone(), text, xc, top, 0.5, 0.0);
-                top += h_eta + 2.0;
+                let (_w_eta, h_eta) = cr_text_aligned(cr.clone(), text, xc, top, 0.5, 0.0);
+                top += h_eta;
             }
 
             // dbg_println!("Battery moving");
@@ -114,6 +113,6 @@ impl ClockTrait for Clock3 {
         } else {
             // dbg_println!("No battery info/moving");
         }
-        // TODO: return top value to avoid hardcoding reserved height
+        (w, top)
     }
 }

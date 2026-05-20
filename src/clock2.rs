@@ -28,7 +28,7 @@ impl ClockTrait for Clock2 {
         0.0
     }
 
-    fn draw (&mut self, cr: Context, x: f64, y: f64, w: f64, h: f64, battery_integrated: Option<crate::battery::BatteryStats>) {
+    fn draw (&mut self, cr: Context, x: f64, _y: f64, w: f64, h: f64, battery_integrated: Option<crate::battery::BatteryStats>) -> (f64, f64) {
         let right = (x + w) as u32;
         let wheight = h as i32;
         /*if self.background_surface.is_none() {
@@ -155,6 +155,7 @@ impl ClockTrait for Clock2 {
             let top = clock_height + top_shift - drawing_hour as f64 * step_height - step_height;
             rounded_rect_gradient(&cr, left, top, w, step_height - (padding*2.0), 2.0, steps, crate::utils::GradientDirection::Vertical, false, None);
         }
+        (10.0, h)
     }
 }
 
