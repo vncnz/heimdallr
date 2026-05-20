@@ -27,7 +27,7 @@ impl ClockTrait for Clock1 {
         0.0
     }
 
-    fn draw (&mut self, cr: Context, x: f64, y: f64, w: f64, h: f64, battery_integrated: Option<crate::battery::BatteryStats>) {
+    fn draw (&mut self, cr: Context, x: f64, y: f64, w: f64, h: f64, battery_integrated: Option<crate::battery::BatteryStats>) -> (f64, f64) {
         let right = (x + w) as u32;
         let wheight = h as i32;
         if self.background_surface.is_none() {
@@ -92,6 +92,7 @@ impl ClockTrait for Clock1 {
         } else {
             // dbg_println!("No battery info/moving");
         }
+        (w, h)
     }
 }
 

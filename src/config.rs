@@ -16,6 +16,7 @@ pub enum ClockCfg {
     Clock1,
     Clock2,
     Clock3,
+    Clock4,
 }
 
 #[derive(Debug, Clone)]
@@ -90,14 +91,15 @@ impl ClockCfg {
                 "clock1" => { ClockCfg::Clock1 },
                 "clock2" => { ClockCfg::Clock2 },
                 "clock3" => { ClockCfg::Clock3 },
+                "clock4" => { ClockCfg::Clock4 },
                 _ => {
-                    eprintln!("Unrecognized value in clock config: {:?}. Accepted types are \"clock1\", \"clock2\", \"clock3\", null", s);
+                    eprintln!("Unrecognized value in clock config: {:?}. Accepted types are \"clock1\", \"clock2\", \"clock3\", \"clock4\", null", s);
                     ClockCfg::None
                 }
             },
 
             _ => {
-                eprintln!("Invalid clock value in JSON configuration {:?}. Accepted types are \"clock1\", \"clock2\", \"clock3\", null", value);
+                eprintln!("Invalid clock value in JSON configuration {:?}. Accepted types are \"clock1\", \"clock2\", \"clock3\", \"clock4\", null", value);
                 ClockCfg::None
             }
         }
