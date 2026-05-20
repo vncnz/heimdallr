@@ -69,7 +69,7 @@ impl ClockTrait for Clock3 {
                 let text = if minutes > 90.0 {
                     format!("{}h", (minutes / 60.0).round())
                 } else if minutes > 0.0 {
-                    format!("{}m", minutes.round())
+                    format!("{}", minutes.round())
                 } else if bat.state == crate::battery::BatteryState::Charging {
                     "󱐋".into()
                 } else {
@@ -77,7 +77,7 @@ impl ClockTrait for Clock3 {
                 };
 
                 cr.set_source_rgba(color.0, color.1, color.2, color.3);
-                cr.set_font_size(15.0);
+                cr.set_font_size(16.0);
                 let (w_eta, h_eta) = cr_text_aligned(cr.clone(), text, xc, top, 0.5, 0.0);
                 top += h_eta + 2.0;
             }
