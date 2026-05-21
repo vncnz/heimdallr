@@ -33,6 +33,9 @@ mod clock4;
 mod battery;
 mod security;
 mod notch_security;
+
+mod block_trait;
+
 use config::Config;
 // use chrono;
 
