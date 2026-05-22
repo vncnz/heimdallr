@@ -211,8 +211,8 @@ impl ClockTrait for Clock3 {
             let mut slices_hours = [SliceConfig { fill_color: gray, border_color: None }; 6];
             for (i, slice) in slices_hours.iter_mut().enumerate() {
                 let eta_ends = current_hour + eta_hours;
-                slice.fill_color = if (i as f64 + 1.0) < current_hour { white }
-                                   else if (i as f64 + 1.0) < eta_ends { green }
+                slice.fill_color = if (i as f64) < current_hour { white }
+                                   else if (i as f64) < eta_ends { green }
                                    else { gray };
                 
                 slice.border_color = if (i as f64 + 6.5) < eta_ends { Some(green) }
