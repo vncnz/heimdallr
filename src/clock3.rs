@@ -163,10 +163,10 @@ impl ClockTrait for Clock3 {
 
         let mut eta_hours = 0.0;
 
+        let mut color: (f64, f64, f64, f64) = (0.0, 0.0, 0.0, 0.0);
         if let Some(bat) = battery_integrated {
             if bat.state == crate::battery::BatteryState::Charging || bat.state == crate::battery::BatteryState::Discharging {
                 eta_hours = bat.eta_minutes.unwrap_or_default() / 60.0;
-                let color: (f64, f64, f64, f64);
                 if bat.state == crate::battery::BatteryState::Charging {
                     color = (0.1, 1.0, 0.2, 1.0);
                 } else {
@@ -212,21 +212,21 @@ impl ClockTrait for Clock3 {
             for (i, slice) in slices_hours.iter_mut().enumerate() {
                 let eta_ends = current_hour + eta_hours;
                 slice.fill_color = if (i as f64) < current_hour { white }
-                                   else if (i as f64) < eta_ends { green }
+                                   else if (i as f64) < eta_ends { color }
                                    else { gray };
                 
-                slice.border_color = if (i as f64 + 6.5) < eta_ends { Some(green) }
+                slice.border_color = if (i as f64 + 6.5) < eta_ends { Some(color) }
                                      else { None };
             }
             draw_micro_hexagon(&cr, xc, top + 20.0, outer_radius, spacing, border_thickness, gap_thickness, slices_hours);
             
-            let eta_tens = eta_hours / 6.0;
+            let eta_tens = eta_hours * 6.0;
             let current_tents = now.minute() as f64 / 10.0;
             let mut slices_minutes = [SliceConfig { fill_color: gray, border_color: None }; 6];
             for (i, slice) in slices_minutes.iter_mut().enumerate() {
                 let eta_ends = current_tents + eta_tens;
                 slice.fill_color = if (i as f64 + 1.0) < current_tents { white }
-                                   else if (i as f64 + 1.0) < eta_ends { green }
+                                   else if (i as f64 + 1.0) < eta_ends { color }
                                    else { gray };
                 
                 // slice.border_color = if (i as f64 + 6.5) < eta_ends { Some(green) }
