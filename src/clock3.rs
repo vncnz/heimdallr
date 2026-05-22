@@ -1,8 +1,116 @@
 use cairo::{Context, FontSlant};
-use chrono::Local;
+use chrono::{Local, Timelike};
 
 use crate::clock::ClockTrait;
 use crate::utils::cr_text_aligned;
+
+use std::f64::consts::PI;
+
+/* #[derive(Clone, Copy)]
+pub struct Color {
+    pub r: f64,
+    pub g: f64,
+    pub b: f64,
+    pub a: f64,
+} */
+
+type Color = (f64, f64, f64, f64);
+
+/// Configurazione per il singolo spicchio
+#[derive(Clone, Copy)]
+pub struct SliceConfig {
+    pub fill_color: Color,
+    /// Se Some(colore), disegna il bordo trapezoidale esterno
+    pub border_color: Option<Color>,
+}
+
+/// Disegna un esagono compatto con bordi trapezoidali integrati per icone di piccole dimensioni.
+///
+/// # Parametri
+/// - `outer_radius`: Il raggio totale dell'icona (es. 11.0 per un diametro di 22px).
+/// - `spacing`: Distanza di offset per separare i 6 spicchi tra loro.
+/// - `border_thickness`: Spessore (in pixel) del trapezio del bordo.
+/// - `gap_thickness`: Lo spazio vuoto tra il bordo trapezoidale e lo spicchio interno.
+pub fn draw_micro_hexagon(
+    cr: &cairo::Context,
+    center_x: f64,
+    center_y: f64,
+    outer_radius: f64,
+    spacing: f64,
+    border_thickness: f64,
+    gap_thickness: f64,
+    slices: [SliceConfig; 6],
+) {
+    let angle_step = PI / 3.0;
+
+    // Calcoliamo i raggi dinamici per evitare sovrapposizioni
+    let r_border_outer = outer_radius;
+    let r_border_inner = (r_border_outer - border_thickness).max(0.0);
+    let r_slice_max = (r_border_inner - gap_thickness).max(0.0);
+
+    for i in 0..6 {
+        let start_angle = i as f64 * angle_step;
+        let end_angle = (i + 1) as f64 * angle_step;
+
+        // Direzione del distanziamento (offset)
+        let mid_angle = start_angle + (angle_step / 2.0);
+        let offset_x = mid_angle.cos() * spacing;
+        let offset_y = mid_angle.sin() * spacing;
+
+        let s_center_x = center_x + offset_x;
+        let s_center_y = center_y + offset_y;
+
+        let config = &slices[i];
+
+        // 1. DISEGNO DEL BORDO ESTERNO (Se abilitato)
+        // Se il bordo esiste, lo disegnamo come un trapezio isolato
+        if let Some(b_color) = config.border_color {
+            // Vertici esterni del trapezio
+            let bo1_x = s_center_x + start_angle.cos() * r_border_outer;
+            let bo1_y = s_center_y + start_angle.sin() * r_border_outer;
+            let bo2_x = s_center_x + end_angle.cos() * r_border_outer;
+            let bo2_y = s_center_y + end_angle.sin() * r_border_outer;
+
+            // Vertici interni del trapezio
+            let bi1_x = s_center_x + start_angle.cos() * r_border_inner;
+            let bi1_y = s_center_y + start_angle.sin() * r_border_inner;
+            let bi2_x = s_center_x + end_angle.cos() * r_border_inner;
+            let bi2_y = s_center_y + end_angle.sin() * r_border_inner;
+
+            // Tracciamento del trapezio
+            cr.move_to(bo1_x, bo1_y);
+            cr.line_to(bo2_x, bo2_y);
+            cr.line_to(bi2_x, bi2_y);
+            cr.line_to(bi1_x, bi1_y);
+            cr.close_path();
+
+            cr.set_source_rgba(b_color.0, b_color.1, b_color.2, b_color.3);
+            let _ = cr.fill();
+        }
+
+        // 2. DISEGNO DEL CORPO DELLO SPICCHIO
+        // Se c'è il bordo, il raggio massimo sarà ridotto (r_slice_max),
+        // altrimenti se non c'è il bordo usiamo tutto lo spazio fino a r_border_inner per coerenza geometrica
+        let current_r_max = if config.border_color.is_some() {
+            r_slice_max
+        } else {
+            r_border_inner // mantiene la forma allineata al limite interno del potenziale bordo
+        };
+
+        let v1_x = s_center_x + start_angle.cos() * current_r_max;
+        let v1_y = s_center_y + start_angle.sin() * current_r_max;
+        let v2_x = s_center_x + end_angle.cos() * current_r_max;
+        let v2_y = s_center_y + end_angle.sin() * current_r_max;
+
+        cr.move_to(s_center_x, s_center_y);
+        cr.line_to(v1_x, v1_y);
+        cr.line_to(v2_x, v2_y);
+        cr.close_path();
+
+        cr.set_source_rgba(config.fill_color.0, config.fill_color.1, config.fill_color.2, config.fill_color.3);
+        let _ = cr.fill();
+    }
+}
 
 pub struct Clock3 {
     // pub(crate) background_surface: Option<cairo::ImageSurface>
@@ -53,8 +161,11 @@ impl ClockTrait for Clock3 {
         let (_w_minutes, h_minutes) = cr_text_aligned(cr.clone(), minutes, xc, top, 0.5, 0.0);
         top += h_minutes + 2.0;
 
+        let mut eta_hours = 0.0;
+
         if let Some(bat) = battery_integrated {
             if bat.state == crate::battery::BatteryState::Charging || bat.state == crate::battery::BatteryState::Discharging {
+                eta_hours = bat.eta_minutes.unwrap_or_default() / 60.0;
                 let color: (f64, f64, f64, f64);
                 if bat.state == crate::battery::BatteryState::Charging {
                     color = (0.1, 1.0, 0.2, 1.0);
@@ -80,6 +191,48 @@ impl ClockTrait for Clock3 {
                 let (_w_eta, h_eta) = cr_text_aligned(cr.clone(), text, xc, top, 0.5, 0.0);
                 top += h_eta;
             }
+
+            // eta_hours = 3.4;
+
+            let outer_radius = 11.0;
+            let spacing = 1.0;
+            let border_thickness = 2.0;
+            let gap_thickness = 1.0;
+            let white = (1.0, 1.0, 1.0, 1.0);
+            /* let middle = match self.config.frame_color {
+                FrameColor::Rgba(r, g, b, a) => Some((r, g, b, a)),
+                _ => (1.0, 1.0, 1.0, 0.6)
+            }; */
+            let gray = (1.0, 1.0, 1.0, 0.2);
+            let green = (0.2, 1.0, 0.4, 0.8);
+
+            let current_hour = now.hour() as f64 % 6.0;
+
+            let mut slices_hours = [SliceConfig { fill_color: gray, border_color: None }; 6];
+            for (i, slice) in slices_hours.iter_mut().enumerate() {
+                let eta_ends = current_hour + eta_hours;
+                slice.fill_color = if (i as f64 + 1.0) < current_hour { white }
+                                   else if (i as f64 + 1.0) < eta_ends { green }
+                                   else { gray };
+                
+                slice.border_color = if (i as f64 + 6.5) < eta_ends { Some(green) }
+                                     else { None };
+            }
+            draw_micro_hexagon(&cr, xc, top + 20.0, outer_radius, spacing, border_thickness, gap_thickness, slices_hours);
+            
+            let eta_tens = eta_hours / 6.0;
+            let current_tents = now.minute() as f64 / 10.0;
+            let mut slices_minutes = [SliceConfig { fill_color: gray, border_color: None }; 6];
+            for (i, slice) in slices_minutes.iter_mut().enumerate() {
+                let eta_ends = current_tents + eta_tens;
+                slice.fill_color = if (i as f64 + 1.0) < current_tents { white }
+                                   else if (i as f64 + 1.0) < eta_ends { green }
+                                   else { gray };
+                
+                // slice.border_color = if (i as f64 + 6.5) < eta_ends { Some(green) }
+                //                      else { None };
+            }
+            draw_micro_hexagon(&cr, xc, top + 50.0, outer_radius, spacing, border_thickness, gap_thickness, slices_minutes);
 
             // dbg_println!("Battery moving");
             /*let bat_symb: String = if bat.state == crate::battery::BatteryState::Charging { "󱐋".into() } else { "󰯆".into() };
