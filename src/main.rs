@@ -17,7 +17,7 @@ use std::thread;
 
 use colored::Colorize;
 
-use crate::{battery::BatteryStats, clock::{ClockTrait, NoClock}, clock1::Clock1, clock2::Clock2, clock3::Clock3, clock4::Clock4, commands::start_command_listener, data::{BluetoothStats, RatatoskrSocket, UPowerDeviceKind}, heimdallr_layer::IconChange, notch_security::NotchTrait, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
+use crate::{battery::BatteryStats, block_trait::ClockBlock, clock::{ClockTrait, NoClock}, clock1::Clock1, clock2::Clock2, clock3::Clock3, clock4::Clock4, commands::start_command_listener, data::{BluetoothStats, RatatoskrSocket, UPowerDeviceKind}, heimdallr_layer::IconChange, notch_security::NotchTrait, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
 
 mod data;
 mod config;
@@ -191,7 +191,8 @@ fn main() {
         last_batteries_width: 0.0,
         last_batteries_text: "".to_string(),
         batteries_pristine: false,
-        security_notch: SecurityNotch::new()
+        security_notch: SecurityNotch::new(),
+        clock_notch: crate::notch_security::ClockNotch::new()
     };
 
     if !config.hide_missing_ratatoskr {

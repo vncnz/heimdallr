@@ -154,7 +154,7 @@ impl ClockTrait for Clock3 {
         cr.new_sub_path();
         cr.move_to(x + 4.0, top);
         cr.line_to(x + w - 4.0, top);
-        cr.stroke();
+        let _ = cr.stroke();
         top += 2.0;
 
         cr.set_font_size(16.0);
@@ -204,7 +204,7 @@ impl ClockTrait for Clock3 {
                 _ => (1.0, 1.0, 1.0, 0.6)
             }; */
             let gray = (1.0, 1.0, 1.0, 0.2);
-            let green = (0.2, 1.0, 0.4, 0.8);
+            let primary = (0.5, 0.7, 1.0, 1.0);
 
             let current_hour = now.hour() as f64 % 6.0;
 
@@ -212,6 +212,7 @@ impl ClockTrait for Clock3 {
             for (i, slice) in slices_hours.iter_mut().enumerate() {
                 let eta_ends = current_hour + eta_hours;
                 slice.fill_color = if (i as f64) < current_hour { white }
+                                   else if i == current_hour.floor() as usize { primary }
                                    else if (i as f64) < eta_ends { color }
                                    else { gray };
                 

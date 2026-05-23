@@ -1,4 +1,4 @@
-use cairo::{Context, Format, ImageSurface};
+use cairo::{Context, FontSlant, Format, ImageSurface};
 
 pub trait BlockTrait {
     type DataType;
@@ -44,28 +44,45 @@ impl BlockTrait for ClockBlock {
 
     fn update_data (&mut self, _data: Self::DataType) -> Result<bool, Box<dyn std::error::Error>> {
 
-        let dummy_surface = ImageSurface::create(Format::ARgb32, 1, 1)?;
+        let font_size = 16.0;
+
+        let dummy_surface = ImageSurface::create(Format::ARgb32, 100, 100)?;
         let dummy_ctx = Context::new(&dummy_surface)?;
-        let (layout, width, height) = compute_pango_layout(&dummy_ctx, "00:00", 16.0);
-        let wi = width.ceil() as i32;
-        let hi = height.ceil() as i32;
+
+        let layout = pangocairo::functions::create_layout(&dummy_ctx);
+
+        let mut font_desc = pango::FontDescription::new();
+        font_desc.set_family(""); // O "Iosevka", o lasci il default
+        font_desc.set_absolute_size(font_size * pango::SCALE as f64);
+        layout.set_font_description(Some(&font_desc));
+        layout.set_text("00:00");
+
+        let (ink_rect, logical_rect) = layout.extents();
+        // dbg_println!("ink_rect: {:?}   logical_rect: {:?}", ink_rect, logical_rect);
+        let w = logical_rect.width() as f64 / pango::SCALE as f64;
+        let h = logical_rect.height() as f64 / pango::SCALE as f64;
+        // let extents = cr.text_extents(text)?;
+        //let local_x = -w * dx;
+        //let local_y = -(h * dy);
 
         let need_reallocate = match &self.surface_cache {
             None => true,
-            Some(s) => s.width() != wi || s.height() != hi,
+            Some(s) => s.width() != w as i32 || s.height() != h as i32,
         };
 
         if need_reallocate {
-            self.surface_cache = Some(ImageSurface::create(Format::ARgb32, wi, hi).unwrap());
-            self.width = wi;
-            self.height = hi;
+            self.surface_cache = Some(ImageSurface::create(Format::ARgb32, w as i32, h as i32).unwrap());
+            self.width = w as i32;
+            self.height = h as i32;
         }
 
         let s = self.surface_cache.as_ref().unwrap();
         let cr = Context::new(s).unwrap();
 
+        cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
         cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
 
+        // cr.move_to(local_x, local_y);
         cr.move_to(0.0, 0.0);
         pangocairo::functions::show_layout(&cr, &layout);
 
@@ -74,13 +91,14 @@ impl BlockTrait for ClockBlock {
 
     fn draw (&mut self, cr: Context, x: f64, y: f64, _w: f64, _h: f64) -> (f64, f64) {
         if let Some(ref local_surface) = self.surface_cache {
+            eprintln!("Drawing clock block with size {}x{} at {}x{}", local_surface.width(), local_surface.height(), x, y);
             cr.save().unwrap();
             cr.translate(x, y);
             cr.set_source_surface(local_surface, 0.0, 0.0).unwrap();
             cr.paint().unwrap();
             cr.restore().unwrap();
         }
-        (0.0, 0.0)
+        (self.width as f64, self.height as f64)
     }
 
     fn get_width (&self) -> f64 {

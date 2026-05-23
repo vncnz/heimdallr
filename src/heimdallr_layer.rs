@@ -66,7 +66,8 @@ pub struct HeimdallrLayer {
     pub(crate) last_batteries_width: f64,
     pub(crate) last_batteries_text: String,
     pub(crate) batteries_pristine: bool,
-    pub(crate) security_notch: crate::notch_security::SecurityNotch
+    pub(crate) security_notch: crate::notch_security::SecurityNotch,
+    pub(crate) clock_notch: crate::notch_security::ClockNotch
 }
 
 impl HeimdallrLayer {
@@ -183,6 +184,7 @@ impl HeimdallrLayer {
                 let cr = Context::new(&surface).unwrap();
                 self.check_batteries_data(&cr);
                 self.security_notch.update_data(&cr);
+                self.clock_notch.update_data(&cr);
 
                 self.draw_myframe(cr.clone());
                 self.clock.draw(cr.clone(), 0.0, self.height as f64 - self.clock.get_reserved_height(), 24.0, self.clock.get_reserved_height(), self.battery_integrated.clone());
@@ -193,6 +195,8 @@ impl HeimdallrLayer {
                     let top = 0.0 + /*if self.notifications.len() > 0 { 24.0 } else { 0.0 }*/24.0 * self.frame_model.notif_height_ratio;
                     self.security_notch.draw(cr.clone(), self.width as f64 / 2.0, top);
                 }
+
+                self.clock_notch.draw(cr.clone(), 0.0, self.height as f64 - self.icons.len() as f64 * 24.0);
 
                 let layer = self.layer.clone().unwrap();
                 let buffer = self.buffers[buffer_idx].as_ref().unwrap();
@@ -279,7 +283,7 @@ impl HeimdallrLayer {
         let mut y_offset = self.height as f64 - 8.0; // parte dal basso
         // let res_w = 24.0;
         // let res_h = if self.ratatoskr_connected { (self.icons.len() as f64) * 30.0 } else { 30.0 };
-        let resources_height = self.frame_model.icons_ratio * 24.0;
+        // let resources_height = self.frame_model.icons_ratio * 24.0;
         let wob_h = 24.0 * self.frame_model.wob_height;
 
         // Draw rounded rectangle frame

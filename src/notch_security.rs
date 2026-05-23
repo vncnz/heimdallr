@@ -1,8 +1,9 @@
 use std::time::Instant;
 
 use cairo::{Context, FontSlant};
+use chrono::Local;
 
-use crate::{security::MicCameraStatus, utils::{Anchor, cr_text_aligned, rounded_rect_gradient}};
+use crate::{security::MicCameraStatus, utils::{Anchor, cr_text_aligned, cr_text_rotated, rounded_rect_gradient}};
 
 // TODO: improve animation system with easing logic and with a robust way to handle last drawing!
 
@@ -193,5 +194,71 @@ impl NotchTrait for SecurityNotch {
                 // cr_text_aligned(cr.clone(), app.into(), self.width / 2.0, 0.5, 0.0);
             } */
         // }
+    }
+}
+
+
+pub struct ClockNotch {
+    pub(crate) last_height: f64,
+    pub(crate) last_text: String
+}
+impl NotchTrait for ClockNotch {
+
+    fn new () -> Self {
+        ClockNotch {
+            last_height: 0.0,
+            last_text: "".to_string()
+        }
+    }
+
+    fn is_active (&self) -> bool {
+        true
+    }
+
+    fn need_redraw(&self) -> bool {
+        true
+    }
+
+    fn get_position (&self) -> Anchor {
+        Anchor::LeftFloating
+    }
+    fn get_width (&self) -> f64 {
+        0.0
+    }
+    fn get_height (&self) -> f64 {
+        self.last_height + 2.0
+    }
+
+    fn update_data(&mut self, cr: &Context) -> bool {
+    
+        let now = Local::now();
+        let text = now.format("%H:%M").to_string();
+        self.last_text = text;
+        /* self.animator.animate_property(
+            &self.frame_model,
+            AnimationKey::SecurityNotchRatio,
+            if self.last_text.is_empty() { 0.0 } else { 1.0 },
+            200
+        ); */
+        cr.set_font_size(10.0);
+        cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
+        if let Ok(ext) = cr.text_extents(&self.last_text) {
+            self.last_height = ext.width() + 6.0;
+        } else {
+            self.last_height = 0.0;
+        }
+        true
+    }
+
+    // (x,y) depends on declared anchor
+    fn draw (&mut self, cr: Context, x: f64, y: f64) {
+
+        cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
+        cr.set_font_size(18.0);
+
+        cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
+        // let (_w_hours, h_hours) = cr_text_aligned(cr.clone(), hours, xc, y, 0.5, 0.0);
+        let (w_time, h_time) = cr_text_rotated(&cr, &self.last_text.to_string(), 0.0, y, 0.0, 0.0, -90.0).ok().unwrap_or((0.0, 0.0));
+        // top += h_time + 2.0;
     }
 }

@@ -386,6 +386,7 @@ pub enum Anchor {
     LeftCenter,
     RightCenter,
     RightFull,
+    LeftFloating,
     None
 }
 
