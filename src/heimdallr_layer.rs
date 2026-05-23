@@ -373,7 +373,7 @@ impl HeimdallrLayer {
             cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
             spaces.push(ReservedSpace { anchor: Anchor::TopCenter, width: self.last_security_width + 2.0, height: 14.0 * self.frame_model.security_height });
         }
-        draw_smart_border(&cr, thickness / 2.0, top, w_hole, h - thickness - top, w / 2.0, h / 2.0, radius, radius2, &&spaces);
+        draw_smart_border(&cr, thickness / 2.0, top, w_hole, h - thickness/2.0 - top, w / 2.0, h / 2.0, radius, radius2, &&spaces);
 
         cr.set_fill_rule(cairo::FillRule::EvenOdd);
         cr.rectangle(-1.0, -1.0, w + 2.0, h + 2.0);
