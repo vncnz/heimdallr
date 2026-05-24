@@ -299,6 +299,41 @@ pub fn cr_text_rotated(cr: &Context, text: &str, x: f64, y: f64, dx: f64, dy: f6
     Ok((extents.width(), extents.height()))
 }
 
+pub fn cr_text_rotated_mixed(cr: &Context, text: &str, x: f64, y: f64, dx: f64, dy: f64, angle: f64, font_size: f64) -> Result<(f64, f64), Error> {
+
+    cr.save()?;
+
+    cr.translate(x, y);
+
+    cr.rotate(angle.to_radians());
+
+    let layout = pangocairo::functions::create_layout(cr);
+
+    let mut font_desc = pango::FontDescription::new();
+    font_desc.set_family(""); // O "Iosevka", o lasci il default
+    font_desc.set_absolute_size(font_size * pango::SCALE as f64);
+    layout.set_font_description(Some(&font_desc));
+    layout.set_text(text);
+    let (ink_rect, logical_rect) = layout.extents();
+    // dbg_println!("ink_rect: {:?}   logical_rect: {:?}", ink_rect, logical_rect);
+    let w = logical_rect.width() as f64 / pango::SCALE as f64;
+    let h = logical_rect.height() as f64 / pango::SCALE as f64;
+    // let extents = cr.text_extents(text)?;
+    let local_x = -w * dx;
+    let local_y = -(h * dy);
+
+    cr.move_to(local_x, local_y);
+    pangocairo::functions::show_layout(cr, &layout);
+
+    /*cr.move_to(local_x, local_y);
+    cr.show_text(text)?;*/
+
+    cr.restore()?;
+
+    // Restituiamo le dimensioni del testo "dritto", coerentemente con il primo metodo
+    Ok((w, h))
+}
+
 /* Replace by more general method draw_smart_border
 pub fn rounded_big_hole (cr: &Context, x: f64, y: f64, w: f64, h: f64, r: f64, r2: f64, reserved_w: f64, reserved_h: f64, wob_h: f64) {
     cr.new_sub_path();
