@@ -26,7 +26,8 @@ pub enum IconChange {
 pub struct AlarmIcon {
     symbol: String,
     color: (f64, f64, f64, f64), // RGBA
-    warn: f64
+    warn: f64,
+    text: String
 }
 
 static mut AVG_DUR: u128 = 0;
@@ -490,10 +491,12 @@ impl HeimdallrLayer {
         cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
         cr.set_font_size(16.0);
         for icon in self.icons.values() {
-            cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
-            cr.move_to(4.0, y_offset);
-            cr.show_text(&icon.symbol).unwrap();
-            y_offset -= 24.0;
+            // if icon.warn >= 0.3 {
+                cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
+                cr.move_to(4.0, y_offset);
+                cr.show_text(&icon.symbol).unwrap();
+                y_offset -= 24.0;
+            // }
         }
 
     }
@@ -502,7 +505,6 @@ impl HeimdallrLayer {
         if self.notification_idx >= self.notifications.len() {
             self.notification_idx = self.notifications.len() - 1;
         }
-        // icon example: /home/vncnz/.cache/ignis/notifications/images/64
         cr.set_operator(cairo::Operator::Over);
 
         // let top = thickness / 2.0 + if self.notifications.len() > 0 { 24.0 } else { 0.0 };
@@ -587,6 +589,7 @@ impl HeimdallrLayer {
 }
 
 impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like to keep it separated
+
     pub fn add_icon(&mut self, id: &str, symbol: &str, color: (f64, f64, f64, f64), warn: f64) -> IconChange {
 
         let mut already_present = false;
@@ -602,7 +605,8 @@ impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like
             AlarmIcon {
                 symbol: symbol.to_string(),
                 color,
-                warn
+                warn,
+                text: "".to_string()
             },
         );
         if already_present {
