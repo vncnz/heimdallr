@@ -538,6 +538,8 @@ pub fn draw_smart_border(
         add_notch(cr, Side::Bottom, xc, y + h, s.width, s.height, r_notch);
     }
 
+    add_notch(cr, Side::Bottom, xc - 300.0, y + h, 60.0, 20.0, r_notch); // ! EXPERIMENT: notch for warning about a resource
+
    if let Some(s) = get_s(Anchor::BottomLeft) {
         let r2_safe = if s.height > r_notch { r_notch } else { s.height/2.0 };
         // dbg_println!("reserved_h: {}", reserved_h);

@@ -14,7 +14,7 @@ use cairo::FontSlant;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{clock::ClockTrait, config::FrameColor, data::BatteryDevice, dbg_println, notifications::Notification, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, cr_text_rotated, draw_smart_border, log_to_file, rounded_rect_gradient}};
+use crate::{clock::ClockTrait, config::FrameColor, data::BatteryDevice, dbg_println, notifications::Notification, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, cr_text_rotated, cr_text_rotated_mixed, draw_smart_border, get_color_gradient, log_to_file, rounded_rect_gradient}};
 
 #[derive(PartialEq)]
 pub enum IconChange {
@@ -31,6 +31,8 @@ pub struct AlarmIcon {
 
 static mut AVG_DUR: u128 = 0;
 static mut AVG_CNT: i64 = -5;
+
+// static EXPERIMENTAL_RESOURCE_WARNING: bool = true;
 
 pub struct HeimdallrLayer {
     pub(crate) registry_state: RegistryState,
@@ -373,7 +375,7 @@ impl HeimdallrLayer {
             cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
             spaces.push(ReservedSpace { anchor: Anchor::TopCenter, width: self.last_security_width + 2.0, height: 14.0 * self.frame_model.security_height });
         }
-        draw_smart_border(&cr, thickness / 2.0, top, w_hole, h - thickness/2.0 - top, w / 2.0, h / 2.0, radius, radius2, &&spaces);
+        draw_smart_border(&cr, thickness / 2.0, top, w_hole, h - thickness/2.0 - top - 3.0, w / 2.0, h / 2.0, radius, radius2, &&spaces); // ! EXPERIMENT: 3.0px extra space at the bottom
 
         cr.set_fill_rule(cairo::FillRule::EvenOdd);
         cr.rectangle(-1.0, -1.0, w + 2.0, h + 2.0);
@@ -394,6 +396,24 @@ impl HeimdallrLayer {
             cr.set_source_rgba(r, g, b, a);
             // rounded_big_hole(&cr, thickness / 2.0 + 1.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h, wob_h);
             cr.stroke().unwrap();
+        }
+
+        // ! EXPERIMENT for new resource monitoring
+        for i in 0..5 {
+
+            if i == 3 {
+                let c = get_color_gradient(0.67);
+                cr.set_source_rgba(c.0, c.1, c.2, c.3);
+                let _ = cr_text_rotated_mixed(&cr, "󰃤 67%", self.width as f64 / 2.0 - 300.0, self.height as f64 - 2.0, 0.5, 1.0, 0.0, 14.0);
+            } else {
+                let c = get_color_gradient(if i == 1 { 0.56 } else { 0.0 });
+                cr.set_source_rgba(c.0, c.1, c.2, if i == 1 { 1.0 } else { 0.7 });
+            }
+
+            cr.new_sub_path();
+            let x = self.width as f64 / 2.0 - 480.0 + (i as f64) * 60.0;
+            cr.rectangle(x - 25.0, self.height as f64 - 2.0, 50.0, 2.0);
+            cr.fill().unwrap();
         }
 
         // wob-like
