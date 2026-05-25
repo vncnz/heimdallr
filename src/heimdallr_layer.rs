@@ -400,6 +400,12 @@ impl HeimdallrLayer {
         }
 
         // ! EXPERIMENT for new resource monitoring
+        /* let keys = ["loadavg", "ram", "temperature", "network", "volume", "disk"];
+        let v: Vec<Span> = keys
+            .iter()
+            .filter_map(|k| spans.get(*k).cloned())
+            .collect();
+        */
         for i in 0..5 {
 
             if i == 3 {
