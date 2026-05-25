@@ -35,6 +35,8 @@ pub struct AlarmIcon {
 static mut AVG_DUR: u128 = 0;
 static mut AVG_CNT: i64 = -5;
 
+static RESOURCES_KEYS: [&str; 6] = ["loadavg", "ram", "temperature", "network", "volume", "disk"];
+
 // static EXPERIMENTAL_RESOURCE_WARNING: bool = true;
 
 pub struct HeimdallrLayer {
@@ -341,7 +343,7 @@ impl HeimdallrLayer {
         let mut y_offset = self.height as f64 - 8.0; // parte dal basso
         let res_w = 24.0;
         // let res_h = if self.ratatoskr_connected { (self.icons.len() as f64) * 30.0 } else { 30.0 };
-        let res_h = self.frame_model.icons_ratio * 24.0;
+        let res_h = 0.0; // self.frame_model.icons_ratio * 24.0;
         let wob_h = 24.0 * self.frame_model.wob_height;
 
         // Draw rounded rectangle frame
@@ -378,7 +380,15 @@ impl HeimdallrLayer {
             cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
             spaces.push(ReservedSpace { anchor: Anchor::TopCenter, width: self.last_security_width + 2.0, height: 14.0 * self.frame_model.security_height });
         }
-        draw_smart_border(&cr, thickness / 2.0, top, w_hole, h - thickness/2.0 - top - 3.0, w / 2.0, h / 2.0, radius, radius2, &&spaces); // ! EXPERIMENT: 3.0px extra space at the bottom
+
+        let resources: Vec<&AlarmIcon> = RESOURCES_KEYS
+            .iter()
+            .filter_map(|k| self.icons.get(*k))
+            .collect();
+
+        let resources_position: Vec<(f64, bool)> = resources.iter().enumerate().map(|(idx, el)| (70.0 + (idx as f64) * 60.0, el.warn >= 0.3)).collect();
+        
+        draw_smart_border(&cr, thickness / 2.0, top, w_hole, h - thickness/2.0 - top - 3.0, w / 2.0, h / 2.0, radius, radius2, &&spaces, &resources_position); // ! EXPERIMENT: 3.0px extra space at the bottom
 
         cr.set_fill_rule(cairo::FillRule::EvenOdd);
         cr.rectangle(-1.0, -1.0, w + 2.0, h + 2.0);
@@ -402,14 +412,8 @@ impl HeimdallrLayer {
         }
 
         // ! EXPERIMENT for new resource monitoring
-        let keys = ["loadavg", "ram", "temperature", "network", "volume", "disk"];
-        let v: Vec<&AlarmIcon> = keys
-            .iter()
-            .filter_map(|k| self.icons.get(*k))
-            .collect();
-
-        for (i, el) in v.iter().enumerate() {
-            eprintln!("{} {:?}", i, el);
+        for (i, el) in resources.iter().enumerate() {
+            // eprintln!("{} {:?}", i, el);
 
             /* if i == 3 {
                 let c = get_color_gradient(0.67);
@@ -420,11 +424,13 @@ impl HeimdallrLayer {
                 cr.set_source_rgba(c.0, c.1, c.2, if el.warn > 0.3 { 1.0 } else { 0.7 });
             } */
 
-            let xc = 100.0 + (i as f64) * 60.0;
+            let xc = resources_position[i].0;
 
             let c = get_color_gradient(el.warn);
             cr.set_source_rgba(c.0, c.1, c.2, 1.0);
-            let _ = cr_text_rotated_mixed(&cr, &format!("{} {}", el.symbol, el.text), xc, self.height as f64 - 2.0, 0.5, 1.0, 0.0, 14.0);
+            if resources_position[i].1 {
+                let _ = cr_text_rotated_mixed(&cr, &format!("{} {}", el.symbol, el.text), xc, self.height as f64 - 2.0, 0.5, 1.0, 0.0, 14.0);
+            }
 
             cr.new_sub_path();
             cr.rectangle(xc - 25.0, self.height as f64 - 2.0, 50.0, 2.0);
@@ -453,56 +459,8 @@ impl HeimdallrLayer {
             }
         }
 
-
-        // Draw battery level if integrated battery is present
-
-        /* if let Some(bat) = &self.battery_integrated {
-            let x = self.width as f64 - 2.0;
-            let y = self.height as f64 - 0.0;
-            cr.set_source_rgba(1.0, 1.0, 1.0 ,1.0);
-            cr.set_font_size(9.0);
-
-            cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
-            let (wt, ht) = cr_text_rotated(&cr, &*format!("{:.0}%", bat.percentage), x, y - 2.0, 1.0, 0.0, 90.0).unwrap();
-
-            cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
-            let _ = cr_text_rotated(&cr, "󰌢", x, y - wt - 2.0, 1.0,0.0, 90.0);
-        } */
-
-        /* let mut x = self.width as f64 - self.clock.get_reserved_width() - 2.0 - 42.0;
-        let mut y = 2.0; // self.height as f64 - 2.0
-        if let Some(bat) = &self.battery_integrated {
-            // spaces.push(ReservedSpace { anchor: Anchor::BottomRight, width: 60.0, height: 20.0 });
-            if bat.state == crate::battery::BatteryState::Charging {
-                cr.set_source_rgba(0.1, 1.0, 0.2, 1.0);
-            } else if bat.state == crate::battery::BatteryState::Discharging {
-                cr.set_source_rgba(1.0, 0.1, 0.2, 1.0);
-            } else {
-                cr.set_source_rgba(1.0, 1.0, 1.0 ,1.0);
-            }
-            cr.set_font_size(10.0);
-
-            cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
-            cr_text_aligned(cr.clone(), "󰌢".to_string(), x, y, 0.0, 0.0);
-
-            cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
-            cr_text_aligned(cr.clone(), format!("{:.0}%", bat.percentage), x + 14.0, y, 0.0, 0.0);
-        }
-
-        y += 14.0;
-        cr.set_source_rgba(1.0, 1.0, 1.0 ,1.0);
-        cr.set_font_size(10.0);
-
-        cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
-        cr_text_aligned(cr.clone(), "󰦋".to_string(), x, y, 0.0, 0.0);
-
-        cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
-        cr_text_aligned(cr.clone(), format!("{:.0}%", 90.0), x + 14.0, y, 0.0, 0.0);
-        */
-
         // === Draw alarm icons ===
-        
-        cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
+        /* cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
         cr.set_font_size(16.0);
         for icon in self.icons.values() {
             // if icon.warn >= 0.3 {
@@ -511,7 +469,7 @@ impl HeimdallrLayer {
                 cr.show_text(&icon.symbol).unwrap();
                 y_offset -= 24.0;
             // }
-        }
+        } */
 
     }
 

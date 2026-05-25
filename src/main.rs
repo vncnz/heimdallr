@@ -493,13 +493,37 @@ fn main() {
                 if data.resource == "loadavg" {
                     icon = "󰬢";
                     if let Some(dt) = &data.data {
-                        if let Some(v) = dt.get("m1").unwrap().as_f64() { text = format!("{v}"); }
+                        if let Some(v) = dt.get("m1").unwrap().as_f64() { text = format!("{v:.2}"); }
                     }
                 }
-                else if data.resource == "ram" { icon = "󰘚"; }
-                else if data.resource == "temperature" { icon = &data.icon; }
-                else if data.resource == "network" { icon = if data.icon != "" { &data.icon } else { "󰞃" }; }
-                else if data.resource == "disk" { icon = "󰋊"; }
+                else if data.resource == "ram" {
+                    icon = "󰘚";
+                    if let Some(dt) = &data.data {
+                        if let Some(v) = dt.get("mem_percent").unwrap().as_f64() { text = format!("{v:.0}%"); }
+                    }
+                }
+                else if data.resource == "temperature" {
+                    icon = &data.icon;
+                    if let Some(dt) = &data.data {
+                        if let Some(v) = dt.get("value").unwrap().as_f64() { text = format!("{v:.0}°C"); }
+                    }
+                }
+                else if data.resource == "network" {
+                    icon = if data.icon != "" { &data.icon } else { "󰞃" };
+                    if let Some(dt) = &data.data {
+                        let conn_type = dt.get("conn_type").unwrap().as_str().unwrap_or_default();
+                        if conn_type == "wifi" {
+                            let signal = dt.get("signal").unwrap().as_f64().unwrap_or_default();
+                            text = format!("{:.0}%", signal);
+                        }
+                    }
+                }
+                else if data.resource == "disk" {
+                    icon = "󰋊";
+                    if let Some(dt) = &data.data {
+                        if let Some(v) = dt.get("used_percent").unwrap().as_f64() { text = format!("{v:.0}%"); }
+                    }
+                }
                 else if data.resource == "volume" {
                     if let Some(vol) = &data.data {
                         if vol.get("headphones").unwrap().as_i64().unwrap() == 1 { icon = ""; }

@@ -493,7 +493,8 @@ pub fn draw_smart_border(
     x: f64, y: f64, w: f64, h: f64, xc: f64, yc: f64,
     r_base: f64, 
     r_notch: f64, 
-    spaces: &[ReservedSpace]
+    spaces: &[ReservedSpace],
+    resources: &Vec<(f64, bool)>
 ) {
     let get_s = |a: Anchor| spaces.iter().find(|s| s.anchor == a);
     cr.new_sub_path();
@@ -538,7 +539,18 @@ pub fn draw_smart_border(
         add_notch(cr, Side::Bottom, xc, y + h, s.width, s.height, r_notch);
     }
 
-    add_notch(cr, Side::Bottom, 100.0, y + h, 60.0, 18.0, r_notch); // ! EXPERIMENT: notch for warning about a resource
+    let mut sorted_refs: Vec<&(f64, bool)> = resources.iter().collect();
+
+    // 2. Ordiniamo i riferimenti in base al primo elemento (f64) in ordine decrescente.
+    // Usiamo b.0.partial_cmp(&a.0) invece di a.0.partial_cmp(&b.0) per invertire l'ordine.
+    sorted_refs.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
+
+    // 3. Clicliamo sul vettore ordinato
+    for resource in sorted_refs {
+        if resource.1 {
+            add_notch(cr, Side::Bottom, resource.0, y + h, 56.0, 18.0, r_notch); // ! EXPERIMENT: notch for warning about a resource
+        }
+    }
 
    if let Some(s) = get_s(Anchor::BottomLeft) {
         let r2_safe = if s.height > r_notch { r_notch } else { s.height/2.0 };
