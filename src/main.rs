@@ -184,7 +184,7 @@ fn main() {
     };
 
     if !config.hide_missing_ratatoskr {
-        app.add_icon("ratatoskr", "󰠗", get_color_gradient(1.0), 1.0);
+        app.add_icon("ratatoskr", "󰠗", get_color_gradient(1.0), 1.0, "".to_string());
         app.animator.animate_property(
             &app.frame_model,
             AnimationKey::IconsHeight,
@@ -426,7 +426,7 @@ fn main() {
                                     _ => "󰂱"
                                 };
                                 if config.show_always_bluetooth || dev.warn >= 0.3 {
-                                    let _added = app.add_icon(&iconkey, icon, get_color_gradient(dev.warn), dev.warn);
+                                    let _added = app.add_icon(&iconkey, icon, get_color_gradient(dev.warn), dev.warn, "".to_string());
                                 }
                             }
                             app.animator.animate_property(
@@ -458,7 +458,7 @@ fn main() {
                         for iconkey in keys {
                             app.remove_icon(&iconkey);
                         } */
-                        if !config.hide_missing_ratatoskr { app.add_icon("ratatoskr", "󰠗", get_color_gradient(1.0), 1.0); }
+                        if !config.hide_missing_ratatoskr { app.add_icon("ratatoskr", "󰠗", get_color_gradient(1.0), 1.0, "".to_string()); }
                         app.animator.animate_property(
                             &app.frame_model,
                             AnimationKey::IconsHeight,
@@ -476,7 +476,7 @@ fn main() {
                     }
                     app.request_redraw("ratatoskr");
                 }
-            } else if data.warning < 0.3 {
+            } /* else if data.warning < 0.3 {
                 if app.remove_icon(&data.resource) {
                     app.animator.animate_property(
                         &app.frame_model,
@@ -486,10 +486,16 @@ fn main() {
                     );
                     app.request_redraw(&"data.resource");
                 }
-            }
+            } */
             else {
                 let mut icon = "";
-                if data.resource == "loadavg" { icon = "󰬢"; }
+                let mut text = "".to_string();
+                if data.resource == "loadavg" {
+                    icon = "󰬢";
+                    if let Some(dt) = &data.data {
+                        if let Some(v) = dt.get("m1").unwrap().as_f64() { text = format!("{v}"); }
+                    }
+                }
                 else if data.resource == "ram" { icon = "󰘚"; }
                 else if data.resource == "temperature" { icon = &data.icon; }
                 else if data.resource == "network" { icon = if data.icon != "" { &data.icon } else { "󰞃" }; }
@@ -501,6 +507,7 @@ fn main() {
                             let slice: &[&str] = &["", "", ""][..];
                             icon = select_icon(0.0, 100.0, vol["value"].as_f64().unwrap_or_default(), slice).unwrap();
                         }
+                        if let Some(v) = vol.get("value").unwrap().as_f64() { text = format!("{v}%"); }
                     } else {
                         icon = "󱄡";
                     }
@@ -512,7 +519,7 @@ fn main() {
 
                 if icon != "" {
                     // let removed = app.remove_icon(&data.resource);
-                    let change = app.add_icon(&data.resource, icon, get_color_gradient(data.warning), data.warning);
+                    let change = app.add_icon(&data.resource, icon, get_color_gradient(data.warning), data.warning, text);
                     
                     if change != IconChange::None {
                         if change == IconChange::Added {
@@ -537,7 +544,7 @@ fn main() {
         if let Ok(new_notif) = rx_notif.try_recv() {
             println!("{:?}", new_notif);
             if new_notif.reboot {
-                app.add_icon("reboot", "󱄋", get_color_gradient(1.0), 1.0);
+                app.add_icon("reboot", "󱄋", get_color_gradient(1.0), 1.0, "".to_string());
             }
             app.update_notification_list(Some(new_notif));
             app.request_redraw("notifications updated");

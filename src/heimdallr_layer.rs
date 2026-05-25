@@ -23,6 +23,8 @@ pub enum IconChange {
     // Removed,
     None
 }
+
+#[derive(Debug)]
 pub struct AlarmIcon {
     symbol: String,
     color: (f64, f64, f64, f64), // RGBA
@@ -400,26 +402,32 @@ impl HeimdallrLayer {
         }
 
         // ! EXPERIMENT for new resource monitoring
-        /* let keys = ["loadavg", "ram", "temperature", "network", "volume", "disk"];
-        let v: Vec<Span> = keys
+        let keys = ["loadavg", "ram", "temperature", "network", "volume", "disk"];
+        let v: Vec<&AlarmIcon> = keys
             .iter()
-            .filter_map(|k| spans.get(*k).cloned())
+            .filter_map(|k| self.icons.get(*k))
             .collect();
-        */
-        for i in 0..5 {
 
-            if i == 3 {
+        for (i, el) in v.iter().enumerate() {
+            eprintln!("{} {:?}", i, el);
+
+            /* if i == 3 {
                 let c = get_color_gradient(0.67);
                 cr.set_source_rgba(c.0, c.1, c.2, c.3);
                 let _ = cr_text_rotated_mixed(&cr, "󰃤 67%", self.width as f64 / 2.0 - 300.0, self.height as f64 - 2.0, 0.5, 1.0, 0.0, 14.0);
             } else {
-                let c = get_color_gradient(if i == 1 { 0.56 } else { 0.0 });
-                cr.set_source_rgba(c.0, c.1, c.2, if i == 1 { 1.0 } else { 0.7 });
-            }
+                let c = get_color_gradient(el.warn);
+                cr.set_source_rgba(c.0, c.1, c.2, if el.warn > 0.3 { 1.0 } else { 0.7 });
+            } */
+
+            let xc = 100.0 + (i as f64) * 60.0;
+
+            let c = get_color_gradient(el.warn);
+            cr.set_source_rgba(c.0, c.1, c.2, 1.0);
+            let _ = cr_text_rotated_mixed(&cr, &format!("{} {}", el.symbol, el.text), xc, self.height as f64 - 2.0, 0.5, 1.0, 0.0, 14.0);
 
             cr.new_sub_path();
-            let x = self.width as f64 / 2.0 - 480.0 + (i as f64) * 60.0;
-            cr.rectangle(x - 25.0, self.height as f64 - 2.0, 50.0, 2.0);
+            cr.rectangle(xc - 25.0, self.height as f64 - 2.0, 50.0, 2.0);
             cr.fill().unwrap();
         }
 
@@ -596,7 +604,7 @@ impl HeimdallrLayer {
 
 impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like to keep it separated
 
-    pub fn add_icon(&mut self, id: &str, symbol: &str, color: (f64, f64, f64, f64), warn: f64) -> IconChange {
+    pub fn add_icon(&mut self, id: &str, symbol: &str, color: (f64, f64, f64, f64), warn: f64, text: String) -> IconChange {
 
         let mut already_present = false;
         if let Some(found) = self.icons.get(id) {
@@ -612,7 +620,7 @@ impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like
                 symbol: symbol.to_string(),
                 color,
                 warn,
-                text: "".to_string()
+                text
             },
         );
         if already_present {
