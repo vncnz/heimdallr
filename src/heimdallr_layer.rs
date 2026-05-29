@@ -405,7 +405,7 @@ impl HeimdallrLayer {
         if wob_h > 2.0 {
             match self.config.frame_color {
                 FrameColor::None => {
-                    steps.push((self.wob_value, (0.0, 0.0, 0.0, 0.5)));
+                    steps.push((self.wob_value, (1.0, 1.0, 1.0, 0.3)));
                 },
                 _ => {
                     steps.push((self.wob_value, (0.0, 0.0, 0.0, 0.0)));
