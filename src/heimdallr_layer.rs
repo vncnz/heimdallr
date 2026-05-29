@@ -379,7 +379,7 @@ impl HeimdallrLayer {
         cr.rectangle(-1.0, -1.0, w + 2.0, h + 2.0);
 
         cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
-        cr.fill_preserve().unwrap();
+        
 
         if let Some((r, g, b, a)) = match self.config.frame_color {
             FrameColor::Rgba(r, g, b, a) => Some((r, g, b, a)),
@@ -390,10 +390,13 @@ impl HeimdallrLayer {
                 .map(|icon| icon.color),
             FrameColor::None /* | FrameColor::Random */ => None,
         } {
+            cr.fill_preserve().unwrap();
             cr.set_line_width(1.0);
             cr.set_source_rgba(r, g, b, a);
             // rounded_big_hole(&cr, thickness / 2.0 + 1.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h, wob_h);
             cr.stroke().unwrap();
+        } else {
+            cr.fill().unwrap();
         }
 
         // wob-like
