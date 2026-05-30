@@ -68,7 +68,8 @@ impl ClockTrait for Clock2 {
 
         let clock_height = wheight as f64 * 0.94;
         let top_shift = (wheight as f64 - clock_height) / 2.0;
-        let step_height = clock_height / 24.0;
+        let grouping_gap = 8.0;
+        let step_height = (clock_height - 3.0 * grouping_gap) / 24.0;
         let padding = 2.0;
         let xc = (right as f64) - 5.0;
         let w = 4.0;
@@ -146,8 +147,9 @@ impl ClockTrait for Clock2 {
                 }
             }
 
+            let grouping_padding = (drawing_hour as f64 / 6.0).floor() * grouping_gap;
             let top = clock_height + top_shift - drawing_hour as f64 * step_height - step_height;
-            rounded_rect_gradient(&cr, left, top, w, step_height - (padding*2.0), 2.0, steps, crate::utils::GradientDirection::Vertical, false, None);
+            rounded_rect_gradient(&cr, left, top - grouping_padding, w, step_height - (padding*2.0), 2.0, steps, crate::utils::GradientDirection::Vertical, false, None);
         }
     }
 }
