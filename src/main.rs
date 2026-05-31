@@ -336,6 +336,14 @@ fn main() {
                     println!("{}", cmd);
                     let parts: Vec<&str> = cmd.split(" ").collect();
                     let refresh = match parts.as_slice() {
+                        ["timer", value_str] => {
+                            eprintln!("Timer set to {} seconds", value_str); true
+                            /* match value_str.parse::<f64>() {
+                                Ok(value) => { eprintln!("Timer set to {} seconds", value); true },
+                                Err(_) => { eprintln!("Invalid number: {}", value_str); false }
+                            } */
+                        }
+                        
                         [kind, value_str] => {
                             match value_str.parse::<f64>() {
                                 Ok(value) => app.show_value(value, Some(*kind)),
