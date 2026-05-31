@@ -280,13 +280,17 @@ impl HeimdallrLayer {
     fn draw_batteries (&mut self, cr: Context) {
         if self.last_batteries_text.len() > 0 {
             let color = (1.0, 1.0, 1.0, self.frame_model.batteries_height);
-            let x = 2.0;
-            let y = self.height as f64 / 2.0;
+            
 
             cr.set_source_rgba(color.0, color.1, color.2, color.3);
             cr.set_font_size(10.0);
             cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
-            let (wt, ht) = cr_text_rotated(&cr, &self.last_batteries_text, x, y, 0.5, 0.0, -90.0).unwrap();
+            // let x = 2.0;
+            // let y = self.height as f64 / 2.0;
+            // let (wt, ht) = cr_text_rotated(&cr, &self.last_batteries_text, x, y, 0.5, 0.0, -90.0).unwrap();
+            let x = self.width as f64 - self.clock.get_reserved_width() - 4.0;
+            let y = self.height as f64 - 1.0;
+            cr_text_aligned(cr, self.last_batteries_text.clone(), x, y, 1.0, 1.0);
         }
     }
 
@@ -360,7 +364,7 @@ impl HeimdallrLayer {
         ];
         // if let Some(bat) = &self.battery_integrated {
         if self.last_batteries_text.len() > 0 {
-            spaces.push(ReservedSpace { anchor: Anchor::LeftCenter, width: 14.0, height: self.last_batteries_width });
+            spaces.push(ReservedSpace { anchor: Anchor::BottomRight, width: self.last_batteries_width, height: 14.0 });
         }
         if res_h > 0.0 {
             spaces.push(ReservedSpace { anchor: Anchor::BottomLeft, width: res_w, height: res_h });
