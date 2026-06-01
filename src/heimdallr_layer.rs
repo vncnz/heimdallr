@@ -14,7 +14,7 @@ use cairo::FontSlant;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{clock::ClockTrait, config::FrameColor, data::BatteryDevice, dbg_println, notifications::Notification, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, cr_text_rotated, draw_smart_border, log_to_file, rounded_rect_gradient}};
+use crate::{clock::ClockTrait, config::FrameColor, countdown::Countdown, data::BatteryDevice, dbg_println, notifications::Notification, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, cr_text_rotated, draw_smart_border, log_to_file, rounded_rect_gradient}};
 
 #[derive(PartialEq)]
 pub enum IconChange {
@@ -65,7 +65,8 @@ pub struct HeimdallrLayer {
     pub(crate) batteries: Vec<BatteryDevice>,
     pub(crate) last_batteries_width: f64,
     pub(crate) last_batteries_text: String,
-    pub(crate) batteries_pristine: bool
+    pub(crate) batteries_pristine: bool,
+    pub(crate) timer: Countdown
 }
 
 impl HeimdallrLayer {

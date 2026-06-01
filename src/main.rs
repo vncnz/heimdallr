@@ -17,7 +17,7 @@ use std::thread;
 
 use colored::Colorize;
 
-use crate::{battery::BatteryStats, clock::{ClockTrait, NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, data::{BluetoothStats, UPowerDeviceKind, RatatoskrSocket}, heimdallr_layer::IconChange, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
+use crate::{battery::BatteryStats, clock::{ClockTrait, NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, countdown::Countdown, data::{BluetoothStats, RatatoskrSocket, UPowerDeviceKind}, heimdallr_layer::IconChange, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
 
 mod data;
 mod config;
@@ -30,6 +30,7 @@ mod clock1;
 mod clock2;
 mod battery;
 mod security;
+mod countdown;
 use config::Config;
 // use chrono;
 
@@ -180,7 +181,8 @@ fn main() {
         batteries: vec![],
         last_batteries_width: 0.0,
         last_batteries_text: "".to_string(),
-        batteries_pristine: false
+        batteries_pristine: false,
+        timer: Countdown::new()
     };
 
     if !config.hide_missing_ratatoskr {
@@ -333,11 +335,20 @@ fn main() {
                     }
                 },
                 _ => {
-                    println!("{}", cmd);
+                    println!("cmd to be parsed: {}", cmd);
                     let parts: Vec<&str> = cmd.split(" ").collect();
                     let refresh = match parts.as_slice() {
                         ["timer", value_str] => {
-                            eprintln!("Timer set to {} seconds", value_str); true
+                            match app.timer.fill_from_timespan(value_str) {
+                                Ok(secs) => {
+                                    eprintln!("Timer set to {} seconds", secs);
+                                    true
+                                },
+                                Err(err) => {
+                                    eprintln!("Error setting timer: {err}");
+                                    false
+                                }
+                            }
                             /* match value_str.parse::<f64>() {
                                 Ok(value) => { eprintln!("Timer set to {} seconds", value); true },
                                 Err(_) => { eprintln!("Invalid number: {}", value_str); false }
