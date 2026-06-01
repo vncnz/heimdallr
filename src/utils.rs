@@ -314,7 +314,7 @@ pub fn cr_text_rotated_mixed(cr: &Context, text: &str, x: f64, y: f64, dx: f64, 
     font_desc.set_absolute_size(font_size * pango::SCALE as f64);
     layout.set_font_description(Some(&font_desc));
     layout.set_text(text);
-    let (ink_rect, logical_rect) = layout.extents();
+    let (_ink_rect, logical_rect) = layout.extents();
     // dbg_println!("ink_rect: {:?}   logical_rect: {:?}", ink_rect, logical_rect);
     let w = logical_rect.width() as f64 / pango::SCALE as f64;
     let h = logical_rect.height() as f64 / pango::SCALE as f64;
