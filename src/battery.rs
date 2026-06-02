@@ -5,14 +5,6 @@
 
 use std::sync::mpsc::Sender;
 use colored::Colorize;
-// use futures::stream::StreamExt;
-
-// use zbus::{Connection, Proxy};
-
-// use serde_repr::{Deserialize_repr, Serialize_repr};
-// use zbus::zvariant::OwnedValue;
-
-use crate::dbg_println;
 
 // #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize_repr, Serialize_repr, OwnedValue)]
 #[derive(Clone, Debug, PartialEq)]
@@ -226,12 +218,12 @@ trait UPower {
             percentage,
             eta_minutes: if eta_seconds > 0 { Some((eta_seconds as f64) / 60.0) } else { None }
         };
-        // dbg_println!("{obj:?}");
+        // dbg!("{obj:?}");
         Ok(obj)
     };
 
     if let Ok(stats) = get_stats(&device_proxy).await {
-        dbg_println!("{}", "Battery first info load!".yellow());
+        dbg!("{}", "Battery first info load!".yellow());
         let _ = tx.send(stats);
     }
 
@@ -242,12 +234,12 @@ trait UPower {
         futures::executor::block_on(async {
     
             while let Some(_) = signal_iterator.next().await {
-                dbg_println!("{}", "Battery signal!".yellow());
+                dbg!("{}", "Battery signal!".yellow());
 
                 let res = get_stats(&device_proxy).await;
                 match res {
                     Ok(stats) => {
-                        dbg_println!("{}", "Sending battery signal!".yellow());
+                        dbg!("{}", "Sending battery signal!".yellow());
                         let _ = tx.send(stats);
                     },
                     Err(err) => {
@@ -344,7 +336,7 @@ async fn get_battery_stats(upower: &UPowerProxy<'_>) -> zbus::Result<BatteryStat
     ).await?;
 
     let get_stats = async |p: &Proxy| -> zbus::Result<BatteryStats> {
-        dbg_println!("{}", "get_stats started".blue());
+        dbg!("{}", "get_stats started".blue());
         let state_val: u32 = p.get_property("State").await?;
         let state = BatteryState::from(state_val);
         let percentage: f64 = p.get_property("Percentage").await?;
@@ -359,12 +351,12 @@ async fn get_battery_stats(upower: &UPowerProxy<'_>) -> zbus::Result<BatteryStat
             percentage,
             eta_minutes: if eta_seconds > 0 { Some((eta_seconds as f64) / 60.0) } else { None }
         };
-        dbg_println!("{} {}", "get_stats ended".blue(), eta_seconds);
+        dbg!("{} {}", "get_stats ended".blue(), eta_seconds);
         Ok(obj)
     };
 
     if let Ok(stats) = get_stats(&device_proxy).await {
-        dbg_println!("{}", "Battery first info load!".yellow());
+        dbg!("{}", "Battery first info load!".yellow());
         let _ = tx.send(stats);
     }
 
@@ -377,12 +369,12 @@ async fn get_battery_stats(upower: &UPowerProxy<'_>) -> zbus::Result<BatteryStat
     std::thread::spawn(move || {
         futures::executor::block_on(async {
             while let Some(_) = signal_iterator.next().await {
-                dbg_println!("{}", "Battery signal!".yellow());
+                dbg!("{}", "Battery signal!".yellow());
 
                 let res = get_stats(&device_proxy_signal).await;
                 match res {
                     Ok(stats) => {
-                        dbg_println!("{}", "Sending battery signal!".yellow());
+                        dbg!("{}", "Sending battery signal!".yellow());
                         let _ = tx_signal.send(stats);
                     },
                     Err(err) => {
@@ -420,7 +412,7 @@ async fn get_battery_stats(upower: &UPowerProxy<'_>) -> zbus::Result<BatteryStat
                         });
                         
                         if eta_changed {
-                            dbg_println!("{}", "Sending battery update (polling)!".yellow());
+                            dbg!("{}", "Sending battery update (polling)!".yellow());
                             let _ = tx_poll.send(stats.clone());
                             last_stats = Some(stats);
                         }
@@ -566,7 +558,7 @@ pub fn start_battery_listener(tx: Sender<BatteryStats>) {
         loop {
             let new_stats = bat.get_stats();
             if last_stats.as_ref() != Some(&new_stats) {
-                dbg_println!("{} {:?}", "Sending battery signal!".blue(), new_stats);
+                dbg!("{} {:?}", "Sending battery signal!".blue(), &new_stats);
                 last_stats = Some(new_stats.clone());
                 let _ = tx.send(new_stats);
             }
