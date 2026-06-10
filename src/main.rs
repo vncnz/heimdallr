@@ -17,7 +17,7 @@ use std::thread;
 
 use colored::Colorize;
 
-use crate::{battery::BatteryStats, clock::{ClockTrait, NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, countdown::Countdown, data::{BluetoothStats, RatatoskrSocket, UPowerDeviceKind}, heimdallr_layer::IconChange, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
+use crate::{battery::BatteryStats, clock::{ClockTrait, ClockWrapper, NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, countdown::Countdown, data::{BluetoothStats, RatatoskrSocket, UPowerDeviceKind}, heimdallr_layer::IconChange, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
 
 mod data;
 mod config;
@@ -143,9 +143,9 @@ fn main() {
     // let rx = data::start_socket_watcher("/tmp/ratatoskr.sock");
 
     let clock = match config.show_clock {
-        config::ClockCfg::Clock1 => Box::new(Clock1::new()) as Box<dyn ClockTrait>,
-        config::ClockCfg::Clock2 => Box::new(Clock2::new()) as Box<dyn ClockTrait>,
-        _ => Box::new(NoClock::new()) as Box<dyn ClockTrait>
+        config::ClockCfg::Clock1 => ClockWrapper::Clock1(Clock1::new()),
+        config::ClockCfg::Clock2 => ClockWrapper::Clock2(Clock2::new()),
+        _ => ClockWrapper::NoClock(NoClock::new())
     };
 
     let mut app = HeimdallrLayer {
@@ -186,7 +186,7 @@ fn main() {
     };
 
     if !config.hide_missing_ratatoskr {
-        app.add_icon("ratatoskr", "󰠗", get_color_gradient(1.0), 1.0);
+        app.add_icon("ratatoskr", "󰠗", get_color_gradient(1.0), 1.0, None);
         app.animator.animate_property(
             &app.frame_model,
             AnimationKey::IconsHeight,
@@ -337,16 +337,21 @@ fn main() {
                 _ => {
                     println!("cmd to be parsed: {}", cmd);
                     let parts: Vec<&str> = cmd.split(" ").collect();
-                    let refresh = match parts.as_slice() {
+                    let mut wob_effect = false;
+                    match parts.as_slice() {
                         ["timer", value_str] => {
                             match app.timer.fill_from_timespan(value_str) {
                                 Ok(secs) => {
+                                    if secs > 0 {
+                                        // app.update_timer_icon();
+                                    } else {
+                                        app.remove_icon("timer");
+                                    }
+                                    app.request_redraw("timer set");
                                     eprintln!("Timer set to {} seconds", secs);
-                                    true
                                 },
                                 Err(err) => {
                                     eprintln!("Error setting timer: {err}");
-                                    false
                                 }
                             }
                             /* match value_str.parse::<f64>() {
@@ -357,24 +362,23 @@ fn main() {
                         
                         [kind, value_str] => {
                             match value_str.parse::<f64>() {
-                                Ok(value) => app.show_value(value, Some(*kind)),
-                                Err(_) => { eprintln!("Invalid number: {}", value_str); false }
+                                Ok(value) => wob_effect = app.show_value(value, Some(*kind)),
+                                Err(_) => { eprintln!("Invalid number: {}", value_str); }
                             }
                         }
 
                         [value_str] => {
                             match value_str.parse::<f64>() {
-                                Ok(value) => app.show_value(value, None),
-                                Err(_) => { eprintln!("Invalid number: {}", value_str); false }
+                                Ok(value) => wob_effect = app.show_value(value, None),
+                                Err(_) => { eprintln!("Invalid number: {}", value_str); }
                             }
                         }
 
                         _ => {
                             eprintln!("Unknown command");
-                            false
                         }
                     };
-                    if refresh {
+                    if wob_effect {
                         app.animator.animate_property(
                             &app.frame_model,
                             AnimationKey::WobHeightRatio,
@@ -445,7 +449,7 @@ fn main() {
                                     _ => "󰂱"
                                 };
                                 if config.show_always_bluetooth || dev.warn >= 0.3 {
-                                    let _added = app.add_icon(&iconkey, icon, get_color_gradient(dev.warn), dev.warn);
+                                    let _added = app.add_icon(&iconkey, icon, get_color_gradient(dev.warn), dev.warn, None);
                                 }
                             }
                             app.animator.animate_property(
@@ -477,7 +481,7 @@ fn main() {
                         for iconkey in keys {
                             app.remove_icon(&iconkey);
                         } */
-                        if !config.hide_missing_ratatoskr { app.add_icon("ratatoskr", "󰠗", get_color_gradient(1.0), 1.0); }
+                        if !config.hide_missing_ratatoskr { app.add_icon("ratatoskr", "󰠗", get_color_gradient(1.0), 1.0, None); }
                         app.animator.animate_property(
                             &app.frame_model,
                             AnimationKey::IconsHeight,
@@ -531,7 +535,7 @@ fn main() {
 
                 if icon != "" {
                     // let removed = app.remove_icon(&data.resource);
-                    let change = app.add_icon(&data.resource, icon, get_color_gradient(data.warning), data.warning);
+                    let change = app.add_icon(&data.resource, icon, get_color_gradient(data.warning), data.warning, None);
                     
                     if change != IconChange::None {
                         if change == IconChange::Added {
@@ -556,7 +560,7 @@ fn main() {
         if let Ok(new_notif) = rx_notif.try_recv() {
             println!("{:?}", new_notif);
             if new_notif.reboot {
-                app.add_icon("reboot", "󱄋", get_color_gradient(1.0), 1.0);
+                app.add_icon("reboot", "󱄋", get_color_gradient(1.0), 1.0, None);
             }
             app.update_notification_list(Some(new_notif));
             app.request_redraw("notifications updated");

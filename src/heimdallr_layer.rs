@@ -14,7 +14,7 @@ use cairo::FontSlant;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{clock::ClockTrait, config::FrameColor, countdown::Countdown, data::BatteryDevice, dbg_println, notifications::Notification, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, cr_text_rotated, draw_smart_border, log_to_file, rounded_rect_gradient}};
+use crate::{clock::ClockTrait, config::FrameColor, countdown::Countdown, data::BatteryDevice, dbg_println, notifications::Notification, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, cr_text_rotated, draw_smart_border, get_color_gradient, log_to_file, rounded_rect_gradient}};
 
 #[derive(PartialEq)]
 pub enum IconChange {
@@ -26,7 +26,8 @@ pub enum IconChange {
 pub struct AlarmIcon {
     symbol: String,
     color: (f64, f64, f64, f64), // RGBA
-    warn: f64
+    warn: f64,
+    info: Option<String>
 }
 
 static mut AVG_DUR: u128 = 0;
@@ -58,7 +59,7 @@ pub struct HeimdallrLayer {
     pub(crate) animator: Animator,
     pub(crate) frame_model: FrameModel,
     pub(crate) is_waiting_for_frame: bool,
-    pub(crate) clock: Box<dyn ClockTrait>,
+    pub(crate) clock: crate::clock::ClockWrapper,
     pub(crate) security: crate::security::MicCameraStatus,
     pub(crate) last_security_width: f64,
     pub(crate) last_security_text: String,
@@ -72,11 +73,11 @@ pub struct HeimdallrLayer {
 impl HeimdallrLayer {
     pub fn check_redraw_timeout(&mut self) {
 
-        if self.last_redraw.elapsed() < self.redraw_interval[1] {
-            return;
+        if self.timer.is_active() && self.last_redraw.elapsed() > Duration::from_secs(1) {
+            self.request_redraw("timer tick");
+        } else if self.last_redraw.elapsed() > self.redraw_interval[1] {
+            self.request_redraw("time");
         }
-
-        self.request_redraw("time");
     }
     
     pub fn request_redraw(&mut self, _reason: &str) {
@@ -176,6 +177,9 @@ impl HeimdallrLayer {
                     )
                     .unwrap()
                 };
+
+                self.update_timer_icon();
+
                 let cr = Context::new(&surface).unwrap();
                 self.check_batteries_data(&cr);
                 self.check_security_data(&cr);
@@ -186,6 +190,7 @@ impl HeimdallrLayer {
 
                 self.draw_batteries(cr.clone());
                 self.draw_security(cr.clone());
+                // self.draw_timer_2(&cr);
 
                 let layer = self.layer.clone().unwrap();
                 let buffer = self.buffers[buffer_idx].as_ref().unwrap();
@@ -325,6 +330,112 @@ impl HeimdallrLayer {
                 // let w = cr.text_extents(&text).unwrap().width();
                 // cr_text_aligned(cr.clone(), app.into(), self.width / 2.0, 0.5, 0.0);
             } */
+        }
+    }
+
+    fn draw_timer (&mut self, cr: &Context) {
+        if !self.timer.is_active() {
+            return;
+        }
+        let r = 5.0;
+        let color = (1.0, 0.58, 0.0, 1.0);
+        let rect_width = 100.0;
+        let rect_height = 12.0;
+        let rect_right = self.width as f64 - self.clock.get_reserved_width() - 16.0;
+        let rect_top = 10.0;
+        // let cam_color = (0.2, 0.78, 0.35, 1.0);
+        /* let x = 1.0;
+        let y = 1.0;
+        let w = 10.0;
+        let h = 10.0;
+        let steps = if draw_mic && draw_cam { vec![(0.0, mic_color), (1.0, cam_color)] } else if draw_mic { vec![(0.0, mic_color)] } else { vec![(0.0, cam_color)] };
+        rounded_rect_gradient(&cr, x, y, w, h, r, steps, crate::utils::GradientDirection::Horizontal, true, None); */
+
+        cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
+        cr.set_font_size(24.0);
+
+        let steps = vec![
+            (0.0, (color.0, color.1, color.2, color.3)),
+            (self.timer.progress(), (color.0, color.1, color.2, 0.5))
+        ];
+        // rounded_rect_gradient(&cr, rect_right - rect_width, rect_top, rect_width, rect_height, r, steps, crate::utils::GradientDirection::Horizontal, false, Some((0.0, 0.0, 0.0, 0.0)));
+
+        let (passed, mut time) = self.timer.format_custom_duration();
+        if passed {
+            time = format!("+{time}");
+        }
+
+        cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
+        cr_text_aligned(cr.clone(), time.clone(), rect_right - 1.0, rect_top + rect_height / 2.0 - 1.0, 1.0, 0.5);
+
+        cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
+        cr_text_aligned(cr.clone(), time.clone(), rect_right + 1.0, rect_top + rect_height / 2.0 + 1.0, 1.0, 0.5);
+
+        let color = if passed { (1.0, 0.0, 0.3, 1.0) } else if self.timer.progress() < 0.9 { (1.0, 1.0, 1.0, 0.75) } else { (color.0, color.1, color.2, 0.75) };
+        cr.set_source_rgba(color.0, color.1, color.2, color.3);
+        cr_text_aligned(cr.clone(), time.clone(), rect_right, rect_top + rect_height / 2.0, 1.0, 0.5);
+
+        eprintln!("Timer {},{} (progress {})", passed, time, self.timer.progress());
+    }
+
+    fn draw_timer_2 (&mut self, cr: &Context) {
+        if !self.timer.is_active() {
+            return;
+        }
+        let r = 5.0;
+        let color = (1.0, 0.58, 0.0, 1.0);
+        let rect_width = 100.0;
+        let rect_height = 12.0;
+        let rect_right = self.width as f64 - self.clock.get_reserved_width() - 16.0;
+        let rect_top = 6.0;
+        // let cam_color = (0.2, 0.78, 0.35, 1.0);
+        /* let x = 1.0;
+        let y = 1.0;
+        let w = 10.0;
+        let h = 10.0;
+        let steps = if draw_mic && draw_cam { vec![(0.0, mic_color), (1.0, cam_color)] } else if draw_mic { vec![(0.0, mic_color)] } else { vec![(0.0, cam_color)] };
+        rounded_rect_gradient(&cr, x, y, w, h, r, steps, crate::utils::GradientDirection::Horizontal, true, None); */
+
+        let (passed, mut time) = self.timer.format_custom_duration();
+        if passed {
+            time = format!("+{time}");
+        }
+
+        let color = if passed { (1.0, 0.0, 0.3, 1.0) } else if self.timer.progress() < 0.9 { (1.0, 1.0, 1.0, 0.75) } else { (color.0, color.1, color.2, 0.75) };
+        // cr.set_source_rgba(color.0, color.1, color.2, color.3);
+
+        cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
+        cr.set_font_size(10.0);
+
+        let steps = vec![
+            (0.0, (color.0, color.1, color.2, color.3)),
+            (self.timer.progress(), (color.0, color.1, color.2, color.3 * 0.5))
+        ];
+        rounded_rect_gradient(&cr, rect_right - rect_width, rect_top, rect_width, rect_height, r, steps, crate::utils::GradientDirection::Horizontal, false, Some((0.0, 0.0, 0.0, 0.0)));
+
+        cr.set_source_rgba(0.0, 0.0, 0.0 ,1.0);
+        // cr.move_to(14.0, 9.0);
+        // cr.show_text(&mic).unwrap();
+        // let (passed, time) = self.timer.format_custom_duration();
+        cr_text_aligned(cr.clone(), time, rect_right - rect_width / 2.0, rect_top + rect_height / 2.0, 0.5, 0.5);
+        /* for app in self.security.mic_active.clone().into_iter() {
+            cr.move_to(14.0, 9.0);
+            cr.show_text(&app).unwrap();
+            // let w = cr.text_extents(&text).unwrap().width();
+            // cr_text_aligned(cr.clone(), app.into(), self.width / 2.0, 0.5, 0.0);
+        } */
+    }
+
+    fn update_timer_icon (&mut self) {
+        // 󱫟 for pause
+        // 󱫌 alert
+        if self.timer.is_active() {
+            let status = self.timer.format_custom_duration();
+            let w = if status.0 { 1.0 } else { self.timer.progress() * 0.5 };
+            let icon = if status.0 { "󱫌" } else { "󱫡" };
+            self.add_icon("timer", icon, get_color_gradient(w), w, Some(status.1));
+        } else {
+            self.remove_icon("timer");
         }
     }
 
@@ -475,12 +586,25 @@ impl HeimdallrLayer {
 
         // === Draw alarm icons ===
         
-        cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
-        cr.set_font_size(16.0);
+        let mut switched = true;
         for icon in self.icons.values() {
+            if switched {
+                cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
+                cr.set_font_size(16.0);
+            }
             cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
             cr.move_to(4.0, y_offset);
+            cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
             cr.show_text(&icon.symbol).unwrap();
+            if let Some(info) = &icon.info {
+                switched = true;
+                cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
+                cr.set_font_size(12.0);
+                cr.move_to(24.0, y_offset);
+                cr.show_text(&info).unwrap();
+            } else {
+                switched = false;
+            }
             y_offset -= 24.0;
         }
 
@@ -575,12 +699,12 @@ impl HeimdallrLayer {
 }
 
 impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like to keep it separated
-    pub fn add_icon(&mut self, id: &str, symbol: &str, color: (f64, f64, f64, f64), warn: f64) -> IconChange {
+    pub fn add_icon(&mut self, id: &str, symbol: &str, color: (f64, f64, f64, f64), warn: f64, info: Option<String>) -> IconChange {
 
         let mut already_present = false;
         if let Some(found) = self.icons.get(id) {
             already_present = true;
-            if f64::abs(found.warn - warn) < 0.05 {
+            if f64::abs(found.warn - warn) < 0.05 && found.info == info {
                 return IconChange::None;
             }
         }
@@ -590,7 +714,8 @@ impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like
             AlarmIcon {
                 symbol: symbol.to_string(),
                 color,
-                warn
+                warn,
+                info
             },
         );
         if already_present {

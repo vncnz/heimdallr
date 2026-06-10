@@ -162,6 +162,43 @@ Most software indicators only show what the sound server (PipeWire/PulseAudio) r
 
 By monitoring the physical RUNNING state of your audio cards in /proc/asound and checking accesses to your mic and camera devices in /dev, Heimdallr eliminates false positives from "suspended" apps while catching actual recording in real-time.
 
+## Timer
+
+Heimdallr got a new countdown functionality. Timer is set sending a new command with a string `timer` followed by desired time in format XXmYYs, for example:
+
+```bash
+echo "timer 10s" > /tmp/heimdallr_cmds
+echo "timer 1m30s" > /tmp/heimdallr_cmds
+echo "timer 15m" > /tmp/heimdallr_cmds
+```
+
+You can remove the timer with the command `timer off`:
+
+```bash
+echo "timer off" > /tmp/heimdallr_cmds
+```
+
+For your convenience, you can declare a function in your .bashrc like the following:
+
+```bash
+tm() {
+    echo "timer $1" > /tmp/heimdallr_cmds
+}
+```
+
+With this shortcut, you can set/remove a timer typing in your terminal just this:
+
+```bash
+tm 10s
+tm 1m30s
+tm off
+```
+
+When a timer is active, Heimdallr updates the UI at least once a second. In your alarms area you'll see a new icon.
+
+The timer icon starts green and gradually shifts to yellow as it nears expiration. Once the timer expires, the icon turns red, and the displayed value starts counting up (indicating how much time has passed since the deadline).
+
+
 ## TODOs
 
 - ~~Optional ratatoskr:~~ Done!
@@ -177,8 +214,8 @@ By monitoring the physical RUNNING state of your audio cards in /proc/asound and
 - ~~Move logs to file and check why sometime heimdallr dies~~ Done!
 - ~~Force embedded screen in laptops~~ Done!
 - ~~Make buffer size depending on output size~~ Done!
-- (UI) Different UI for the batteries of the devices?
-- (performance) Send battery signal only if something is changed
+- ~~(UI) Different UI for the batteries of the devices?~~ (sorta) done!
+- ~~(performance) Send battery signal only if something is changed~~ Done!
 - (code) Evaluate a modular system in which each component keeps a cache and private infos
 - (UX) Put temporary notification always before important ones (because the latter doesn't expire!)
 - (UX) Manage those situations where the "unmounted" notification arrives instants before the "mounting" notification
@@ -192,6 +229,7 @@ By monitoring the physical RUNNING state of your audio cards in /proc/asound and
 - ~~Animation system?~~ Done!
 - ~~Wob-like functionality~~ Done!
 - ~~Monitor and indicate mic/camera accesses~~ Done!
+- ~~Countdown~~ Done!
 - Add output configuration both on config file and as parameter
 - Show a resources resume for some time after receiving a dedicated command (something like [AVG 0.9 1.27 1.41] [MEM 73% / SWP 14%] [DSK 49%] and so on)?
 - Force a red frame border when battery is low, regardless of the settings?
@@ -202,6 +240,6 @@ By monitoring the physical RUNNING state of your audio cards in /proc/asound and
 
 ## Known bugs
 
-- ~~Sometimes heimdallr terminates itself after system suspension/resume~~ Normal behaviour, surface is destroyed by Wayland. Solution: set Heimdallr as a system service with automatic restart!
+- ~~Sometimes heimdallr terminates itself after system suspension/resume~~ Fixed!
 - ~~Sometimes, closing an urgent notifications doesn't restore normal frame width~~ Fixed!
-- ~~Sometimes, a bluetooth device keeps to be shown after it is shut off~~ upower's behaviour (used by ratatoskr) when mouse is charging
+- ~~Sometimes, a bluetooth device keeps to be shown after it is shut off~~ upower's behaviour (used by ratatoskr) when mouse is charging through usb. Now, Ratatoskr can distinguish between upower devices with active and non-active bluetooth connection

@@ -1,11 +1,12 @@
 use std::time::{Duration, Instant};
+use cairo::RegionOverlap::In;
 use regex::Regex;
 
 #[derive(Debug)]
 pub struct Countdown {
     pub state: Option<(Instant, Duration)>,
     pub total_paused_time: Duration,
-    pub current_pause_start: Option<Instant>,
+    pub current_pause_start: Option<Instant>
 }
 
 impl Countdown {
@@ -17,8 +18,17 @@ impl Countdown {
         }
     }
 
+    pub fn is_active(&self) -> bool {
+        self.state.is_some()
+    }
+
     /// Parses a timespan string like "10m30s" or "45s" and fills the timing property
     pub fn fill_from_timespan(&mut self, input: &str) -> Result<u64, &'static str> {
+
+        if input.trim().is_empty() || input.trim() == "0" || input.trim() == "off" {
+            self.state = None; // Clear the timer if input is empty
+            return Ok(0);
+        }
         // Regex to capture optional minutes and optional seconds
         // e.g., "10m30s", "10m", or "30s"
         let re = Regex::new(r"^(?:(?P<mins>\d+)m)?(?:(?P<secs>\d+)s)?$")
@@ -55,7 +65,7 @@ impl Countdown {
     }
 
     /// Returns the progress as a float between 0.0 (started) and 1.0 (finished)
-    pub fn progress(&self) -> f32 {
+    pub fn progress(&self) -> f64 {
         /* let Some((start, total_duration)) = self.state else {
             return 0.0; // Countdown hasn't started
         };
@@ -82,17 +92,38 @@ impl Countdown {
         if elapsed >= adjusted_duration {
             1.0
         } else {
-            elapsed.as_secs_f32() / adjusted_duration.as_secs_f32()
+            elapsed.as_secs_f64() / adjusted_duration.as_secs_f64()
         }
     }
 
     /// Returns the remaining formatted time or standard Duration
-    pub fn time_remaining(&self) -> Duration {
+    pub fn time_remaining(&self) -> (bool, Duration) {
         let Some((start, total_duration)) = self.state else {
-            return Duration::ZERO;
+            return (true, Duration::ZERO);
         };
 
-        total_duration.checked_sub(start.elapsed()).unwrap_or(Duration::ZERO)
+        let dur = start.elapsed();
+        if dur >= total_duration {
+            (true, dur - total_duration)
+        } else {
+            (false, total_duration - dur) 
+        }
+    }
+
+    pub fn format_custom_duration(&self) -> (bool, String) {
+        let tm = self.time_remaining();
+        let (passed, total_secs) = (tm.0, tm.1.as_secs());
+        
+        let hours = total_secs / 3600;
+        let minutes = (total_secs % 3600) / 60;
+        let seconds = total_secs % 60;
+
+        match (hours, minutes, seconds) {
+            (0, 0, 0) => (passed, "0s".to_string()),
+            (0, 0, s) => (passed, format!("{}s", s)),
+            (0, m, s) => (passed, format!("{}m{}s", m, s)),
+            (h, m, s) => (passed, format!("{}h{}m{}s", h, m, s)),
+        }
     }
 
     pub fn pause(&mut self) {
