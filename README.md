@@ -198,6 +198,10 @@ When a timer is active, Heimdallr updates the UI at least once a second. In your
 
 The timer icon starts green and gradually shifts to yellow as it nears expiration. Once the timer expires, the icon turns red, and the displayed value starts counting up (indicating how much time has passed since the deadline).
 
+## Stopwatch
+
+You can set the "timer" in stopwatch mode using the command `timer up`. Time starts from zero and move forward, like when the timer is expired but the icon remains green. Like in timer mode, you can remove the timer/stopwatch with the command `timer off`.
+
 
 ## TODOs
 
@@ -216,6 +220,7 @@ The timer icon starts green and gradually shifts to yellow as it nears expiratio
 - ~~Make buffer size depending on output size~~ Done!
 - ~~(UI) Different UI for the batteries of the devices?~~ (sorta) done!
 - ~~(performance) Send battery signal only if something is changed~~ Done!
+- (robustness) Check devices on system resume?
 - (code) Evaluate a modular system in which each component keeps a cache and private infos
 - (UX) Put temporary notification always before important ones (because the latter doesn't expire!)
 - (UX) Manage those situations where the "unmounted" notification arrives instants before the "mounting" notification

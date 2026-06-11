@@ -431,7 +431,7 @@ impl HeimdallrLayer {
         // 󱫌 alert
         if self.timer.is_active() {
             let status = self.timer.format_custom_duration();
-            let w = if status.0 { 1.0 } else { self.timer.progress() * 0.5 };
+            let w = if status.0 { 1.0 } else { self.timer.get_warning() };
             let icon = if status.0 { "󱫌" } else { "󱫡" };
             self.add_icon("timer", icon, get_color_gradient(w), w, Some(status.1));
         } else {

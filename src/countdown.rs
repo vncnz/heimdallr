@@ -1,12 +1,18 @@
 use std::time::{Duration, Instant};
-use cairo::RegionOverlap::In;
 use regex::Regex;
+
+#[derive(Debug, PartialEq)]
+pub enum CountdownDirection {
+    Up,
+    Down
+}
 
 #[derive(Debug)]
 pub struct Countdown {
     pub state: Option<(Instant, Duration)>,
     pub total_paused_time: Duration,
-    pub current_pause_start: Option<Instant>
+    pub current_pause_start: Option<Instant>,
+    pub direction: CountdownDirection
 }
 
 impl Countdown {
@@ -14,7 +20,8 @@ impl Countdown {
         Countdown {
             state: None, // Some(Instant::now(), Duration.from_millis(1000.0)),
             total_paused_time: Duration::from_millis(0),
-            current_pause_start: None
+            current_pause_start: None,
+            direction: CountdownDirection::Down
         }
     }
 
@@ -24,11 +31,19 @@ impl Countdown {
 
     /// Parses a timespan string like "10m30s" or "45s" and fills the timing property
     pub fn fill_from_timespan(&mut self, input: &str) -> Result<u64, &'static str> {
+        self.direction = CountdownDirection::Down;
 
         if input.trim().is_empty() || input.trim() == "0" || input.trim() == "off" {
             self.state = None; // Clear the timer if input is empty
             return Ok(0);
         }
+
+        if input.trim() == "up" {
+            self.state = Some((Instant::now(), Duration::ZERO)); // Start a timer counting up from zero
+            self.direction = CountdownDirection::Up;
+            return Ok(0);
+        }
+
         // Regex to capture optional minutes and optional seconds
         // e.g., "10m30s", "10m", or "30s"
         let re = Regex::new(r"^(?:(?P<mins>\d+)m)?(?:(?P<secs>\d+)s)?$")
@@ -96,6 +111,14 @@ impl Countdown {
         }
     }
 
+    pub fn get_warning (&self) -> f64 {
+        if self.direction == CountdownDirection::Down {
+            self.progress() * 0.5
+        } else {
+            0.0
+        }
+    }
+
     /// Returns the remaining formatted time or standard Duration
     pub fn time_remaining(&self) -> (bool, Duration) {
         let Some((start, total_duration)) = self.state else {
@@ -104,7 +127,7 @@ impl Countdown {
 
         let dur = start.elapsed();
         if dur >= total_duration {
-            (true, dur - total_duration)
+            (self.direction == CountdownDirection::Down, dur - total_duration)
         } else {
             (false, total_duration - dur) 
         }
