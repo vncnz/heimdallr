@@ -600,8 +600,32 @@ impl HeimdallrLayer {
                 switched = true;
                 cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
                 cr.set_font_size(12.0);
-                cr.move_to(24.0, y_offset);
+
+                /* cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
+                cr.move_to(24.0 - 1.0, y_offset - 1.0);
                 cr.show_text(&info).unwrap();
+
+                cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
+                cr.move_to(24.0, y_offset);
+                cr.show_text(&info).unwrap(); */
+
+                cr.move_to(24.0, y_offset);
+                cr.text_path(&info);
+    
+                let path = cr.copy_path().expect("Valid path");
+
+                // border (stroke)
+                cr.set_source_rgb(0.0, 0.0, 0.0);
+                cr.set_line_width(2.0);
+                cr.set_line_join(cairo::LineJoin::Round);
+                cr.stroke().expect("Stroke failed");
+
+                // text (fill)
+                cr.append_path(&path);
+                cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
+                cr.fill().expect("Fill failed");
+
+
             } else {
                 switched = false;
             }
@@ -721,12 +745,27 @@ impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like
         if already_present {
             IconChange::Changed
         } else {
+            self.animator.animate_property(
+                &self.frame_model,
+                AnimationKey::IconsHeight,
+                self.icons.len() as f64,
+                200
+            );
             IconChange::Added
         }
     }
 
     pub fn remove_icon(&mut self, id: &str) -> bool {
-        self.icons.remove(id).is_some()
+        let removed = self.icons.remove(id).is_some();
+        if removed {
+            self.animator.animate_property(
+                &self.frame_model,
+                AnimationKey::IconsHeight,
+                self.icons.len() as f64,
+                200
+            );
+        }
+        removed
     }
 
     pub fn remove_notification(&mut self) -> bool {
