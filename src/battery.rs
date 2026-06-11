@@ -62,11 +62,27 @@ pub enum BatteryLevel {
     Full = 8,
 } */
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct BatteryStats {
     pub state: BatteryState,
     pub percentage: f64,
     pub eta_minutes: Option<f64>,
+}
+
+impl PartialEq for BatteryStats {
+    fn eq(&self, other: &Self) -> bool {
+        if self.state != other.state || self.percentage != other.percentage {
+            return false;
+        }
+
+        match (self.eta_minutes, other.eta_minutes) {
+            (Some(eta1), Some(eta2)) => {
+                const THRESHOLD: f64 = 1.0;
+                (eta1 - eta2).abs() < THRESHOLD
+            }
+            _ => self.eta_minutes == other.eta_minutes,
+        }
+    }
 }
 /*
 #[dbus_proxy(
@@ -460,6 +476,8 @@ use std::fs;
 use std::fs::File;
 use std::io::Read;
 
+use crate::dbg_println;
+
 pub struct SysBatteryReader {
     buffer: String,
     path: String,
@@ -558,9 +576,11 @@ pub fn start_battery_listener(tx: Sender<BatteryStats>) {
         loop {
             let new_stats = bat.get_stats();
             if last_stats.as_ref() != Some(&new_stats) {
-                dbg!("{} {:?}", "Sending battery signal!".blue(), &new_stats);
+                dbg_println!("{} {:?}", "Sending battery signal!".blue(), &new_stats);
                 last_stats = Some(new_stats.clone());
                 let _ = tx.send(new_stats);
+            } else {
+                dbg_println!("{} (no change) {:?}", "Battery polled".blue(), &new_stats);
             }
             std::thread::sleep(poll_interval);
         }
