@@ -126,7 +126,10 @@ pub enum Easing {
     Smooth,
     #[allow(unused)]
     Smoother,
+    #[allow(unused)]
     EaseOutCubic,
+    #[allow(unused)]
+    Spring
 }
 fn ease(e: Easing, t: f64) -> f64 {
     let x = t.clamp(0.0, 1.0);
@@ -135,6 +138,27 @@ fn ease(e: Easing, t: f64) -> f64 {
         Easing::Smooth => x * x * (3.0 - 2.0 * x),
         Easing::Smoother => x * x * x * (x * (x * 6.0 - 15.0) + 10.0),
         Easing::EaseOutCubic => 1.0 - (1.0 - x).powi(3),
+        Easing::Spring => {
+            if x == 0.0 || x == 1.0 {
+                x
+            } else {
+                /*
+                // Adjust factor for frequency (how many bounces) and decay (how fast it settles)
+                let factor = 1.01;
+                
+                // 2.0 ^ (-10 * x) * sin/cos gives the decay
+                // This formula ensures it starts at 0 and overshoots/settles beautifully at 1
+                1.0 - (2.0f64.powf(-factor * x) * ((x * factor - 0.75) * std::f64::consts::TAU).cos())
+                */
+                let damping = 12.0;   // Higher = less overshoot (smaller peaks). Lower = higher peaks
+                let frequency = 1.15; // Controls the number of bounces
+
+                let decay = 2.0f64.powf(-damping * x);
+                let wave = ((x * frequency * std::f64::consts::TAU) - std::f64::consts::FRAC_PI_2).cos();
+                
+                1.0 - (decay * wave)
+            }
+        }
     }
 }
 
