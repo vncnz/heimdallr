@@ -14,7 +14,7 @@ use cairo::FontSlant;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{clock::ClockTrait, config::FrameColor, countdown::Countdown, data::BatteryDevice, dbg_println, notifications::Notification, pills::{PillClock, PillCountdown, PillTrait}, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, cr_text_rotated, cr_text_rotated_mixed, draw_smart_border, get_color_gradient, log_to_file, rounded_rect_gradient, select_icon}};
+use crate::{clock::ClockTrait, config::FrameColor, countdown::Countdown, data::BatteryDevice, dbg_println, notifications::Notification, pills::{PillBattery, PillClock, PillCountdown, PillTrait}, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, cr_text_rotated, cr_text_rotated_mixed, draw_smart_border, get_color_gradient, log_to_file, rounded_rect_gradient, select_icon}};
 
 #[derive(PartialEq)]
 pub enum IconChange {
@@ -335,17 +335,44 @@ impl HeimdallrLayer {
     }
 
     fn draw_test_pill (&mut self, cr: &Context) {
+        // I'm experimenting with new UI: some of this shit will be moved out of here, ofc!
+
+        let mut pill_clock: PillClock = PillClock::new();
+        pill_clock.update_data(&cr);
+        let pill_clock_rect = pill_clock.get_desired_rect();
+
+        let mut pill_battery = PillBattery::new();
+        pill_battery.update_data(&cr, self.battery_integrated.clone());
+        let pill_battery_rect = pill_battery.get_desired_rect();
+
+        let c = Countdown {
+            state: self.timer.state,
+            total_paused_time: self.timer.total_paused_time,
+            current_pause_start: self.timer.current_pause_start,
+            direction: self.timer.direction.clone()
+        }; /* Countdown::new();
+        if self.timer.is_active() {
+            let _ = c.fill_from_timespan(&*self.timer.format_custom_duration().1);
+        } else {
+            // let _ = c.fill_from_timespan("3m10s".into());
+        } */
+        let mut pill_countdown = PillCountdown::new(c);
+        let pill_countdown_rect = pill_countdown.get_desired_rect();
+
         let r = 8.0;
-        let color: (f64, f64, f64, f64) = (0.1, 0.1, 0.2, 0.5);
-        let rect_width = 300.0;
+        let pill_bg_color: (f64, f64, f64, f64) = (0.1, 0.1, 0.15, 0.85);
+
+        let space = 6.0;
+        let rect_width = 
+                space +
+                pill_clock_rect.0 + space +
+                pill_battery_rect.0 + space +
+                if self.timer.is_active() { pill_countdown_rect.0 + space } else { 0.0 } + 
+                if self.icons.len() > 0 { (self.icons.len() as f64) * 20.0 + space } else { 0.0 };
         let rect_height = 26.0;
         let rect_left = (self.width as f64 - rect_width) / 2.0;
         let rect_top = 2.0;
         let mut x = rect_left;
-        let space = 8.0;
-
-        let green = (0.1, 1.0, 0.2, 1.0);
-        let red = (1.0, 0.1, 0.2, 1.0);
 
         cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
         cr.set_font_size(16.0);
@@ -355,19 +382,17 @@ impl HeimdallrLayer {
             (self.timer.progress(), (color.0, color.1, color.2, 0.5))
         ]; */
         // rounded_rect_gradient(&cr, rect_right - rect_width, rect_top, rect_width, rect_height, r, steps, crate::utils::GradientDirection::Horizontal, false, Some((0.0, 0.0, 0.0, 0.0)));
-        rounded_rect_gradient(&cr, rect_left, rect_top, rect_width, rect_height, r, vec![(0.0, color)], crate::utils::GradientDirection::Horizontal, false, Some((0.6, 0.6, 0.6, 1.0)));
+        rounded_rect_gradient(&cr, rect_left, rect_top, rect_width, rect_height, r, vec![(0.0, pill_bg_color)], crate::utils::GradientDirection::Horizontal, false, Some((0.0, 0.0, 0.0, 0.2)));
 
 
         /* cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
         let sizes = cr_text_aligned(cr.clone(), "23:59".into(), x + space, rect_top + rect_height / 2.0, 0.0, 0.5);
         x += space + sizes.0 + space; */
-        let mut p = PillClock::new();
-        let rect = p.get_desired_rect();
-        p.draw(&cr, rect.0, rect_height, rect_left, rect_top);
-        x += space + rect.0 + space;
+        pill_clock.draw(&cr, pill_clock_rect.0, rect_height, rect_left, rect_top);
+        x += pill_clock_rect.0 + space;
 
 
-        if let Some(bat) = &self.battery_integrated {
+        /* if let Some(bat) = &self.battery_integrated {
             if bat.state != crate::battery::BatteryState::FullyCharged {
                 let bat_symb: String = match bat.state {
                     crate::battery::BatteryState::Charging => format!("󱐋 {}", bat.eta_minutes.unwrap_or_default()).into(),
@@ -388,14 +413,63 @@ impl HeimdallrLayer {
                 let sizes2 = cr_text_rotated_mixed(&cr, &bat_symb, x + space, rect_top + rect_height / 2.0, 0.0, 0.5, 0.0, 16.0).unwrap();
                 x += space + sizes2.0 + space;
             }
+        } */
+
+        pill_battery.draw(&cr, pill_battery_rect.0, rect_height, x, rect_top);
+        x += pill_battery_rect.0 + space;
+
+        if self.timer.is_active() {
+            pill_countdown.draw(&cr, pill_countdown_rect.0, rect_height, x, rect_top);
+            x += pill_countdown_rect.0 + space;
         }
 
-        let mut c = Countdown::new();
-        let _ = c.fill_from_timespan("3m10s".into());
-        let mut p = PillCountdown::new(c);
-        let rect = p.get_desired_rect();
-        p.draw(&cr, rect.0, rect_height, x, rect_top);
-        x += space + rect.0 + space;
+
+        let mut switched = true;
+        for icon in self.icons.values() {
+            if &icon.symbol == "󱫡" || &icon.symbol == "󱫌" {
+                continue;
+            }
+            if switched {
+                cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
+                cr.set_font_size(16.0);
+            }
+            cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
+            cr.move_to(x, rect_top + rect_height / 2.0 + 3.0);
+            cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
+            cr.show_text(&icon.symbol).unwrap();
+            /*if let Some(info) = &icon.info {
+                switched = true;
+                cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
+                cr.set_font_size(12.0);
+
+                /* cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
+                cr.move_to(24.0 - 1.0, y_offset - 1.0);
+                cr.show_text(&info).unwrap();
+
+                cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
+                cr.move_to(24.0, y_offset);
+                cr.show_text(&info).unwrap(); */
+
+                cr.move_to(x, rect_top);
+                cr.text_path(&info);
+    
+                let path = cr.copy_path().expect("Valid path");
+
+                // border (stroke)
+                cr.set_source_rgb(0.0, 0.0, 0.0);
+                cr.set_line_width(2.0);
+                cr.set_line_join(cairo::LineJoin::Round);
+                cr.stroke().expect("Stroke failed");
+
+                // text (fill)
+                cr.append_path(&path);
+                cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
+                cr.fill().expect("Fill failed");
+            } else {
+                switched = false;
+            }*/
+            x += 20.0;
+        }
 
 /*
         let color = if passed { (1.0, 0.0, 0.3, 1.0) } else if self.timer.progress() < 0.9 { (1.0, 1.0, 1.0, 0.75) } else { (color.0, color.1, color.2, 0.75) };

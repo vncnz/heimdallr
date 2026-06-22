@@ -334,7 +334,7 @@ pub fn cr_text_rotated_mixed(cr: &Context, text: &str, x: f64, y: f64, dx: f64, 
     let layout = pangocairo::functions::create_layout(cr);
 
     let mut font_desc = pango::FontDescription::new();
-    font_desc.set_family(""); // O "Iosevka", o lasci il default
+    font_desc.set_family("");
     font_desc.set_absolute_size(font_size * pango::SCALE as f64);
     layout.set_font_description(Some(&font_desc));
     layout.set_text(text);
@@ -356,6 +356,22 @@ pub fn cr_text_rotated_mixed(cr: &Context, text: &str, x: f64, y: f64, dx: f64, 
 
     // Restituiamo le dimensioni del testo "dritto", coerentemente con il primo metodo
     Ok((w, h))
+}
+
+pub fn cr_text_layout(cr: &Context, text: &str, font_size: f64) -> Result<(pango::Layout, (f64, f64)), Error> {
+
+    let layout = pangocairo::functions::create_layout(cr);
+
+    let mut font_desc = pango::FontDescription::new();
+    font_desc.set_family("");
+    font_desc.set_absolute_size(font_size * pango::SCALE as f64);
+    layout.set_font_description(Some(&font_desc));
+    layout.set_text(text);
+    let (_ink_rect, logical_rect) = layout.extents();
+    // dbg_println!("ink_rect: {:?}   logical_rect: {:?}", ink_rect, logical_rect);
+    let w = logical_rect.width() as f64 / pango::SCALE as f64;
+    let h = logical_rect.height() as f64 / pango::SCALE as f64;
+    Ok((layout, (w, h)))
 }
 
 /* Replace by more general method draw_smart_border

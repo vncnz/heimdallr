@@ -1,7 +1,7 @@
 use std::time::{Duration, Instant};
 use regex::Regex;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum CountdownDirection {
     Up,
     Down
