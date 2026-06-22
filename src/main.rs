@@ -31,6 +31,8 @@ mod clock2;
 mod battery;
 mod security;
 mod countdown;
+mod pills;
+
 use config::Config;
 // use chrono;
 

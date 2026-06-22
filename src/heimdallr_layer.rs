@@ -14,7 +14,7 @@ use cairo::FontSlant;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{clock::ClockTrait, config::FrameColor, countdown::Countdown, data::BatteryDevice, dbg_println, notifications::Notification, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, cr_text_rotated, draw_smart_border, get_color_gradient, log_to_file, rounded_rect_gradient}};
+use crate::{clock::ClockTrait, config::FrameColor, countdown::Countdown, data::BatteryDevice, dbg_println, notifications::Notification, pills::{PillClock, PillTrait}, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, cr_text_rotated, cr_text_rotated_mixed, draw_smart_border, get_color_gradient, log_to_file, rounded_rect_gradient, select_icon}};
 
 #[derive(PartialEq)]
 pub enum IconChange {
@@ -191,6 +191,7 @@ impl HeimdallrLayer {
                 self.draw_batteries(cr.clone());
                 self.draw_security(cr.clone());
                 // self.draw_timer_2(&cr);
+                self.draw_test_pill(&cr);
 
                 let layer = self.layer.clone().unwrap();
                 let buffer = self.buffers[buffer_idx].as_ref().unwrap();
@@ -331,6 +332,76 @@ impl HeimdallrLayer {
                 // cr_text_aligned(cr.clone(), app.into(), self.width / 2.0, 0.5, 0.0);
             } */
         }
+    }
+
+    fn draw_test_pill (&mut self, cr: &Context) {
+        let r = 8.0;
+        let color: (f64, f64, f64, f64) = (0.1, 0.1, 0.2, 0.5);
+        let rect_width = 300.0;
+        let rect_height = 26.0;
+        let rect_left = (self.width as f64 - rect_width) / 2.0;
+        let rect_top = 2.0;
+        let mut x = rect_left;
+        let space = 8.0;
+
+        let green = (0.1, 1.0, 0.2, 1.0);
+        let red = (1.0, 0.1, 0.2, 1.0);
+
+        cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
+        cr.set_font_size(16.0);
+
+        /* let steps = vec![
+            (0.0, (color.0, color.1, color.2, color.3)),
+            (self.timer.progress(), (color.0, color.1, color.2, 0.5))
+        ]; */
+        // rounded_rect_gradient(&cr, rect_right - rect_width, rect_top, rect_width, rect_height, r, steps, crate::utils::GradientDirection::Horizontal, false, Some((0.0, 0.0, 0.0, 0.0)));
+        rounded_rect_gradient(&cr, rect_left, rect_top, rect_width, rect_height, r, vec![(0.0, color)], crate::utils::GradientDirection::Horizontal, false, Some((0.6, 0.6, 0.6, 1.0)));
+
+
+        /* cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
+        let sizes = cr_text_aligned(cr.clone(), "23:59".into(), x + space, rect_top + rect_height / 2.0, 0.0, 0.5);
+        x += space + sizes.0 + space; */
+        let mut p = PillClock::new();
+        let rect = p.get_desired_rect();
+        p.draw(&cr, rect.0, rect_height, rect_left, rect_top);
+        x += space + rect.0 + space;
+
+
+        if let Some(bat) = &self.battery_integrated {
+            if bat.state != crate::battery::BatteryState::FullyCharged {
+                let bat_symb: String = match bat.state {
+                    crate::battery::BatteryState::Charging => format!("󱐋 {}", bat.eta_minutes.unwrap_or_default()).into(),
+                    crate::battery::BatteryState::Discharging => format!("󰯆 {}", bat.eta_minutes.unwrap_or_default()).into(),
+                    _ => {
+                        let slice: &[&str] = &["󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"][..];
+                        select_icon(0.0, 100.0, bat.percentage, slice).unwrap().into()
+                    }
+                };
+                if bat.state == crate::battery::BatteryState::Charging {  } else {  };
+                let bat_color = match bat.state {
+                    crate::battery::BatteryState::Charging => green,
+                    crate::battery::BatteryState::Discharging => red,
+                    crate::battery::BatteryState::FullyCharged => (0.3, 0.3, 0.8, 0.8),
+                    _ => (1.0, 1.0, 1.0, 0.4)
+                };
+                cr.set_source_rgba(bat_color.0, bat_color.1, bat_color.2, bat_color.3);
+                let sizes2 = cr_text_rotated_mixed(&cr, &bat_symb, x + space, rect_top + rect_height / 2.0, 0.0, 0.5, 0.0, 16.0).unwrap();
+                x += space + sizes2.0 + space;
+            }
+        }
+
+        // TODO: get the real countdown status
+        cr.set_source_rgba(green.0, green.1, green.2, green.3);
+        let sizes2 = cr_text_rotated_mixed(&cr, "󱫡 3m34s".into(), x + space, rect_top + rect_height / 2.0, 0.0, 0.5, 0.0, 16.0).unwrap();
+        x += space + sizes2.0 + space;
+
+/*
+        let color = if passed { (1.0, 0.0, 0.3, 1.0) } else if self.timer.progress() < 0.9 { (1.0, 1.0, 1.0, 0.75) } else { (color.0, color.1, color.2, 0.75) };
+        cr.set_source_rgba(color.0, color.1, color.2, color.3);
+        cr_text_aligned(cr.clone(), time.clone(), rect_right, rect_top + rect_height / 2.0, 1.0, 0.5);
+*/
+
+        eprintln!("Test pill drawn");
     }
 
     fn draw_timer (&mut self, cr: &Context) {
