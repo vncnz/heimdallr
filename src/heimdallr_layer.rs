@@ -371,7 +371,7 @@ impl HeimdallrLayer {
                 if self.icons.len() > 0 { (self.icons.len() as f64) * 20.0 + space } else { 0.0 };
         let rect_height = 26.0;
         let rect_left = (self.width as f64 - rect_width) / 2.0;
-        let rect_top = 2.0;
+        let rect_top = 2.0 + 24.0 * self.frame_model.notif_height_ratio;
         let mut x = rect_left;
 
         cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
