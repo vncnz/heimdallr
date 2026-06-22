@@ -14,7 +14,7 @@ use cairo::FontSlant;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{clock::ClockTrait, config::FrameColor, countdown::Countdown, data::BatteryDevice, dbg_println, notifications::Notification, pills::{PillClock, PillTrait}, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, cr_text_rotated, cr_text_rotated_mixed, draw_smart_border, get_color_gradient, log_to_file, rounded_rect_gradient, select_icon}};
+use crate::{clock::ClockTrait, config::FrameColor, countdown::Countdown, data::BatteryDevice, dbg_println, notifications::Notification, pills::{PillClock, PillCountdown, PillTrait}, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, cr_text_rotated, cr_text_rotated_mixed, draw_smart_border, get_color_gradient, log_to_file, rounded_rect_gradient, select_icon}};
 
 #[derive(PartialEq)]
 pub enum IconChange {
@@ -390,10 +390,12 @@ impl HeimdallrLayer {
             }
         }
 
-        // TODO: get the real countdown status
-        cr.set_source_rgba(green.0, green.1, green.2, green.3);
-        let sizes2 = cr_text_rotated_mixed(&cr, "󱫡 3m34s".into(), x + space, rect_top + rect_height / 2.0, 0.0, 0.5, 0.0, 16.0).unwrap();
-        x += space + sizes2.0 + space;
+        let mut c = Countdown::new();
+        let _ = c.fill_from_timespan("3m10s".into());
+        let mut p = PillCountdown::new(c);
+        let rect = p.get_desired_rect();
+        p.draw(&cr, rect.0, rect_height, x, rect_top);
+        x += space + rect.0 + space;
 
 /*
         let color = if passed { (1.0, 0.0, 0.3, 1.0) } else if self.timer.progress() < 0.9 { (1.0, 1.0, 1.0, 0.75) } else { (color.0, color.1, color.2, 0.75) };
