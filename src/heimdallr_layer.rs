@@ -68,7 +68,9 @@ pub struct HeimdallrLayer {
     pub(crate) last_batteries_width: f64,
     pub(crate) last_batteries_text: String,
     pub(crate) batteries_pristine: bool,
-    pub(crate) timer: Countdown
+    pub(crate) timer: Countdown,
+    pub(crate) pill_security: PillSecurity
+
 }
 
 impl HeimdallrLayer {
@@ -263,7 +265,7 @@ impl HeimdallrLayer {
 
     fn check_security_data(&mut self, cr: &Context) {
         if self.security.pristine {
-            self.security.pristine = false;
+            // self.security.pristine = false;
             let text = self.build_security_text();
             self.last_security_text = text;
             self.animator.animate_property(
@@ -361,9 +363,11 @@ impl HeimdallrLayer {
         pill_countdown.update_data(&cr, c);
         let pill_countdown_rect = pill_countdown.get_desired_rect();
 
-        let mut pill_security = PillSecurity::new();
-        pill_security.update_data(&cr, &self.security);
-        let pill_security_rect = pill_security.get_desired_rect();
+        if self.security.pristine {
+            self.pill_security.update_data(&cr, &self.security);
+            self.security.pristine = false;
+        }
+        let pill_security_rect = self.pill_security.get_desired_rect();
 
         let r = 8.0;
         let pill_bg_color: (f64, f64, f64, f64) = (0.1, 0.1, 0.15, 0.85);
@@ -402,7 +406,7 @@ impl HeimdallrLayer {
             x += pill_countdown_rect.0 + space;
         }
 
-        pill_security.draw(&cr, pill_security_rect.0, rect_height, x, rect_top);
+        self.pill_security.draw(&cr, pill_security_rect.0, rect_height, x, rect_top);
         x += pill_security_rect.0 + space;
 
         pill_warnings.draw(&cr, pill_warnings_rect.0, rect_height, x, rect_top);

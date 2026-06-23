@@ -3,7 +3,7 @@
 use cairo::{Context, FontSlant};
 use chrono::Local;
 
-use crate::{countdown::Countdown, dbg_println, heimdallr_layer::AlarmIcon, security::MicCameraStatus, utils::{cr_text_aligned, cr_text_layout, cr_text_rotated_mixed, get_color_gradient, select_icon}};
+use crate::{countdown::Countdown, dbg_println, heimdallr_layer::AlarmIcon, security::MicCameraStatus, utils::{cr_text_aligned, cr_text_layout, cr_text_rotated_mixed, get_color_gradient, rounded_rect_gradient, select_icon}};
 // use enum_dispatch::enum_dispatch;
 
 // use crate::{clock1::Clock1, clock2::Clock2};
@@ -39,9 +39,9 @@ macro_rules! define_pill_trait_implementer {
                     cr.set_source_rgba(color.0, color.1, color.2, color.3);
                     cr.move_to(x + rect_width / 2.0 - sizes.0 / 2.0, y + rect_height / 2.0 - sizes.1 / 2.0);
                     pangocairo::functions::show_layout(cr, lay);
-                    dbg_println!("PillClock drawn in rect {sizes:?}");
+                    dbg_println!("Pill drawn in rect {sizes:?}");
                 } else {
-                    dbg_println!("PillClock drawn in rect (0.0, 0.0)");
+                    dbg_println!("Pill drawn in rect (0.0, 0.0)");
                 }
             }
 
@@ -237,24 +237,59 @@ impl PillWarnings {
 }
 
 
-define_pill_trait_implementer!(PillSecurity, {
-    full: bool
-});
+pub struct PillSecurity {
+    // full: bool,
+    cached_layout: Option<pango::Layout>,
+    cached_sizes: Option<(f64, f64)>,
+    cached_text: Option<String>,
+    cached_color: Option<(f64, f64, f64, f64)>,
+    last_update: std::time::Instant
+}
+
+impl PillTrait for PillSecurity {
+    fn draw (&mut self, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64) {
+
+        if let (Some(lay), Some(sizes), Some(_text), Some(color)) = (&self.cached_layout, &self.cached_sizes, &self.cached_text, &self.cached_color) {
+
+            let r = 2.0;
+            rounded_rect_gradient(&cr, x, y + 3.0, rect_width, rect_height - 6.0, r, vec![(0.0, *color)], crate::utils::GradientDirection::Horizontal, false, None);
+
+            // cr.set_source_rgba(color.0, color.1, color.2, color.3);
+            cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
+            cr.move_to(x + rect_width / 2.0 - sizes.0 / 2.0 + 5.0, y + rect_height / 2.0 - sizes.1 / 2.0);
+            pangocairo::functions::show_layout(cr, lay);
+            dbg_println!("PillSecurity drawn in rect {sizes:?}");
+        } else {
+            dbg_println!("PillSecurity drawn in rect (0.0, 0.0)");
+        }
+    }
+
+    fn get_current_rect (&self) -> (f64, f64) { self.cached_sizes.unwrap_or((0.0, 0.0)) }
+    fn get_desired_rect (&self) -> (f64, f64) { self.cached_sizes.unwrap_or((0.0, 0.0)) }
+}
+
 impl PillSecurity {
     pub fn new() -> Self {
         PillSecurity {
-            full: false,
+            // full: false,
             cached_layout: None,
             cached_sizes: None,
             cached_text: None,
-            cached_color: None
+            cached_color: None,
+            last_update: std::time::Instant::now()
         }
     }
 
     pub fn update_data (&mut self, cr: &cairo::Context, security: &MicCameraStatus) -> bool {
         // if security.pristine {
             // self.security.pristine = false;
-        let text = security.mic_active.clone().into_iter().map(|s| format!("MIC {s}")).chain(security.camera_active.clone().into_iter().map(|s| format!("CAM {s}"))).collect::<Vec<_>>().join("  ·  ");
+        let text = security.mic_active.clone().into_iter().map(|s| format!("󰍬 {s}")).chain(security.camera_active.clone().into_iter().map(|s| format!("󰖠 {s}"))).collect::<Vec<_>>().join("  ·  ");
+        if text.is_empty() {
+            self.cached_color = None;
+            self.cached_layout = None;
+            self.cached_sizes = None;
+            self.cached_text = None;
+        } else {
             /* if self.last_security_text.is_empty() {
                 return;
             }
@@ -265,17 +300,22 @@ impl PillSecurity {
             } else {
                 self.last_security_width = 0.0;
             } */
-        let text = "MIC".to_string();
-        let (lay, sizes) = cr_text_layout(&cr, &text, PILL_FONT_SIZE).unwrap();
-        self.cached_color = Some((1.0, 0.58, 0.0, 1.0));
-        self.cached_layout = Some(lay);
-        self.cached_sizes = Some((sizes.0.max(50.0), sizes.1));
-        self.cached_text = Some(text);
+            // let text = "MIC".to_string();
+            let (lay, sizes) = cr_text_layout(&cr, &text, PILL_FONT_SIZE).unwrap();
+            self.cached_color = Some((1.0, 0.58, 0.0, 1.0));
+            self.cached_layout = Some(lay);
+            self.cached_sizes = Some(((sizes.0 + 10.0).max(50.0) , sizes.1));
+            self.cached_text = Some(text);
+        }
            
         true
         // } else {
         //     false
         // }
+    }
+
+    pub fn need_fullscreen (&self) -> bool {
+        false
     }
 }
 
