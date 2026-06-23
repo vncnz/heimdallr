@@ -363,11 +363,20 @@ impl HeimdallrLayer {
         pill_countdown.update_data(&cr, c);
         let pill_countdown_rect = pill_countdown.get_desired_rect();
 
+        
         if self.security.pristine {
             self.pill_security.update_data(&cr, &self.security);
             self.security.pristine = false;
         }
-        let pill_security_rect = self.pill_security.get_desired_rect();
+
+        if self.pill_security.step_animation() {
+            eprintln!("Pill security is animating");
+            self.request_redraw("pill_security is animating");
+        } else {
+            eprintln!("Pill security is NOT animating");
+        }
+
+        let pill_security_rect = self.pill_security.get_current_rect();
 
         let r = 8.0;
         let pill_bg_color: (f64, f64, f64, f64) = (0.1, 0.1, 0.15, 0.85);

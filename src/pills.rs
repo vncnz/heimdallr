@@ -2,6 +2,7 @@
 
 use cairo::{Context, FontSlant};
 use chrono::Local;
+use std::time::{Duration, Instant};
 
 use crate::{countdown::Countdown, dbg_println, heimdallr_layer::AlarmIcon, security::MicCameraStatus, utils::{cr_text_aligned, cr_text_layout, cr_text_rotated_mixed, get_color_gradient, rounded_rect_gradient, select_icon}};
 // use enum_dispatch::enum_dispatch;
@@ -14,6 +15,7 @@ pub static PILL_FONT_SIZE: f64 = 14.0;
 pub trait PillTrait {
     // fn new () -> Self;
     fn draw (&mut self, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64);
+    fn step_animation(&mut self) -> bool;
     fn get_current_rect (&self) -> (f64, f64);
     fn get_desired_rect (&self) -> (f64, f64);
 }
@@ -27,6 +29,11 @@ macro_rules! define_pill_trait_implementer {
             cached_sizes: Option<(f64, f64)>,
             cached_text: Option<String>,
             cached_color: Option<(f64, f64, f64, f64)>,
+            current_size: (f64, f64),
+            target_size: (f64, f64),
+            animation_from: (f64, f64),
+            animation_start: Option<Instant>,
+            animation_duration: Duration,
 
             // Campi specifici passati alla macro
             $( $campo_extra : $tipo_extra, )*
@@ -45,6 +52,27 @@ macro_rules! define_pill_trait_implementer {
                 }
             }
 
+            fn step_animation(&mut self) -> bool {
+                if let Some(start) = self.animation_start {
+                    let elapsed = Instant::now().saturating_duration_since(start);
+                    let total = self.animation_duration;
+                    let ratio = (elapsed.as_secs_f64() / total.as_secs_f64()).min(1.0);
+                    let eased = 1.0 - (1.0 - ratio).powi(3);
+                    self.current_size = (
+                        self.animation_from.0 + (self.target_size.0 - self.animation_from.0) * eased,
+                        self.animation_from.1 + (self.target_size.1 - self.animation_from.1) * eased,
+                    );
+                    let still_animating = ratio < 1.0;
+                    if !still_animating {
+                        self.current_size = self.target_size;
+                        self.animation_start = None;
+                    }
+                    still_animating
+                } else {
+                    false
+                }
+            }
+
             fn get_current_rect (&self) -> (f64, f64) { self.cached_sizes.unwrap_or((0.0, 0.0)) }
             fn get_desired_rect (&self) -> (f64, f64) { self.cached_sizes.unwrap_or((0.0, 0.0)) }
         }
@@ -59,7 +87,12 @@ impl PillClock {
             cached_layout: None,
             cached_sizes: Some((45.0, 20.0)),
             cached_text: None,
-            cached_color: Some((1.0, 1.0, 1.0, 1.0))
+            cached_color: Some((1.0, 1.0, 1.0, 1.0)),
+            current_size: (0.0, 0.0),
+            target_size: (0.0, 0.0),
+            animation_from: (0.0, 0.0),
+            animation_start: None,
+            animation_duration: Duration::from_millis(240)
         }
     }
 
@@ -94,7 +127,12 @@ impl PillCountdown {
             cached_layout: None,
             cached_sizes: Some((58.0, 20.0)),
             cached_text: None,
-            cached_color: Some((1.0, 1.0, 1.0, 1.0))
+            cached_color: Some((1.0, 1.0, 1.0, 1.0)),
+            current_size: (0.0, 0.0),
+            target_size: (0.0, 0.0),
+            animation_from: (0.0, 0.0),
+            animation_start: None,
+            animation_duration: Duration::from_millis(240)
         }
     }
 
@@ -135,7 +173,12 @@ impl PillBattery {
             cached_layout: None,
             cached_sizes: None,
             cached_text: None,
-            cached_color: None
+            cached_color: None,
+            current_size: (0.0, 0.0),
+            target_size: (0.0, 0.0),
+            animation_from: (0.0, 0.0),
+            animation_start: None,
+            animation_duration: Duration::from_millis(240)
         }
     }
 
@@ -195,7 +238,12 @@ impl PillBattery {
 
 
 pub struct PillWarnings {
-    icons: Vec<AlarmIcon>
+    icons: Vec<AlarmIcon>,
+    current_size: (f64, f64),
+    target_size: (f64, f64),
+    animation_from: (f64, f64),
+    animation_start: Option<Instant>,
+    animation_duration: Duration
 }
 
 impl PillTrait for PillWarnings {
@@ -220,6 +268,27 @@ impl PillTrait for PillWarnings {
         dbg_println!("PillWarnings drawn in x {x:?}");
     }
 
+    fn step_animation(&mut self) -> bool {
+        if let Some(start) = self.animation_start {
+            let elapsed = Instant::now().saturating_duration_since(start);
+            let total = self.animation_duration;
+            let ratio = (elapsed.as_secs_f64() / total.as_secs_f64()).min(1.0);
+            let eased = 1.0 - (1.0 - ratio).powi(3);
+            self.current_size = (
+                self.animation_from.0 + (self.target_size.0 - self.animation_from.0) * eased,
+                self.animation_from.1 + (self.target_size.1 - self.animation_from.1) * eased,
+            );
+            let still_animating = ratio < 1.0;
+            if !still_animating {
+                self.current_size = self.target_size;
+                self.animation_start = None;
+            }
+            still_animating
+        } else {
+            false
+        }
+    }
+
     fn get_current_rect (&self) -> (f64, f64) { (self.icons.len() as f64 * 20.0, 20.0) }
     fn get_desired_rect (&self) -> (f64, f64) { (self.icons.len() as f64 * 20.0, 20.0) }
 }
@@ -227,7 +296,12 @@ impl PillTrait for PillWarnings {
 impl PillWarnings {
     pub fn new () -> Self {
         PillWarnings {
-            icons: Vec::new()
+            icons: Vec::new(),
+            current_size: (0.0, 0.0),
+            target_size: (0.0, 0.0),
+            animation_from: (0.0, 0.0),
+            animation_start: None,
+            animation_duration: Duration::from_millis(240)
         }
     }
     pub fn update_data (&mut self, cr: &cairo::Context, icons: Vec<AlarmIcon>) -> bool {
@@ -243,7 +317,11 @@ pub struct PillSecurity {
     cached_sizes: Option<(f64, f64)>,
     cached_text: Option<String>,
     cached_color: Option<(f64, f64, f64, f64)>,
-    last_update: std::time::Instant
+    current_size: (f64, f64),
+    target_size: (f64, f64),
+    animation_from: (f64, f64),
+    animation_start: Option<Instant>,
+    animation_duration: Duration
 }
 
 impl PillTrait for PillSecurity {
@@ -254,7 +332,6 @@ impl PillTrait for PillSecurity {
             let r = 2.0;
             rounded_rect_gradient(&cr, x, y + 3.0, rect_width, rect_height - 6.0, r, vec![(0.0, *color)], crate::utils::GradientDirection::Horizontal, false, None);
 
-            // cr.set_source_rgba(color.0, color.1, color.2, color.3);
             cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
             cr.move_to(x + rect_width / 2.0 - sizes.0 / 2.0 + 5.0, y + rect_height / 2.0 - sizes.1 / 2.0);
             pangocairo::functions::show_layout(cr, lay);
@@ -264,8 +341,29 @@ impl PillTrait for PillSecurity {
         }
     }
 
-    fn get_current_rect (&self) -> (f64, f64) { self.cached_sizes.unwrap_or((0.0, 0.0)) }
-    fn get_desired_rect (&self) -> (f64, f64) { self.cached_sizes.unwrap_or((0.0, 0.0)) }
+    fn step_animation(&mut self) -> bool {
+        if let Some(start) = self.animation_start {
+            let elapsed = Instant::now().saturating_duration_since(start);
+            let total = self.animation_duration;
+            let ratio = (elapsed.as_secs_f64() / total.as_secs_f64()).min(1.0);
+            let eased = 1.0 - (1.0 - ratio).powi(3);
+            self.current_size = (
+                self.animation_from.0 + (self.target_size.0 - self.animation_from.0) * eased,
+                self.animation_from.1 + (self.target_size.1 - self.animation_from.1) * eased,
+            );
+            let still_animating = ratio < 1.0;
+            if !still_animating {
+                self.current_size = self.target_size;
+                self.animation_start = None;
+            }
+            still_animating
+        } else {
+            false
+        }
+    }
+
+    fn get_current_rect (&self) -> (f64, f64) { self.current_size }
+    fn get_desired_rect (&self) -> (f64, f64) { self.target_size }
 }
 
 impl PillSecurity {
@@ -276,42 +374,44 @@ impl PillSecurity {
             cached_sizes: None,
             cached_text: None,
             cached_color: None,
-            last_update: std::time::Instant::now()
+            current_size: (0.0, 0.0),
+            target_size: (0.0, 0.0),
+            animation_from: (0.0, 0.0),
+            animation_start: None,
+            animation_duration: Duration::from_millis(240)
         }
     }
 
     pub fn update_data (&mut self, cr: &cairo::Context, security: &MicCameraStatus) -> bool {
-        // if security.pristine {
-            // self.security.pristine = false;
         let text = security.mic_active.clone().into_iter().map(|s| format!("󰍬 {s}")).chain(security.camera_active.clone().into_iter().map(|s| format!("󰖠 {s}"))).collect::<Vec<_>>().join("  ·  ");
-        if text.is_empty() {
+        let new_target = if text.is_empty() {
             self.cached_color = None;
             self.cached_layout = None;
             self.cached_sizes = None;
             self.cached_text = None;
+            (0.0, 0.0)
         } else {
-            /* if self.last_security_text.is_empty() {
-                return;
-            }
-            cr.set_font_size(10.0);
-            cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
-            if let Ok(ext) = cr.text_extents(&self.last_security_text) {
-                self.last_security_width = ext.width() + 6.0;
-            } else {
-                self.last_security_width = 0.0;
-            } */
-            // let text = "MIC".to_string();
             let (lay, sizes) = cr_text_layout(&cr, &text, PILL_FONT_SIZE).unwrap();
             self.cached_color = Some((1.0, 0.58, 0.0, 1.0));
             self.cached_layout = Some(lay);
-            self.cached_sizes = Some(((sizes.0 + 10.0).max(50.0) , sizes.1));
+            self.cached_sizes = Some(((sizes.0 + 10.0).max(50.0), sizes.1));
             self.cached_text = Some(text);
+            ((sizes.0 + 10.0).max(50.0), sizes.1)
+        };
+
+        let changed = self.target_size != new_target;
+        if changed {
+            self.animation_from = self.current_size;
+            self.target_size = new_target;
+            self.animation_start = Some(Instant::now());
         }
-           
-        true
-        // } else {
-        //     false
-        // }
+
+        if self.current_size == (0.0, 0.0) && self.target_size != (0.0, 0.0) && self.animation_start.is_none() {
+            self.animation_from = self.current_size;
+            self.animation_start = Some(Instant::now());
+        }
+
+        changed
     }
 
     pub fn need_fullscreen (&self) -> bool {
