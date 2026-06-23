@@ -356,14 +356,9 @@ impl HeimdallrLayer {
             total_paused_time: self.timer.total_paused_time,
             current_pause_start: self.timer.current_pause_start,
             direction: self.timer.direction.clone()
-        }; /* Countdown::new();
-        if self.timer.is_active() {
-            let _ = c.fill_from_timespan(&*self.timer.format_custom_duration().1);
-        } else {
-            // let _ = c.fill_from_timespan("3m10s".into());
-        } */
-        let mut pill_countdown = PillCountdown::new(c);
-        pill_countdown.update_data(&cr);
+        };
+        let mut pill_countdown = PillCountdown::new();
+        pill_countdown.update_data(&cr, c);
         let pill_countdown_rect = pill_countdown.get_desired_rect();
 
         let r = 8.0;

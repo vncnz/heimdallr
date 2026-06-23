@@ -63,12 +63,12 @@ impl PillClock {
         }
     }
 
-    pub fn update_data (&mut self, cr: &cairo::Context) {
+    pub fn update_data (&mut self, cr: &cairo::Context) -> bool {
         let date = Local::now();
         let text = date.format("%H:%M").to_string();
 
         if self.cached_text.as_ref() == Some(&text) {
-            return;
+            return false;
         }
 
         // cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
@@ -76,6 +76,7 @@ impl PillClock {
         self.cached_layout = Some(lay);
         self.cached_sizes = Some(sizes);
         self.cached_text = Some(text);
+        true
     }
 }
 
@@ -84,12 +85,12 @@ impl PillClock {
 
 
 define_pill_trait_implementer!(PillCountdown, {
-    countdown: Countdown
+    last_status: (bool, String)
 });
 impl PillCountdown {
-    pub fn new (countdown: Countdown) -> Self {
+    pub fn new () -> Self {
         PillCountdown {
-            countdown,
+            last_status: (false, "".into()),
             cached_layout: None,
             cached_sizes: Some((58.0, 20.0)),
             cached_text: None,
@@ -97,9 +98,13 @@ impl PillCountdown {
         }
     }
 
-    pub fn update_data (&mut self, cr: &cairo::Context) {
-        let (status, time) = self.countdown.format_custom_duration();
-        let w = if status { 1.0 } else { self.countdown.get_warning() };
+    // TODO: think about how to manage countdown!
+    pub fn update_data (&mut self, cr: &cairo::Context, countdown: Countdown) -> bool {
+        let (status, time) = countdown.format_custom_duration();
+        if self.last_status.0 == status && self.last_status.1 == time {
+            return false;
+        }
+        let w = if status { 1.0 } else { countdown.get_warning() };
         let icon = if status { "󱫌" } else { "󱫡" };
         let color = get_color_gradient(w);
         let text = format!("{icon} {time}");
@@ -111,7 +116,7 @@ impl PillCountdown {
         self.cached_text = Some(text);
         // cr.set_source_rgba(color.0, color.1, color.2, color.3);
         // let sizes = cr_text_rotated_mixed(cr, &*format!("{icon} {text}"), x + rect_width / 2.0, y + rect_height / 2.0, 0.5, 0.5, 0.0, PILL_FONT_SIZE);
-
+        true
     }
 }
 
@@ -134,7 +139,7 @@ impl PillBattery {
         }
     }
 
-    pub fn update_data (&mut self, cr: &cairo::Context, battery: Option<crate::battery::BatteryStats>) {
+    pub fn update_data (&mut self, cr: &cairo::Context, battery: Option<crate::battery::BatteryStats>) -> bool {
         self.battery = battery;
 
         let green = (0.1, 1.0, 0.2, 1.0);
@@ -183,6 +188,7 @@ impl PillBattery {
                 dbg_println!("PillBattery will need a rect (0.0, 0.0)");
             }
         }
+        true // TODO: implement the logic
     }
 }
 
@@ -224,8 +230,9 @@ impl PillWarnings {
             icons: Vec::new()
         }
     }
-    pub fn update_data (&mut self, cr: &cairo::Context, icons: Vec<AlarmIcon>) {
+    pub fn update_data (&mut self, cr: &cairo::Context, icons: Vec<AlarmIcon>) -> bool {
         self.icons = icons;
+        true // TODO: implement the logic
     }
 }
 
