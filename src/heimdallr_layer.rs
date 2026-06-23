@@ -14,7 +14,7 @@ use cairo::FontSlant;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{clock::ClockTrait, config::FrameColor, countdown::Countdown, data::BatteryDevice, dbg_println, notifications::Notification, pills::{PillBattery, PillClock, PillCountdown, PillTrait}, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, cr_text_rotated, cr_text_rotated_mixed, draw_smart_border, get_color_gradient, log_to_file, rounded_rect_gradient, select_icon}};
+use crate::{clock::ClockTrait, config::FrameColor, countdown::Countdown, data::BatteryDevice, dbg_println, notifications::Notification, pills::{PillBattery, PillClock, PillCountdown, PillTrait, PillWarnings}, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, cr_text_rotated, cr_text_rotated_mixed, draw_smart_border, get_color_gradient, log_to_file, rounded_rect_gradient, select_icon}};
 
 #[derive(PartialEq)]
 pub enum IconChange {
@@ -23,6 +23,7 @@ pub enum IconChange {
     // Removed,
     None
 }
+#[derive(Clone)]
 pub struct AlarmIcon {
     symbol: String,
     color: (f64, f64, f64, f64), // RGBA
@@ -345,6 +346,11 @@ impl HeimdallrLayer {
         pill_battery.update_data(&cr, self.battery_integrated.clone());
         let pill_battery_rect = pill_battery.get_desired_rect();
 
+        let mut pill_warnings = PillWarnings::new();
+        let icons: Vec<AlarmIcon> = self.icons.values().cloned().filter(|icon| icon.symbol != "󱫡" && icon.symbol != "󱫌").collect();
+        pill_warnings.update_data(&cr, icons);
+        let pill_warnings_rect = pill_warnings.get_desired_rect();
+
         let c = Countdown {
             state: self.timer.state,
             total_paused_time: self.timer.total_paused_time,
@@ -357,6 +363,7 @@ impl HeimdallrLayer {
             // let _ = c.fill_from_timespan("3m10s".into());
         } */
         let mut pill_countdown = PillCountdown::new(c);
+        pill_countdown.update_data(&cr);
         let pill_countdown_rect = pill_countdown.get_desired_rect();
 
         let r = 8.0;
@@ -372,7 +379,7 @@ impl HeimdallrLayer {
         let rect_height = 26.0;
         let rect_left = (self.width as f64 - rect_width) / 2.0;
         let rect_top = 2.0 + 24.0 * self.frame_model.notif_height_ratio;
-        let mut x = rect_left;
+        let mut x = rect_left + space;
 
         cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
         cr.set_font_size(16.0);
@@ -384,36 +391,8 @@ impl HeimdallrLayer {
         // rounded_rect_gradient(&cr, rect_right - rect_width, rect_top, rect_width, rect_height, r, steps, crate::utils::GradientDirection::Horizontal, false, Some((0.0, 0.0, 0.0, 0.0)));
         rounded_rect_gradient(&cr, rect_left, rect_top, rect_width, rect_height, r, vec![(0.0, pill_bg_color)], crate::utils::GradientDirection::Horizontal, false, Some((0.0, 0.0, 0.0, 0.2)));
 
-
-        /* cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
-        let sizes = cr_text_aligned(cr.clone(), "23:59".into(), x + space, rect_top + rect_height / 2.0, 0.0, 0.5);
-        x += space + sizes.0 + space; */
-        pill_clock.draw(&cr, pill_clock_rect.0, rect_height, rect_left, rect_top);
+        pill_clock.draw(&cr, pill_clock_rect.0, rect_height, x, rect_top);
         x += pill_clock_rect.0 + space;
-
-
-        /* if let Some(bat) = &self.battery_integrated {
-            if bat.state != crate::battery::BatteryState::FullyCharged {
-                let bat_symb: String = match bat.state {
-                    crate::battery::BatteryState::Charging => format!("󱐋 {}", bat.eta_minutes.unwrap_or_default()).into(),
-                    crate::battery::BatteryState::Discharging => format!("󰯆 {}", bat.eta_minutes.unwrap_or_default()).into(),
-                    _ => {
-                        let slice: &[&str] = &["󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"][..];
-                        select_icon(0.0, 100.0, bat.percentage, slice).unwrap().into()
-                    }
-                };
-                if bat.state == crate::battery::BatteryState::Charging {  } else {  };
-                let bat_color = match bat.state {
-                    crate::battery::BatteryState::Charging => green,
-                    crate::battery::BatteryState::Discharging => red,
-                    crate::battery::BatteryState::FullyCharged => (0.3, 0.3, 0.8, 0.8),
-                    _ => (1.0, 1.0, 1.0, 0.4)
-                };
-                cr.set_source_rgba(bat_color.0, bat_color.1, bat_color.2, bat_color.3);
-                let sizes2 = cr_text_rotated_mixed(&cr, &bat_symb, x + space, rect_top + rect_height / 2.0, 0.0, 0.5, 0.0, 16.0).unwrap();
-                x += space + sizes2.0 + space;
-            }
-        } */
 
         pill_battery.draw(&cr, pill_battery_rect.0, rect_height, x, rect_top);
         x += pill_battery_rect.0 + space;
@@ -422,7 +401,6 @@ impl HeimdallrLayer {
             pill_countdown.draw(&cr, pill_countdown_rect.0, rect_height, x, rect_top);
             x += pill_countdown_rect.0 + space;
         }
-
 
         let mut switched = true;
         for icon in self.icons.values() {
@@ -437,37 +415,6 @@ impl HeimdallrLayer {
             cr.move_to(x, rect_top + rect_height / 2.0 + 3.0);
             cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
             cr.show_text(&icon.symbol).unwrap();
-            /*if let Some(info) = &icon.info {
-                switched = true;
-                cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
-                cr.set_font_size(12.0);
-
-                /* cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
-                cr.move_to(24.0 - 1.0, y_offset - 1.0);
-                cr.show_text(&info).unwrap();
-
-                cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
-                cr.move_to(24.0, y_offset);
-                cr.show_text(&info).unwrap(); */
-
-                cr.move_to(x, rect_top);
-                cr.text_path(&info);
-    
-                let path = cr.copy_path().expect("Valid path");
-
-                // border (stroke)
-                cr.set_source_rgb(0.0, 0.0, 0.0);
-                cr.set_line_width(2.0);
-                cr.set_line_join(cairo::LineJoin::Round);
-                cr.stroke().expect("Stroke failed");
-
-                // text (fill)
-                cr.append_path(&path);
-                cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
-                cr.fill().expect("Fill failed");
-            } else {
-                switched = false;
-            }*/
             x += 20.0;
         }
 
