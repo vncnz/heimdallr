@@ -14,7 +14,7 @@ use cairo::FontSlant;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{clock::ClockTrait, config::FrameColor, countdown::Countdown, data::BatteryDevice, dbg_println, notifications::Notification, pills::{PillBattery, PillClock, PillCountdown, PillTrait, PillWarnings}, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, cr_text_rotated, cr_text_rotated_mixed, draw_smart_border, get_color_gradient, log_to_file, rounded_rect_gradient, select_icon}};
+use crate::{clock::ClockTrait, config::FrameColor, countdown::Countdown, data::BatteryDevice, dbg_println, notifications::Notification, pills::{PillBattery, PillClock, PillCountdown, PillSecurity, PillTrait, PillWarnings}, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, cr_text_rotated, cr_text_rotated_mixed, draw_smart_border, get_color_gradient, log_to_file, rounded_rect_gradient, select_icon}};
 
 #[derive(PartialEq)]
 pub enum IconChange {
@@ -361,6 +361,10 @@ impl HeimdallrLayer {
         pill_countdown.update_data(&cr, c);
         let pill_countdown_rect = pill_countdown.get_desired_rect();
 
+        let mut pill_security = PillSecurity::new();
+        pill_security.update_data(&cr, &self.security);
+        let pill_security_rect = pill_security.get_desired_rect();
+
         let r = 8.0;
         let pill_bg_color: (f64, f64, f64, f64) = (0.1, 0.1, 0.15, 0.85);
 
@@ -370,6 +374,7 @@ impl HeimdallrLayer {
                 pill_clock_rect.0 + space +
                 pill_battery_rect.0 + space +
                 if self.timer.is_active() { pill_countdown_rect.0 + space } else { 0.0 } + 
+                pill_security_rect.0 + space +
                 if self.icons.len() > 0 { (self.icons.len() as f64) * 20.0 + space } else { 0.0 };
         let rect_height = 26.0;
         let rect_left = (self.width as f64 - rect_width) / 2.0;
@@ -396,6 +401,9 @@ impl HeimdallrLayer {
             pill_countdown.draw(&cr, pill_countdown_rect.0, rect_height, x, rect_top);
             x += pill_countdown_rect.0 + space;
         }
+
+        pill_security.draw(&cr, pill_security_rect.0, rect_height, x, rect_top);
+        x += pill_security_rect.0 + space;
 
         pill_warnings.draw(&cr, pill_warnings_rect.0, rect_height, x, rect_top);
         x += pill_warnings_rect.0 + space;

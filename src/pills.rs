@@ -3,7 +3,7 @@
 use cairo::{Context, FontSlant};
 use chrono::Local;
 
-use crate::{countdown::Countdown, dbg_println, heimdallr_layer::AlarmIcon, utils::{cr_text_aligned, cr_text_layout, cr_text_rotated_mixed, get_color_gradient, select_icon}};
+use crate::{countdown::Countdown, dbg_println, heimdallr_layer::AlarmIcon, security::MicCameraStatus, utils::{cr_text_aligned, cr_text_layout, cr_text_rotated_mixed, get_color_gradient, select_icon}};
 // use enum_dispatch::enum_dispatch;
 
 // use crate::{clock1::Clock1, clock2::Clock2};
@@ -237,7 +237,47 @@ impl PillWarnings {
 }
 
 
+define_pill_trait_implementer!(PillSecurity, {
+    full: bool
+});
+impl PillSecurity {
+    pub fn new() -> Self {
+        PillSecurity {
+            full: false,
+            cached_layout: None,
+            cached_sizes: None,
+            cached_text: None,
+            cached_color: None
+        }
+    }
 
+    pub fn update_data (&mut self, cr: &cairo::Context, security: &MicCameraStatus) -> bool {
+        // if security.pristine {
+            // self.security.pristine = false;
+        let text = security.mic_active.clone().into_iter().map(|s| format!("MIC {s}")).chain(security.camera_active.clone().into_iter().map(|s| format!("CAM {s}"))).collect::<Vec<_>>().join("  ·  ");
+            /* if self.last_security_text.is_empty() {
+                return;
+            }
+            cr.set_font_size(10.0);
+            cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
+            if let Ok(ext) = cr.text_extents(&self.last_security_text) {
+                self.last_security_width = ext.width() + 6.0;
+            } else {
+                self.last_security_width = 0.0;
+            } */
+        let text = "MIC".to_string();
+        let (lay, sizes) = cr_text_layout(&cr, &text, PILL_FONT_SIZE).unwrap();
+        self.cached_color = Some((1.0, 0.58, 0.0, 1.0));
+        self.cached_layout = Some(lay);
+        self.cached_sizes = Some((sizes.0.max(50.0), sizes.1));
+        self.cached_text = Some(text);
+           
+        true
+        // } else {
+        //     false
+        // }
+    }
+}
 
 
 /* #[enum_dispatch(PillTrait)]
