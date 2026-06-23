@@ -25,10 +25,10 @@ pub enum IconChange {
 }
 #[derive(Clone)]
 pub struct AlarmIcon {
-    symbol: String,
-    color: (f64, f64, f64, f64), // RGBA
-    warn: f64,
-    info: Option<String>
+    pub symbol: String,
+    pub color: (f64, f64, f64, f64), // RGBA
+    pub warn: f64,
+    pub info: Option<String>
 }
 
 static mut AVG_DUR: u128 = 0;
@@ -402,21 +402,8 @@ impl HeimdallrLayer {
             x += pill_countdown_rect.0 + space;
         }
 
-        let mut switched = true;
-        for icon in self.icons.values() {
-            if &icon.symbol == "󱫡" || &icon.symbol == "󱫌" {
-                continue;
-            }
-            if switched {
-                cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
-                cr.set_font_size(16.0);
-            }
-            cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
-            cr.move_to(x, rect_top + rect_height / 2.0 + 3.0);
-            cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
-            cr.show_text(&icon.symbol).unwrap();
-            x += 20.0;
-        }
+        pill_warnings.draw(&cr, pill_warnings_rect.0, rect_height, x, rect_top);
+        x += pill_warnings_rect.0 + space;
 
 /*
         let color = if passed { (1.0, 0.0, 0.3, 1.0) } else if self.timer.progress() < 0.9 { (1.0, 1.0, 1.0, 0.75) } else { (color.0, color.1, color.2, 0.75) };

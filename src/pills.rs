@@ -1,6 +1,6 @@
 // I'm experimenting with new UI: some of this shit will be spread out in multiple files, ofc!
 
-use cairo::Context;
+use cairo::{Context, FontSlant};
 use chrono::Local;
 
 use crate::{countdown::Countdown, dbg_println, heimdallr_layer::AlarmIcon, utils::{cr_text_aligned, cr_text_layout, cr_text_rotated_mixed, get_color_gradient, select_icon}};
@@ -194,8 +194,24 @@ pub struct PillWarnings {
 
 impl PillTrait for PillWarnings {
     fn draw (&mut self, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64) {
-        // dbg_println!("PillWarnings drawn in rect {sizes:?}");
-        dbg_println!("PillWarnings TODO!");
+        let mut x = x;
+
+        let mut switched = true;
+        for icon in &self.icons {
+            if &icon.symbol == "󱫡" || &icon.symbol == "󱫌" {
+                continue;
+            }
+            if switched {
+                cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
+                cr.set_font_size(16.0);
+            }
+            cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
+            cr.move_to(x, y + rect_height / 2.0 + 3.0);
+            cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
+            cr.show_text(&icon.symbol).unwrap();
+            x += 20.0;
+        }
+        dbg_println!("PillWarnings drawn in x {x:?}");
     }
 
     fn get_current_rect (&self) -> (f64, f64) { (self.icons.len() as f64 * 20.0, 20.0) }
