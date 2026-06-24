@@ -16,6 +16,9 @@ use colored::Colorize;
 
 use crate::{clock::ClockTrait, config::FrameColor, countdown::Countdown, data::BatteryDevice, dbg_println, notifications::Notification, pills::{PillBattery, PillClock, PillCountdown, PillSecurity, PillTrait, PillWarnings}, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, cr_text_rotated, cr_text_rotated_mixed, draw_smart_border, get_color_gradient, log_to_file, rounded_rect_gradient, select_icon}};
 
+static DRAW_PILL: bool = true;
+static DRAW_OLD_UI: bool = false;
+
 #[derive(PartialEq)]
 pub enum IconChange {
     Added,
@@ -193,9 +196,9 @@ impl HeimdallrLayer {
                 if self.notifications.len() > 0 { self.draw_notification(cr.clone()) }
 
                 self.draw_batteries(cr.clone());
-                self.draw_security(cr.clone());
+                if DRAW_OLD_UI { self.draw_security(cr.clone()); }
                 // self.draw_timer_2(&cr);
-                self.draw_test_pill(&cr);
+                if DRAW_PILL { self.draw_test_pill(&cr); }
 
                 let layer = self.layer.clone().unwrap();
                 let buffer = self.buffers[buffer_idx].as_ref().unwrap();
@@ -257,6 +260,7 @@ impl HeimdallrLayer {
     }
     
     fn build_security_text (&self) -> String {
+        // Used by OLD UI (no pills UI)
         /* (
             self.security.mic_active.clone().into_iter().map(|s| format!("MIC {s}")).collect::<Vec<_>>().join("  ·  "), 
             self.security.camera_active.clone().into_iter().map(|s| format!("CAM {s}")).collect::<Vec<_>>().join("  ·  ")
@@ -265,8 +269,9 @@ impl HeimdallrLayer {
     }
 
     fn check_security_data(&mut self, cr: &Context) {
+        // Used by old UI, not by pills UI
         if self.security.pristine {
-            // self.security.pristine = false;
+            if !DRAW_PILL { self.security.pristine = false; }
             let text = self.build_security_text();
             self.last_security_text = text;
             self.animator.animate_property(
@@ -540,6 +545,7 @@ impl HeimdallrLayer {
     }
 
     fn update_timer_icon (&mut self) {
+        // Used by old UI (no pill UI)
         // 󱫟 for pause
         // 󱫌 alert
         if self.timer.is_active() {
