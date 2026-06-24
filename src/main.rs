@@ -185,7 +185,8 @@ fn main() {
         last_batteries_text: "".to_string(),
         batteries_pristine: false,
         timer: Countdown::new(),
-        pill_security: PillSecurity::new()
+        pill_security: PillSecurity::new(),
+        pills_animation: false
     };
 
     if !config.hide_missing_ratatoskr {

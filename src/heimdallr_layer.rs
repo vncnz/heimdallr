@@ -69,7 +69,8 @@ pub struct HeimdallrLayer {
     pub(crate) last_batteries_text: String,
     pub(crate) batteries_pristine: bool,
     pub(crate) timer: Countdown,
-    pub(crate) pill_security: PillSecurity
+    pub(crate) pill_security: PillSecurity,
+    pub(crate) pills_animation: bool
 
 }
 
@@ -101,7 +102,7 @@ impl HeimdallrLayer {
             }
         }
 
-        let animating = self.animator.step(&mut self.frame_model);
+        let animating = self.animator.step(&mut self.frame_model) || self.pills_animation;
         if !animating { // Now, we skip calling draw only if we are not animating something
 
             if !self.needs_redraw {
@@ -338,6 +339,7 @@ impl HeimdallrLayer {
     }
 
     fn draw_test_pill (&mut self, cr: &Context) {
+        self.pills_animation = false;
         // I'm experimenting with new UI: some of this shit will be moved out of here, ofc!
 
         let mut pill_clock: PillClock = PillClock::new();
@@ -371,6 +373,7 @@ impl HeimdallrLayer {
 
         if self.pill_security.step_animation() {
             eprintln!("Pill security is animating");
+            self.pills_animation = true;
             self.request_redraw("pill_security is animating");
         } else {
             eprintln!("Pill security is NOT animating");
