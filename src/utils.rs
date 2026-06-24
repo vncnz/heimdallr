@@ -131,7 +131,7 @@ pub enum Easing {
     #[allow(unused)]
     Spring
 }
-fn ease(e: Easing, t: f64) -> f64 {
+pub fn ease(e: Easing, t: f64) -> f64 {
     let x = t.clamp(0.0, 1.0);
     match e {
         Easing::Linear => x,
