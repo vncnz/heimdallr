@@ -9,10 +9,7 @@ use crate::{
     dbg_println,
     heimdallr_layer::AlarmIcon,
     security::MicCameraStatus,
-    utils::{
-        cr_text_aligned, cr_text_layout, cr_text_rotated_mixed, get_color_gradient,
-        rounded_rect_gradient, select_icon,
-    },
+    utils::{cr_text_layout, ease, get_color_gradient, rounded_rect_gradient, select_icon}
 };
 
 pub static PILL_FONT_SIZE: f64 = 14.0;
@@ -33,7 +30,7 @@ impl AnimationState {
             target_size: (0.0, 0.0),
             animation_from: (0.0, 0.0),
             animation_start: None,
-            animation_duration: Duration::from_millis(240),
+            animation_duration: Duration::from_millis(500),
         }
     }
 
