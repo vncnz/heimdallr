@@ -385,9 +385,9 @@ impl HeimdallrLayer {
         let rect_width = 
                 space +
                 pill_clock_rect.0 + space +
-                pill_battery_rect.0 + space +
+                if pill_battery_rect.0 > 0.0 { pill_battery_rect.0 + space } else { 0.0 } +
                 if self.timer.is_active() { pill_countdown_rect.0 + space } else { 0.0 } + 
-                pill_security_rect.0 + space +
+                if pill_security_rect.0 > 0.0 { pill_security_rect.0 + space } else { 0.0 } +
                 if self.icons.len() > 0 { (self.icons.len() as f64) * 20.0 + space } else { 0.0 };
         let rect_height = 26.0;
         let rect_left = (self.width as f64 - rect_width) / 2.0;
@@ -407,16 +407,20 @@ impl HeimdallrLayer {
         pill_clock.draw(&cr, pill_clock_rect.0, rect_height, x, rect_top);
         x += pill_clock_rect.0 + space;
 
-        pill_battery.draw(&cr, pill_battery_rect.0, rect_height, x, rect_top);
-        x += pill_battery_rect.0 + space;
+        if pill_battery_rect.0 > 0.0 {
+            pill_battery.draw(&cr, pill_battery_rect.0, rect_height, x, rect_top);
+            x += pill_battery_rect.0 + space;
+        }
 
         if self.timer.is_active() {
             pill_countdown.draw(&cr, pill_countdown_rect.0, rect_height, x, rect_top);
             x += pill_countdown_rect.0 + space;
         }
 
-        self.pill_security.draw(&cr, pill_security_rect.0, rect_height, x, rect_top);
-        x += pill_security_rect.0 + space;
+        if pill_security_rect.0 > 0.0 {
+            self.pill_security.draw(&cr, pill_security_rect.0, rect_height, x, rect_top);
+            x += pill_security_rect.0 + space;
+        }
 
         pill_warnings.draw(&cr, pill_warnings_rect.0, rect_height, x, rect_top);
         x += pill_warnings_rect.0 + space;
