@@ -260,7 +260,7 @@ impl PillTrait for PillWarnings {
                 cr.set_font_size(16.0);
             }
             cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
-            cr.move_to(x, y + rect_height / 2.0 + 3.0);
+            cr.move_to(x, y + rect_height / 2.0 + 4.0);
             cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
             cr.show_text(&icon.symbol).unwrap();
             x += 20.0;
