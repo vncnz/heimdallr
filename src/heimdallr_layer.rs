@@ -381,18 +381,16 @@ impl HeimdallrLayer {
         let r = 8.0;
         let pill_bg_color: (f64, f64, f64, f64) = (0.1, 0.1, 0.15, 0.85);
 
-        let space = 6.0;
         let rect_width = 
-                space +
-                pill_clock_rect.0 + space +
-                if pill_battery_rect.0 > 0.0 { pill_battery_rect.0 + space } else { 0.0 } +
-                if self.timer.is_active() { pill_countdown_rect.0 + space } else { 0.0 } + 
-                if pill_security_rect.0 > 0.0 { pill_security_rect.0 + space } else { 0.0 } +
-                if self.icons.len() > 0 { (self.icons.len() as f64) * 20.0 + space } else { 0.0 };
+                pill_clock_rect.0 +
+                if pill_battery_rect.0 > 0.0 { pill_battery_rect.0 } else { 0.0 } +
+                if self.timer.is_active() { pill_countdown_rect.0 } else { 0.0 } + 
+                if pill_security_rect.0 > 0.0 { pill_security_rect.0 } else { 0.0 } +
+                if self.icons.len() > 0 { (self.icons.len() as f64) * 20.0 } else { 0.0 }; // TODO: calculate pill_warnings width properly
         let rect_height = 26.0;
         let rect_left = (self.width as f64 - rect_width) / 2.0;
         let rect_top = 2.0 + 24.0 * self.frame_model.notif_height_ratio;
-        let mut x = rect_left + space;
+        let mut x = rect_left;
 
         cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
         cr.set_font_size(16.0);
@@ -403,7 +401,7 @@ impl HeimdallrLayer {
         ]; */
         // rounded_rect_gradient(&cr, rect_right - rect_width, rect_top, rect_width, rect_height, r, steps, crate::utils::GradientDirection::Horizontal, false, Some((0.0, 0.0, 0.0, 0.0)));
 
-        /* let frame_color = match self.config.frame_color {
+        let frame_color = match self.config.frame_color {
             FrameColor::Rgba(r, g, b, a) => Some((r, g, b, a)),
             FrameColor::WorstResource => self
                 .icons
@@ -411,31 +409,30 @@ impl HeimdallrLayer {
                 .max_by(|a, b| a.warn.partial_cmp(&b.warn).unwrap_or(std::cmp::Ordering::Equal))
                 .map(|icon| icon.color),
             FrameColor::None /* | FrameColor::Random */ => None
-        }; */
-        let frame_color = None;
+        };
 
         rounded_rect_gradient(&cr, rect_left, rect_top, rect_width, rect_height, r, vec![(0.0, pill_bg_color)], crate::utils::GradientDirection::Horizontal, false, frame_color);
 
         pill_clock.draw(&cr, pill_clock_rect.0, rect_height, x, rect_top);
-        x += pill_clock_rect.0 + space;
+        x += pill_clock_rect.0;
 
         if pill_battery_rect.0 > 0.0 {
             pill_battery.draw(&cr, pill_battery_rect.0, rect_height, x, rect_top);
-            x += pill_battery_rect.0 + space;
+            x += pill_battery_rect.0;
         }
 
         if self.timer.is_active() {
             pill_countdown.draw(&cr, pill_countdown_rect.0, rect_height, x, rect_top);
-            x += pill_countdown_rect.0 + space;
+            x += pill_countdown_rect.0;
         }
 
         if pill_security_rect.0 > 0.0 {
             self.pill_security.draw(&cr, pill_security_rect.0, rect_height, x, rect_top);
-            x += pill_security_rect.0 + space;
+            x += pill_security_rect.0;
         }
 
         pill_warnings.draw(&cr, pill_warnings_rect.0, rect_height, x, rect_top);
-        x += pill_warnings_rect.0 + space;
+        x += pill_warnings_rect.0;
 
 /*
         let color = if passed { (1.0, 0.0, 0.3, 1.0) } else if self.timer.progress() < 0.9 { (1.0, 1.0, 1.0, 0.75) } else { (color.0, color.1, color.2, 0.75) };
