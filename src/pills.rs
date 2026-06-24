@@ -11,6 +11,31 @@ use crate::{countdown::Countdown, dbg_println, heimdallr_layer::AlarmIcon, secur
 
 pub static PILL_FONT_SIZE: f64 = 14.0;
 
+
+
+
+
+
+
+struct AnimationState {
+    current_size: (f64, f64),
+    target_size: (f64, f64),
+    animation_from: (f64, f64),
+    animation_start: Option<Instant>,
+    animation_duration: Duration,
+}
+
+impl AnimationState {
+    fn step(&mut self) -> bool { false } // TODO
+    fn set_target(&mut self, target: (f64, f64)) {} // TODO
+}
+
+
+
+
+
+
+
 // #[enum_dispatch]
 pub trait PillTrait {
     // fn new () -> Self;
@@ -18,6 +43,19 @@ pub trait PillTrait {
     fn step_animation(&mut self) -> bool;
     fn get_current_rect (&self) -> (f64, f64);
     fn get_desired_rect (&self) -> (f64, f64);
+
+    /*
+    fn step_animation(&mut self) -> bool {
+        self.animation_state().step()
+    }
+
+    fn get_current_rect(&self) -> (f64, f64) {
+        self.animation_state().current_size
+    }
+    fn get_desired_rect(&self) -> (f64, f64) {
+        self.animation_state().target_size
+    }
+    */
 }
 
 macro_rules! define_pill_trait_implementer {
@@ -40,6 +78,8 @@ macro_rules! define_pill_trait_implementer {
         }
 
         impl PillTrait for $nome_widget {
+            // fn animation_state(&mut self) -> &mut AnimationState { &mut self.animation } TODO uncomment this
+
             fn draw (&mut self, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64) {
 
                 if let (Some(lay), Some(sizes), Some(_text), Some(color)) = (&self.cached_layout, &self.cached_sizes, &self.cached_text, &self.cached_color) {
