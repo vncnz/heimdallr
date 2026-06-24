@@ -403,7 +403,7 @@ impl HeimdallrLayer {
         ]; */
         // rounded_rect_gradient(&cr, rect_right - rect_width, rect_top, rect_width, rect_height, r, steps, crate::utils::GradientDirection::Horizontal, false, Some((0.0, 0.0, 0.0, 0.0)));
 
-        let frame_color = match self.config.frame_color {
+        /* let frame_color = match self.config.frame_color {
             FrameColor::Rgba(r, g, b, a) => Some((r, g, b, a)),
             FrameColor::WorstResource => self
                 .icons
@@ -411,7 +411,8 @@ impl HeimdallrLayer {
                 .max_by(|a, b| a.warn.partial_cmp(&b.warn).unwrap_or(std::cmp::Ordering::Equal))
                 .map(|icon| icon.color),
             FrameColor::None /* | FrameColor::Random */ => None
-        };
+        }; */
+        let frame_color = None;
 
         rounded_rect_gradient(&cr, rect_left, rect_top, rect_width, rect_height, r, vec![(0.0, pill_bg_color)], crate::utils::GradientDirection::Horizontal, false, frame_color);
 
