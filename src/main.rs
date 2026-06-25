@@ -150,7 +150,13 @@ fn main() {
         _ => ClockWrapper::NoClock(NoClock::new())
     };
 
-    let mut app = HeimdallrLayer {
+    let mut app = HeimdallrLayer::new(
+        RegistryState::new(&globals),
+        OutputState::new(&globals, &qh),
+        Shm::bind(&globals, &qh).unwrap(),
+        config.clone()
+    );
+    /* let mut app = HeimdallrLayer {
         registry_state: RegistryState::new(&globals),
         output_state: OutputState::new(&globals, &qh),
         shm,
@@ -191,7 +197,7 @@ fn main() {
         pill_security: PillSecurity::new(),
         pill_countdown: PillCountdown::new(),
         pills_animation: false
-    };
+    }; */
 
     if !config.hide_missing_ratatoskr {
         app.add_icon("ratatoskr", "󰠗", get_color_gradient(1.0), 1.0, None);

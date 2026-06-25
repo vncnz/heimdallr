@@ -14,7 +14,7 @@ use cairo::FontSlant;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{clock::ClockTrait, config::FrameColor, countdown::Countdown, data::BatteryDevice, dbg_println, notifications::Notification, pills::{PillBattery, PillClock, PillCountdown, PillSecurity, PillTrait, PillWarnings}, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, cr_text_rotated, cr_text_rotated_mixed, draw_smart_border, get_color_gradient, log_to_file, rounded_rect_gradient, select_icon}};
+use crate::{clock::{ClockTrait, ClockWrapper, NoClock}, clock1::Clock1, clock2::Clock2, config::{ClockCfg, Config, FrameColor}, countdown::Countdown, data::BatteryDevice, dbg_println, notifications::Notification, pills::{PillBattery, PillClock, PillCountdown, PillSecurity, PillTrait, PillWarnings}, security::MicCameraStatus, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, cr_text_rotated, cr_text_rotated_mixed, draw_smart_border, get_color_gradient, log_to_file, rounded_rect_gradient, select_icon}};
 
 static DRAW_PILL: bool = true;
 static DRAW_OLD_UI: bool = false;
@@ -82,6 +82,63 @@ pub struct HeimdallrLayer {
 }
 
 impl HeimdallrLayer {
+    pub fn new (
+        registry_state: RegistryState,
+        output_state: OutputState,
+        shm: Shm,
+        config: Config
+    ) -> Self {
+
+        let clock = match config.show_clock {
+            ClockCfg::Clock1 => ClockWrapper::Clock1(Clock1::new()),
+            ClockCfg::Clock2 => ClockWrapper::Clock2(Clock2::new()),
+            _ => ClockWrapper::NoClock(NoClock::new())
+        };
+
+        HeimdallrLayer {
+            registry_state,
+            output_state,
+            shm,
+            pool: None,
+            layer: None,
+            width: 1,
+            height: 1,
+            first_configure: true,
+            // input_region: Some(empty_region),
+            icons: HashMap::new(),
+            ratatoskr_connected: false,
+            battery_integrated: None,
+            needs_redraw: true,
+            last_redraw: Instant::now(),
+            redraw_interval: [Duration::from_millis(1_000), Duration::from_millis(60_000)],
+            buffers: [None, None],
+            current_buffer_idx: 0,
+            config,
+            notifications: vec![],
+            notification_idx: 0,
+            wob_expiration: None,
+            wob_value: 0.0,
+            animator: Animator::new(),
+            frame_model: FrameModel::new(),
+            is_waiting_for_frame: false,
+            clock,
+            security: MicCameraStatus { mic_active: vec!(), camera_active: vec!(), pristine: false },
+            last_security_width: 0.0,
+            last_security_text: "".to_string(),
+            batteries: vec![],
+            last_batteries_width: 0.0,
+            last_batteries_text: "".to_string(),
+            batteries_pristine: false,
+            timer: Countdown::new(),
+            pill_clock: PillClock::new(),
+            pill_battery: PillBattery::new(),
+            pill_warnings: PillWarnings::new(),
+            pill_security: PillSecurity::new(),
+            pill_countdown: PillCountdown::new(),
+            pills_animation: false
+        }
+    }
+
     pub fn check_redraw_timeout(&mut self) {
 
         if self.timer.is_active() && self.last_redraw.elapsed() > Duration::from_secs(1) {
@@ -369,7 +426,7 @@ impl HeimdallrLayer {
             self.pills_animation = true;
             self.request_redraw("pill_warning animation");
         } else {
-            eprintln!("Pill warning is NOT animating");
+            // eprintln!("Pill warning is NOT animating");
         }
         let pill_warnings_rect = self.pill_warnings.get_current_rect();
 
@@ -388,7 +445,7 @@ impl HeimdallrLayer {
             self.pills_animation = true;
             self.request_redraw("pill_countdown animation");
         } else {
-            eprintln!("Pill countdown is NOT animating");
+            // eprintln!("Pill countdown is NOT animating");
         }
         let pill_countdown_rect = self.pill_countdown.get_current_rect();
 
@@ -404,7 +461,7 @@ impl HeimdallrLayer {
             self.pills_animation = true;
             self.request_redraw("pill_security animation");
         } else {
-            eprintln!("Pill security is NOT animating");
+            // eprintln!("Pill security is NOT animating");
         }
 
         let pill_security_rect = self.pill_security.get_current_rect();
