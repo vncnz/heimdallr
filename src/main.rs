@@ -137,7 +137,7 @@ fn main() {
 
     let compositor = CompositorState::bind(&globals, &qh).unwrap();
     let layer_shell = LayerShell::bind(&globals, &qh).unwrap();
-    let shm = Shm::bind(&globals, &qh).unwrap();
+    // let shm = Shm::bind(&globals, &qh).unwrap();
 
     //let resources = Arc::new(Mutex::new(ResourceData::default()));
     //let receiver = start_resource_watcher("/tmp/ratatoskr.json", resources.clone());
