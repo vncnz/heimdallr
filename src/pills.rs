@@ -353,7 +353,7 @@ impl PillTrait for PillWarnings {
         let mut x = x;
 
         cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
-        cr.set_font_size(16.0);
+        cr.set_font_size(PILL_FONT_SIZE);
 
         for icon in &self.icons {
             if icon.symbol == "󱫡" || icon.symbol == "󱫌" {
