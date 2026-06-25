@@ -214,7 +214,15 @@ pub struct PillCountdown {
 
 impl PillTrait for PillCountdown {
     fn draw(&mut self, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64) {
-        self.base.draw_centered(cr, rect_width, rect_height, x, y);
+
+        if self.last_status.0 {
+            let r = 2.0;
+            rounded_rect_gradient(&cr, x + PILL_MARGIN / 2.0, y + 3.0, rect_width - PILL_MARGIN, rect_height - 6.0, r, vec![(0.0, get_color_gradient(1.0))], crate::utils::GradientDirection::Horizontal, false, None); // Alternative red: (1.0, 0.0, 0.41, 1.0)
+        }
+
+        self.base.draw_centered(&cr, rect_width, rect_height, x, y);
+
+        // self.base.draw_centered(cr, rect_width, rect_height, x, y);
     }
 
     fn animation_state(&mut self) -> &mut AnimationState {
@@ -242,7 +250,7 @@ impl PillCountdown {
 
             let w = if status { 1.0 } else { countdown.get_warning() };
             let icon = if status { "󱫌" } else { "󱫡" };
-            let color = get_color_gradient(w);
+            let color = if status { (0.0, 0.0, 0.0, 1.0) } else { get_color_gradient(w) };
             let text: &str = if countdown.is_active() { &format!("{icon} {time}") } else { "" };
 
             let (layout, sizes) = cr_text_layout(&cr, &text, PILL_FONT_SIZE).unwrap();
