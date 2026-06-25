@@ -144,11 +144,11 @@ fn main() {
 
     // let rx = data::start_socket_watcher("/tmp/ratatoskr.sock");
 
-    let clock = match config.show_clock {
+    /* let clock = match config.show_clock {
         config::ClockCfg::Clock1 => ClockWrapper::Clock1(Clock1::new()),
         config::ClockCfg::Clock2 => ClockWrapper::Clock2(Clock2::new()),
         _ => ClockWrapper::NoClock(NoClock::new())
-    };
+    }; */
 
     let mut app = HeimdallrLayer::new(
         RegistryState::new(&globals),
