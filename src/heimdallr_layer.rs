@@ -72,6 +72,9 @@ pub struct HeimdallrLayer {
     pub(crate) last_batteries_text: String,
     pub(crate) batteries_pristine: bool,
     pub(crate) timer: Countdown,
+    pub(crate) pill_clock: PillClock,
+    pub(crate) pill_battery: PillBattery,
+    pub(crate) pill_warnings: PillWarnings,
     pub(crate) pill_security: PillSecurity,
     pub(crate) pill_countdown: PillCountdown,
     pub(crate) pills_animation: bool
@@ -348,22 +351,27 @@ impl HeimdallrLayer {
         self.pills_animation = false;
         // I'm experimenting with new UI: some of this shit will be moved out of here, ofc!
 
-        let mut pill_clock: PillClock = PillClock::new();
-        pill_clock.update_data(&cr);
+        self.pill_clock.update_data(&cr);
+        self.pill_battery.update_data(&cr, self.battery_integrated.clone());
 
-        let mut pill_battery = PillBattery::new();
-        pill_battery.update_data(&cr, self.battery_integrated.clone());
-
-        let mut pill_warnings = PillWarnings::new();
         let icons: Vec<AlarmIcon> = self.icons.values().cloned().filter(|icon| icon.symbol != "󱫡" && icon.symbol != "󱫌").collect();
-        pill_warnings.update_data(&cr, icons);
-
+        self.pill_warnings.update_data(&cr, icons);
 
 
         /* Pills without animation */
-        let pill_clock_rect = pill_clock.get_desired_rect(); // pill_clock.get_current_rect();
-        let pill_battery_rect = pill_battery.get_desired_rect();
-        let pill_warnings_rect = pill_warnings.get_desired_rect();
+        let pill_clock_rect = self.pill_clock.get_desired_rect(); // pill_clock.get_current_rect();
+        let pill_battery_rect = self.pill_battery.get_desired_rect();
+
+
+        /* Update warnings pill animation */
+        if self.pill_warnings.step_animation() {
+            eprintln!("Pill warning animation");
+            self.pills_animation = true;
+            self.request_redraw("pill_warning animation");
+        } else {
+            eprintln!("Pill warning is NOT animating");
+        }
+        let pill_warnings_rect = self.pill_warnings.get_current_rect();
 
 
         /* Update countdown pill (to be unified) */
@@ -436,11 +444,11 @@ impl HeimdallrLayer {
 
         rounded_rect_gradient(&cr, rect_left, rect_top, rect_width, rect_height, r, vec![(0.0, pill_bg_color)], crate::utils::GradientDirection::Horizontal, false, frame_color);
 
-        pill_clock.draw(&cr, pill_clock_rect.0, rect_height, x, rect_top);
+        self.pill_clock.draw(&cr, pill_clock_rect.0, rect_height, x, rect_top);
         x += pill_clock_rect.0;
 
         if pill_battery_rect.0 > 0.0 {
-            pill_battery.draw(&cr, pill_battery_rect.0, rect_height, x, rect_top);
+            self.pill_battery.draw(&cr, pill_battery_rect.0, rect_height, x, rect_top);
             x += pill_battery_rect.0;
         }
 
@@ -454,8 +462,10 @@ impl HeimdallrLayer {
             x += pill_security_rect.0;
         }
 
-        pill_warnings.draw(&cr, pill_warnings_rect.0, rect_height, x, rect_top);
-        x += pill_warnings_rect.0;
+        if pill_warnings_rect.0 > 0.0 {
+            self.pill_warnings.draw(&cr, pill_warnings_rect.0, rect_height, x, rect_top);
+            x += pill_warnings_rect.0;
+        }
 
 /*
         let color = if passed { (1.0, 0.0, 0.3, 1.0) } else if self.timer.progress() < 0.9 { (1.0, 1.0, 1.0, 0.75) } else { (color.0, color.1, color.2, 0.75) };

@@ -70,9 +70,9 @@ impl AnimationState {
         let current_size = self.current_size;
         let ct = self.target_size;
         if changed {
-            dbg_println!("{} t:{t:?} target_size:{ct:?} current_size:{current_size:?}", "changed target!".cyan());
+            dbg_println!("{} new_target:{t:?} target_size:{ct:?} current_size:{current_size:?}", "changed target!".cyan());
         } else {
-            dbg_println!("{} t:{t:?} target_size:{ct:?} current_size:{current_size:?}", "NOT changed target!".blue());
+            dbg_println!("{} new_target:{t:?} target_size:{ct:?} current_size:{current_size:?}", "NOT changed target!".blue());
         }
 
         if changed {
@@ -364,7 +364,7 @@ impl PillTrait for PillWarnings {
             cr.show_text(&icon.symbol).unwrap();
             x += 20.0;
         }
-        dbg_println!("PillWarnings drawn in x {x:?}");
+        // dbg_println!("PillWarnings drawn in x {x:?}");
     }
 
     fn animation_state(&mut self) -> &mut AnimationState {
@@ -372,7 +372,9 @@ impl PillTrait for PillWarnings {
     }
 
     fn get_current_rect(&mut self) -> (f64, f64) {
-        (self.icons.len() as f64 * 20.0, 20.0)
+        let sizes = self.animation_state().current_size;
+        dbg_println!("{} current_size:{sizes:?}", "PillWarnings get_current_rect".red());
+        sizes
     }
 
     fn get_desired_rect(&mut self) -> (f64, f64) {
@@ -389,8 +391,14 @@ impl PillWarnings {
     }
 
     pub fn update_data(&mut self, _cr: &cairo::Context, icons: Vec<AlarmIcon>) -> bool {
+        let changed_size = self.icons.len() != icons.len();
         self.icons = icons;
-        true
+        if changed_size {
+            let sizes = (self.icons.len() as f64 * 20.0, 20.0);
+            dbg_println!("{} target:{sizes:?}", "PillWarnings update_data".blue());
+            self.animation.set_target(sizes);
+        }
+        changed_size
     }
 }
 

@@ -17,7 +17,7 @@ use std::thread;
 
 use colored::Colorize;
 
-use crate::{battery::BatteryStats, clock::{ClockTrait, ClockWrapper, NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, countdown::Countdown, data::{BluetoothStats, RatatoskrSocket, UPowerDeviceKind}, heimdallr_layer::IconChange, notifications::Notification, pills::{PillCountdown, PillSecurity}, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
+use crate::{battery::BatteryStats, clock::{ClockTrait, ClockWrapper, NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, countdown::Countdown, data::{BluetoothStats, RatatoskrSocket, UPowerDeviceKind}, heimdallr_layer::IconChange, notifications::Notification, pills::{PillBattery, PillClock, PillCountdown, PillSecurity, PillWarnings}, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
 
 mod data;
 mod config;
@@ -185,6 +185,9 @@ fn main() {
         last_batteries_text: "".to_string(),
         batteries_pristine: false,
         timer: Countdown::new(),
+        pill_clock: PillClock::new(),
+        pill_battery: PillBattery::new(),
+        pill_warnings: PillWarnings::new(),
         pill_security: PillSecurity::new(),
         pill_countdown: PillCountdown::new(),
         pills_animation: false
