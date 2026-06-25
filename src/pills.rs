@@ -158,9 +158,9 @@ impl PillBase {
                 y + rect_height / 2.0 - sizes.1 / 2.0,
             );
             pangocairo::functions::show_layout(cr, layout);
-            dbg_println!("Pill drawn in rect {sizes:?}");
+            // dbg_println!("Pill drawn in rect {sizes:?}");
         } else {
-            dbg_println!("Pill drawn in rect (0.0, 0.0)");
+            // dbg_println!("Pill drawn in rect (0.0, 0.0)");
         }
     }
 }
