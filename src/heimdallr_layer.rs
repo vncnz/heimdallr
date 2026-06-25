@@ -73,6 +73,7 @@ pub struct HeimdallrLayer {
     pub(crate) batteries_pristine: bool,
     pub(crate) timer: Countdown,
     pub(crate) pill_security: PillSecurity,
+    pub(crate) pill_countdown: PillCountdown,
     pub(crate) pills_animation: bool
 
 }
@@ -349,37 +350,51 @@ impl HeimdallrLayer {
 
         let mut pill_clock: PillClock = PillClock::new();
         pill_clock.update_data(&cr);
-        let pill_clock_rect = pill_clock.get_desired_rect();
 
         let mut pill_battery = PillBattery::new();
         pill_battery.update_data(&cr, self.battery_integrated.clone());
-        let pill_battery_rect = pill_battery.get_desired_rect();
 
         let mut pill_warnings = PillWarnings::new();
         let icons: Vec<AlarmIcon> = self.icons.values().cloned().filter(|icon| icon.symbol != "󱫡" && icon.symbol != "󱫌").collect();
         pill_warnings.update_data(&cr, icons);
+
+
+
+        /* Pills without animation */
+        let pill_clock_rect = pill_clock.get_desired_rect(); // pill_clock.get_current_rect();
+        let pill_battery_rect = pill_battery.get_desired_rect();
         let pill_warnings_rect = pill_warnings.get_desired_rect();
 
+
+        /* Update countdown pill (to be unified) */
         let c = Countdown {
             state: self.timer.state,
             total_paused_time: self.timer.total_paused_time,
             current_pause_start: self.timer.current_pause_start,
             direction: self.timer.direction.clone()
         };
-        let mut pill_countdown = PillCountdown::new();
-        pill_countdown.update_data(&cr, c);
-        let pill_countdown_rect = pill_countdown.get_desired_rect();
+        self.pill_countdown.update_data(&cr, c);
+
+        if self.pill_countdown.step_animation() {
+            eprintln!("Pill countdown animation");
+            self.pills_animation = true;
+            self.request_redraw("pill_countdown animation");
+        } else {
+            eprintln!("Pill countdown is NOT animating");
+        }
+        let pill_countdown_rect = self.pill_countdown.get_current_rect();
 
         
+        /* Update security pill */
         if self.security.pristine {
             self.pill_security.update_data(&cr, &self.security);
             self.security.pristine = false;
         }
 
         if self.pill_security.step_animation() {
-            eprintln!("Pill security is animating");
+            eprintln!("Pill security animation");
             self.pills_animation = true;
-            self.request_redraw("pill_security is animating");
+            self.request_redraw("pill_security animation");
         } else {
             eprintln!("Pill security is NOT animating");
         }
@@ -392,7 +407,7 @@ impl HeimdallrLayer {
         let rect_width = 
                 pill_clock_rect.0 +
                 if pill_battery_rect.0 > 0.0 { pill_battery_rect.0 } else { 0.0 } +
-                if self.timer.is_active() { pill_countdown_rect.0 } else { 0.0 } + 
+                if pill_countdown_rect.0 > 0.0 { pill_countdown_rect.0 } else { 0.0 } + 
                 if pill_security_rect.0 > 0.0 { pill_security_rect.0 } else { 0.0 } +
                 if self.icons.len() > 0 { (self.icons.len() as f64) * 20.0 } else { 0.0 }; // TODO: calculate pill_warnings width properly
         let rect_height = 26.0;
@@ -429,8 +444,8 @@ impl HeimdallrLayer {
             x += pill_battery_rect.0;
         }
 
-        if self.timer.is_active() {
-            pill_countdown.draw(&cr, pill_countdown_rect.0, rect_height, x, rect_top);
+        if pill_countdown_rect.0 > 0.0 {
+            self.pill_countdown.draw(&cr, pill_countdown_rect.0, rect_height, x, rect_top);
             x += pill_countdown_rect.0;
         }
 

@@ -3,6 +3,7 @@
 use cairo::{Context, FontSlant};
 use chrono::Local;
 use std::time::{Duration, Instant};
+use colored::Colorize;
 
 use crate::{
     countdown::Countdown,
@@ -65,6 +66,14 @@ impl AnimationState {
             (x, y) => (x + PILL_MARGIN * 2.0, y)
         };
         let changed = self.target_size != t;
+
+        let current_size = self.current_size;
+        let ct = self.target_size;
+        if changed {
+            dbg_println!("{} t:{t:?} target_size:{ct:?} current_size:{current_size:?}", "changed target!".cyan());
+        } else {
+            dbg_println!("{} t:{t:?} target_size:{ct:?} current_size:{current_size:?}", "NOT changed target!".blue());
+        }
 
         if changed {
             self.animation_from = self.current_size;
@@ -191,6 +200,7 @@ impl PillClock {
         let color = (1.0, 1.0, 1.0, 1.0);
 
         self.base.set_layout(layout, sizes, text, color);
+        dbg_println!("{} target:{sizes:?}", "PillClock update_data".blue());
         self.animation.set_target(sizes);
         true
     }
@@ -215,7 +225,7 @@ impl PillTrait for PillCountdown {
 impl PillCountdown {
     pub fn new() -> Self {
         PillCountdown {
-            base: PillBase::with_size((58.0, 20.0)),
+            base: PillBase::new(), // with_size((58.0, 20.0)),
             animation: AnimationState::new(),
             last_status: (false, "".into()),
         }
@@ -227,18 +237,27 @@ impl PillCountdown {
             return false;
         }
 
-        self.last_status = (status, time.clone());
-        let w = if status { 1.0 } else { countdown.get_warning() };
-        let icon = if status { "󱫌" } else { "󱫡" };
-        let color = get_color_gradient(w);
-        let text = format!("{icon} {time}");
+        let target = if countdown.is_active() {
+            self.last_status = (status, time.clone());
 
-        let (layout, sizes) = cr_text_layout(&cr, &text, PILL_FONT_SIZE).unwrap();
-        let target = (sizes.0.max(58.0), sizes.1);
+            let w = if status { 1.0 } else { countdown.get_warning() };
+            let icon = if status { "󱫌" } else { "󱫡" };
+            let color = get_color_gradient(w);
+            let text: &str = if countdown.is_active() { &format!("{icon} {time}") } else { "" };
 
-        self.base.set_layout(layout, target, text, color);
-        self.animation.set_target(target);
-        true
+            let (layout, sizes) = cr_text_layout(&cr, &text, PILL_FONT_SIZE).unwrap();
+            let target = if countdown.is_active() { (sizes.0, sizes.1) } else { (0.0, 0.0) };
+
+            self.base.set_layout(layout, target, text.to_string(), color);
+            dbg_println!("{} {target:?}", "countdown target".blue());
+            target
+        } else {
+            self.base.clear();
+            dbg_println!("{} zero", "countdown target".blue());
+            (0.0, 0.0)
+        };
+
+        self.animation.set_target(target)
     }
 }
 
@@ -292,7 +311,7 @@ impl PillBattery {
                     _ => {
                         let slice: &[&str] = &[
                             "󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹",
-                        ];
+                        ].as_slice();
                         select_icon(0.0, 100.0, bat.percentage, slice)
                             .unwrap()
                             .into()
@@ -318,6 +337,7 @@ impl PillBattery {
             (0.0, 0.0)
         };
 
+        dbg_println!("{}", "PillBattery update_data".blue());
         self.animation.set_target(target);
         true
     }
@@ -422,11 +442,7 @@ impl PillSecurity {
             target
         };
 
-        self.animation.set_target(target);
-        true
-    }
-
-    pub fn need_fullscreen(&self) -> bool {
-        false
+        dbg_println!("{}", "PillSecurity update_data".blue());
+        self.animation.set_target(target)
     }
 }

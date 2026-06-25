@@ -17,7 +17,7 @@ use std::thread;
 
 use colored::Colorize;
 
-use crate::{battery::BatteryStats, clock::{ClockTrait, ClockWrapper, NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, countdown::Countdown, data::{BluetoothStats, RatatoskrSocket, UPowerDeviceKind}, heimdallr_layer::IconChange, notifications::Notification, pills::PillSecurity, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
+use crate::{battery::BatteryStats, clock::{ClockTrait, ClockWrapper, NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, countdown::Countdown, data::{BluetoothStats, RatatoskrSocket, UPowerDeviceKind}, heimdallr_layer::IconChange, notifications::Notification, pills::{PillCountdown, PillSecurity}, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
 
 mod data;
 mod config;
@@ -186,6 +186,7 @@ fn main() {
         batteries_pristine: false,
         timer: Countdown::new(),
         pill_security: PillSecurity::new(),
+        pill_countdown: PillCountdown::new(),
         pills_animation: false
     };
 
@@ -525,7 +526,7 @@ fn main() {
                     if let Some(vol) = &data.data {
                         if vol.get("headphones").unwrap().as_i64().unwrap() == 1 { icon = ""; }
                         else {
-                            let slice: &[&str] = &["", "", ""][..];
+                            let slice: &[&str] = &["", "", ""].as_slice();
                             icon = select_icon(0.0, 100.0, vol["value"].as_f64().unwrap_or_default(), slice).unwrap();
                         }
                     } else {
@@ -555,7 +556,7 @@ fn main() {
                         }
                         app.request_redraw(&data.resource);
                     } else {
-                        dbg_println!("Icon untouched {} {}", data.resource, data.warning);
+                        // dbg_println!("Icon untouched {} {}", data.resource, data.warning);
                     }
                 }
             }
