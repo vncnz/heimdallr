@@ -491,7 +491,15 @@ impl HeimdallrLayer {
 
         let r = 8.0;
         let pill_bg_color: (f64, f64, f64, f64) = (0.1, 0.1, 0.15, 0.85);
-        let mut pill_border_color: Option<(f64, f64, f64, f64)> = None;
+        let mut pill_border_color: Option<(f64, f64, f64, f64)> = match self.config.frame_color {
+            FrameColor::Rgba(r, g, b, a) => Some((r, g, b, a)),
+            FrameColor::WorstResource => self
+                .icons
+                .values()
+                .max_by(|a, b| a.warn.partial_cmp(&b.warn).unwrap_or(std::cmp::Ordering::Equal))
+                .map(|icon| icon.color),
+            FrameColor::None /* | FrameColor::Random */ => None
+        };
 
         let rect_width = 
                 pill_clock_rect.0 +
@@ -510,18 +518,12 @@ impl HeimdallrLayer {
         if self.frame_model.wob_height > 0.0 { // if self.wob_expiration.is_some() {
             let wob_color_base = (0.6, 0.6, 0.7, pill_bg_color.3);
             let wob_color = mix_color(pill_bg_color, wob_color_base, self.frame_model.wob_height);
+            pill_border_color = Some(mix_color(pill_border_color.unwrap_or((0.0, 0.0, 0.0, 0.0)), wob_color_base, self.frame_model.wob_height));
             let mut steps = vec![(0.0, wob_color)]; // TODO remove links to global animation system?
-            match self.config.frame_color {
-                FrameColor::None => {
-                    steps.push((self.wob_value, pill_bg_color));
-                },
-                _ => {
-                    steps.push((self.wob_value, pill_bg_color));
-                }
-            }
-            pill_border_color = Some(wob_color);
+            steps.push((self.wob_value, pill_bg_color));
             pill_bg_steps = steps;
         }
+        eprintln!("{} {pill_border_color:?}", "pill_bg_color -->".on_red());
 
 
         cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
