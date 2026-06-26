@@ -381,7 +381,7 @@ impl PillTrait for PillWarnings {
 
     fn get_current_rect(&mut self) -> (f64, f64) {
         let sizes = self.animation_state().current_size;
-        dbg_println!("{} current_size:{sizes:?}", "PillWarnings get_current_rect".red());
+        // dbg_println!("{} current_size:{sizes:?}", "PillWarnings get_current_rect".red());
         sizes
     }
 
