@@ -89,9 +89,9 @@ impl HeimdallrLayer {
         config: Config
     ) -> Self {
 
-        let clock = match config.show_clock {
-            ClockCfg::Clock1 => ClockWrapper::Clock1(Clock1::new()),
-            ClockCfg::Clock2 => ClockWrapper::Clock2(Clock2::new()),
+        let clock = match (config.show_clock.clone(), DRAW_OLD_UI) {
+            (ClockCfg::Clock1, true) => ClockWrapper::Clock1(Clock1::new()),
+            (ClockCfg::Clock2, true) => ClockWrapper::Clock2(Clock2::new()),
             _ => ClockWrapper::NoClock(NoClock::new())
         };
 
@@ -480,6 +480,23 @@ impl HeimdallrLayer {
         let rect_top = 2.0 + 24.0 * self.frame_model.notif_height_ratio;
         let mut x = rect_left;
 
+        let mut pill_bg_steps = vec![(0.0, pill_bg_color)];
+
+        // wob-like
+        if self.wob_expiration.is_some() {
+            let mut steps = vec![(0.0, (1.0, 1.0, 1.0, self.frame_model.wob_height * 0.5))]; // TODO remove links to global animation system?
+            match self.config.frame_color {
+                FrameColor::None => {
+                    steps.push((self.wob_value, pill_bg_color));
+                },
+                _ => {
+                    steps.push((self.wob_value, pill_bg_color));
+                }
+            }
+            pill_bg_steps = steps;
+        }
+
+
         cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
         cr.set_font_size(16.0);
 
@@ -489,7 +506,7 @@ impl HeimdallrLayer {
         ]; */
         // rounded_rect_gradient(&cr, rect_right - rect_width, rect_top, rect_width, rect_height, r, steps, crate::utils::GradientDirection::Horizontal, false, Some((0.0, 0.0, 0.0, 0.0)));
 
-        let frame_color = match self.config.frame_color {
+        /* let frame_color = match self.config.frame_color {
             FrameColor::Rgba(r, g, b, a) => Some((r, g, b, a)),
             FrameColor::WorstResource => self
                 .icons
@@ -497,9 +514,10 @@ impl HeimdallrLayer {
                 .max_by(|a, b| a.warn.partial_cmp(&b.warn).unwrap_or(std::cmp::Ordering::Equal))
                 .map(|icon| icon.color),
             FrameColor::None /* | FrameColor::Random */ => None
-        };
+        }; */
+        let frame_color = None;
 
-        rounded_rect_gradient(&cr, rect_left, rect_top, rect_width, rect_height, r, vec![(0.0, pill_bg_color)], crate::utils::GradientDirection::Horizontal, false, frame_color);
+        rounded_rect_gradient(&cr, rect_left, rect_top, rect_width, rect_height, r, pill_bg_steps, crate::utils::GradientDirection::Horizontal, false, frame_color);
 
         self.pill_clock.draw(&cr, pill_clock_rect.0, rect_height, x, rect_top);
         x += pill_clock_rect.0;
@@ -653,8 +671,8 @@ impl HeimdallrLayer {
         let mut y_offset = self.height as f64 - 8.0; // parte dal basso
         let res_w = 24.0;
         // let res_h = if self.ratatoskr_connected { (self.icons.len() as f64) * 30.0 } else { 30.0 };
-        let res_h = self.frame_model.icons_ratio * 24.0;
-        let wob_h = 24.0 * self.frame_model.wob_height;
+        let res_h = if DRAW_OLD_UI { self.frame_model.icons_ratio * 24.0 } else { 0.0 };
+        let wob_h = if DRAW_OLD_UI { 24.0 * self.frame_model.wob_height } else { 0.0 };
 
         // Draw rounded rectangle frame
         let thickness = 1.0;
@@ -716,25 +734,27 @@ impl HeimdallrLayer {
             cr.fill().unwrap();
         }
 
-        // wob-like
-        let mut steps = vec![(0.0, (1.0, 1.0, 1.0, self.frame_model.wob_height))];
-        let xc = (self.width as f64) / 2.0;
-        if wob_h > 2.0 {
-            match self.config.frame_color {
-                FrameColor::None => {
-                    steps.push((self.wob_value, (1.0, 1.0, 1.0, 0.3)));
-                },
-                _ => {
-                    steps.push((self.wob_value, (0.0, 0.0, 0.0, 0.0)));
+        if DRAW_OLD_UI {
+            // wob-like
+            let mut steps = vec![(0.0, (1.0, 1.0, 1.0, self.frame_model.wob_height))];
+            let xc = (self.width as f64) / 2.0;
+            if wob_h > 2.0 {
+                match self.config.frame_color {
+                    FrameColor::None => {
+                        steps.push((self.wob_value, (1.0, 1.0, 1.0, 0.3)));
+                    },
+                    _ => {
+                        steps.push((self.wob_value, (0.0, 0.0, 0.0, 0.0)));
+                    }
                 }
-            }
 
-            let wob_half_width = 98.0;
-            let wob_height = wob_h - 4.0;
-            if wob_height > 0.0 {
-                let left = xc - wob_half_width;
-                let top = h - thickness - (thickness / 2.0) - wob_h + 3.0;
-                rounded_rect_gradient(&cr, left, top, wob_half_width * 2.0, wob_height, wob_h.min(radius2-1.0), steps, crate::utils::GradientDirection::Horizontal, false, None);
+                let wob_half_width = 98.0;
+                let wob_height = wob_h - 4.0;
+                if wob_height > 0.0 {
+                    let left = xc - wob_half_width;
+                    let top = h - thickness - (thickness / 2.0) - wob_h + 3.0;
+                    rounded_rect_gradient(&cr, left, top, wob_half_width * 2.0, wob_height, wob_h.min(radius2-1.0), steps, crate::utils::GradientDirection::Horizontal, false, None);
+                }
             }
         }
 
@@ -787,50 +807,52 @@ impl HeimdallrLayer {
 
         // === Draw alarm icons ===
         
-        let mut switched = true;
-        for icon in self.icons.values() {
-            if switched {
+        if DRAW_OLD_UI {
+            let mut switched = true;
+            for icon in self.icons.values() {
+                if switched {
+                    cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
+                    cr.set_font_size(16.0);
+                }
+                cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
+                cr.move_to(4.0, y_offset);
                 cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
-                cr.set_font_size(16.0);
+                cr.show_text(&icon.symbol).unwrap();
+                if let Some(info) = &icon.info {
+                    switched = true;
+                    cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
+                    cr.set_font_size(12.0);
+
+                    /* cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
+                    cr.move_to(24.0 - 1.0, y_offset - 1.0);
+                    cr.show_text(&info).unwrap();
+
+                    cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
+                    cr.move_to(24.0, y_offset);
+                    cr.show_text(&info).unwrap(); */
+
+                    cr.move_to(24.0, y_offset);
+                    cr.text_path(&info);
+        
+                    let path = cr.copy_path().expect("Valid path");
+
+                    // border (stroke)
+                    cr.set_source_rgb(0.0, 0.0, 0.0);
+                    cr.set_line_width(2.0);
+                    cr.set_line_join(cairo::LineJoin::Round);
+                    cr.stroke().expect("Stroke failed");
+
+                    // text (fill)
+                    cr.append_path(&path);
+                    cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
+                    cr.fill().expect("Fill failed");
+
+
+                } else {
+                    switched = false;
+                }
+                y_offset -= 24.0;
             }
-            cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
-            cr.move_to(4.0, y_offset);
-            cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
-            cr.show_text(&icon.symbol).unwrap();
-            if let Some(info) = &icon.info {
-                switched = true;
-                cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
-                cr.set_font_size(12.0);
-
-                /* cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
-                cr.move_to(24.0 - 1.0, y_offset - 1.0);
-                cr.show_text(&info).unwrap();
-
-                cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
-                cr.move_to(24.0, y_offset);
-                cr.show_text(&info).unwrap(); */
-
-                cr.move_to(24.0, y_offset);
-                cr.text_path(&info);
-    
-                let path = cr.copy_path().expect("Valid path");
-
-                // border (stroke)
-                cr.set_source_rgb(0.0, 0.0, 0.0);
-                cr.set_line_width(2.0);
-                cr.set_line_join(cairo::LineJoin::Round);
-                cr.stroke().expect("Stroke failed");
-
-                // text (fill)
-                cr.append_path(&path);
-                cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
-                cr.fill().expect("Fill failed");
-
-
-            } else {
-                switched = false;
-            }
-            y_offset -= 24.0;
         }
 
     }
