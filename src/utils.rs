@@ -6,7 +6,22 @@ macro_rules! dbg_println {
     };
 }
 
+type Color = (f64, f64, f64, f64);
+pub fn mix_color(c1: Color, c2: Color, t: f64) -> Color {
+    // Clamping di t per evitare comportamenti inaspettati fuori dal range [0.0, 1.0]
+    let t = t.clamp(0.0, 1.10);
+    
+    let (r1, g1, b1, a1) = c1;
+    let (r2, g2, b2, a2) = c2;
 
+    // Applichiamo la formula del lerp a ciascun canale
+    let r = r1.powf(2.2) * (1.0 - t) + r2.powf(2.2) * t;
+    let g = g1.powf(2.2) * (1.0 - t) + g2.powf(2.2) * t;
+    let b = b1.powf(2.2) * (1.0 - t) + b2.powf(2.2) * t;
+    let a = a1 * (1.0 - t) + a2 * t;
+
+    (r.powf(1.0/2.2), g.powf(1.0/2.2), b.powf(1.0/2.2), a)
+}
 
 
 

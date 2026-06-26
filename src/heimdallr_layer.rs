@@ -14,7 +14,7 @@ use cairo::FontSlant;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{clock::{ClockTrait, ClockWrapper, NoClock}, clock1::Clock1, clock2::Clock2, config::{ClockCfg, Config, FrameColor}, countdown::Countdown, data::BatteryDevice, dbg_println, notifications::Notification, pills::{PillBattery, PillClock, PillCountdown, PillSecurity, PillTrait, PillWarnings}, security::MicCameraStatus, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, cr_text_rotated, cr_text_rotated_mixed, draw_smart_border, get_color_gradient, log_to_file, rounded_rect_gradient, select_icon}};
+use crate::{clock::{ClockTrait, ClockWrapper, NoClock}, clock1::Clock1, clock2::Clock2, config::{ClockCfg, Config, FrameColor}, countdown::Countdown, data::BatteryDevice, dbg_println, notifications::Notification, pills::{PillBattery, PillClock, PillCountdown, PillSecurity, PillTrait, PillWarnings}, security::MicCameraStatus, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, draw_smart_border, get_color_gradient, log_to_file, mix_color, rounded_rect_gradient}};
 
 static DRAW_PILL: bool = true;
 static DRAW_OLD_UI: bool = false;
@@ -491,6 +491,7 @@ impl HeimdallrLayer {
 
         let r = 8.0;
         let pill_bg_color: (f64, f64, f64, f64) = (0.1, 0.1, 0.15, 0.85);
+        let mut pill_border_color: Option<(f64, f64, f64, f64)> = None;
 
         let rect_width = 
                 pill_clock_rect.0 +
@@ -506,8 +507,10 @@ impl HeimdallrLayer {
         let mut pill_bg_steps = vec![(0.0, pill_bg_color)];
 
         // wob-like
-        if self.wob_expiration.is_some() {
-            let mut steps = vec![(0.0, (1.0, 1.0, 1.0, self.frame_model.wob_height * 0.5))]; // TODO remove links to global animation system?
+        if self.frame_model.wob_height > 0.0 { // if self.wob_expiration.is_some() {
+            let wob_color_base = (0.6, 0.6, 0.7, pill_bg_color.3);
+            let wob_color = mix_color(pill_bg_color, wob_color_base, self.frame_model.wob_height);
+            let mut steps = vec![(0.0, wob_color)]; // TODO remove links to global animation system?
             match self.config.frame_color {
                 FrameColor::None => {
                     steps.push((self.wob_value, pill_bg_color));
@@ -516,6 +519,7 @@ impl HeimdallrLayer {
                     steps.push((self.wob_value, pill_bg_color));
                 }
             }
+            pill_border_color = Some(wob_color);
             pill_bg_steps = steps;
         }
 
@@ -538,9 +542,8 @@ impl HeimdallrLayer {
                 .map(|icon| icon.color),
             FrameColor::None /* | FrameColor::Random */ => None
         }; */
-        let frame_color = None;
 
-        rounded_rect_gradient(&cr, rect_left, rect_top, rect_width, rect_height, r, pill_bg_steps, crate::utils::GradientDirection::Horizontal, false, frame_color);
+        rounded_rect_gradient(&cr, rect_left, rect_top, rect_width, rect_height, r, pill_bg_steps, crate::utils::GradientDirection::Horizontal, false, pill_border_color);
 
         self.pill_clock.draw(&cr, pill_clock_rect.0, rect_height, x, rect_top);
         x += pill_clock_rect.0;
