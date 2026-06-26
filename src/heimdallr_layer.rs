@@ -33,7 +33,22 @@ pub struct AlarmIcon {
     pub warn: f64,
     pub info: Option<String>
 }
-
+/* Trait that I'll use in the future, maybe
+pub trait HeimdallrLayerTrait {
+    fn new (registry_state: RegistryState, output_state: OutputState, shm: Shm, config: Config);
+    fn update_security_data (&mut self, data: MicCameraStatus);
+    fn update_battery_data (&mut self, data: Option<crate::battery::BatteryStats>);
+    fn check_redraw_timeout(&mut self);
+    fn request_redraw(&mut self, _reason: &str);
+    fn maybe_redraw(&mut self, qh: &QueueHandle<Self>);
+    fn update_notification_list (&mut self, new_notif_opt: Option<Notification>);
+    fn add_icon(&mut self, id: &str, symbol: &str, color: (f64, f64, f64, f64), warn: f64, info: Option<String>) -> IconChange;
+    fn remove_icon(&mut self, id: &str) -> bool;
+    fn remove_notification(&mut self) -> bool;
+    fn show_notification(&mut self, new_idx: i32) -> bool;
+    fn show_value(&mut self, value: f64, _kind: Option<&str>) -> bool;
+}
+*/
 static mut AVG_DUR: u128 = 0;
 static mut AVG_CNT: i64 = -5;
 
@@ -137,6 +152,14 @@ impl HeimdallrLayer {
             pill_countdown: PillCountdown::new(),
             pills_animation: false
         }
+    }
+
+    pub fn update_security_data (&mut self, data: MicCameraStatus) {
+        self.security = data;
+    }
+
+    pub fn update_battery_data (&mut self, data: Option<crate::battery::BatteryStats>) {
+        self.battery_integrated = data;
     }
 
     pub fn check_redraw_timeout(&mut self) {

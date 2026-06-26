@@ -299,8 +299,7 @@ fn main() {
         let _ = event_queue.dispatch_pending(&mut app);
 
         if let Ok(bat) = rx_battery.try_recv() {
-            eprintln!("{:?}", bat);
-            app.battery_integrated = Some(bat);
+            app.update_battery_data(Some(bat));
             app.request_redraw(&"battery");
             eprintln!("{}", "Battery update".yellow());
         }
@@ -316,7 +315,7 @@ fn main() {
             // eprintln!("{}", "PipeWire update".bright_blue());
             log_to_file(format!("{:?}", status).to_string());
             println!("{}", format!("{:?}", status).red());
-            app.security = status;
+            app.update_security_data(status);
             app.request_redraw("security updated");
         }
 
