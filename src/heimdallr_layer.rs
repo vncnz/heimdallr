@@ -523,8 +523,6 @@ impl HeimdallrLayer {
             steps.push((self.wob_value, pill_bg_color));
             pill_bg_steps = steps;
         }
-        eprintln!("{} {pill_border_color:?}", "pill_bg_color -->".on_red());
-
 
         cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
         cr.set_font_size(16.0);
@@ -569,14 +567,6 @@ impl HeimdallrLayer {
             self.pill_warnings.draw(&cr, pill_warnings_rect.0, rect_height, x, rect_top);
             x += pill_warnings_rect.0;
         }
-
-/*
-        let color = if passed { (1.0, 0.0, 0.3, 1.0) } else if self.timer.progress() < 0.9 { (1.0, 1.0, 1.0, 0.75) } else { (color.0, color.1, color.2, 0.75) };
-        cr.set_source_rgba(color.0, color.1, color.2, color.3);
-        cr_text_aligned(cr.clone(), time.clone(), rect_right, rect_top + rect_height / 2.0, 1.0, 0.5);
-*/
-
-        eprintln!("Test pill drawn");
     }
 
     fn draw_timer (&mut self, cr: &Context) {
