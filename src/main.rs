@@ -15,7 +15,7 @@ use std::thread;
 
 use colored::Colorize;
 
-use crate::{battery::BatteryStats, commands::start_command_listener, data::{BluetoothStats, RatatoskrSocket, UPowerDeviceKind}, heimdallr_layer::IconChange, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, get_color_gradient, log_to_file, select_icon}};
+use crate::{battery::BatteryStats, commands::start_command_listener, data::{BluetoothStats, RatatoskrSocket, UPowerDeviceKind}, heimdallr_layer::{DRAW_OLD_UI, IconChange}, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, get_color_gradient, log_to_file, select_icon}};
 
 mod data;
 mod config;
@@ -459,7 +459,7 @@ fn main() {
                                     UPowerDeviceKind::Keyboard => "󰌌",
                                     _ => "󰂱"
                                 };
-                                if config.show_always_bluetooth || dev.warn >= 0.3 {
+                                if (config.show_always_bluetooth || dev.warn >= 0.3) && DRAW_OLD_UI {
                                     let _added = app.add_icon(&iconkey, icon, get_color_gradient(dev.warn), dev.warn, None);
                                 }
                             }

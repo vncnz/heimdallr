@@ -14,10 +14,10 @@ use cairo::FontSlant;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{clock::{ClockTrait, ClockWrapper, NoClock}, clock1::Clock1, clock2::Clock2, config::{ClockCfg, Config, FrameColor}, countdown::Countdown, data::BatteryDevice, dbg_println, notifications::Notification, pills::{PillLaptopBattery, PillClock, PillCountdown, PillSecurity, PillTrait, PillWarnings}, security::MicCameraStatus, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, draw_smart_border, get_color_gradient, log_to_file, mix_color, rounded_rect_gradient}};
+use crate::{clock::{ClockTrait, ClockWrapper, NoClock}, clock1::Clock1, clock2::Clock2, config::{ClockCfg, Config, FrameColor}, countdown::Countdown, data::BatteryDevice, dbg_println, notifications::Notification, pills::{PillClock, PillCountdown, PillDevices, PillLaptopBattery, PillSecurity, PillTrait, PillWarnings}, security::MicCameraStatus, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, draw_smart_border, get_color_gradient, log_to_file, mix_color, rounded_rect_gradient}};
 
 static DRAW_PILL: bool = true;
-static DRAW_OLD_UI: bool = false;
+pub static DRAW_OLD_UI: bool = false;
 
 #[derive(PartialEq)]
 pub enum IconChange {
@@ -92,7 +92,8 @@ pub struct HeimdallrLayer {
     pub(crate) pill_warnings: PillWarnings,
     pub(crate) pill_security: PillSecurity,
     pub(crate) pill_countdown: PillCountdown,
-    pub(crate) pills_animation: bool
+    pub(crate) pill_devices: PillDevices,
+    pub(crate) pills_are_animating: bool
 
 }
 
@@ -150,7 +151,8 @@ impl HeimdallrLayer {
             pill_warnings: PillWarnings::new(),
             pill_security: PillSecurity::new(),
             pill_countdown: PillCountdown::new(),
-            pills_animation: false
+            pill_devices: PillDevices::new(),
+            pills_are_animating: false
         }
     }
 
@@ -189,7 +191,7 @@ impl HeimdallrLayer {
             }
         }
 
-        let animating = self.animator.step(&mut self.frame_model) || self.pills_animation;
+        let animating = self.animator.step(&mut self.frame_model) || self.pills_are_animating;
         if !animating { // Now, we skip calling draw only if we are not animating something
 
             if !self.needs_redraw {
@@ -428,7 +430,7 @@ impl HeimdallrLayer {
     }
 
     fn draw_test_pill (&mut self, cr: &Context) {
-        self.pills_animation = false;
+        self.pills_are_animating = false;
         // I'm experimenting with new UI: some of this shit will be moved out of here, ofc!
 
         self.pill_clock.update_data(&cr);
@@ -446,7 +448,7 @@ impl HeimdallrLayer {
         /* Update warnings pill animation */
         if self.pill_warnings.step_animation() {
             eprintln!("Pill warning animation");
-            self.pills_animation = true;
+            self.pills_are_animating = true;
             self.request_redraw("pill_warning animation");
         } else {
             // eprintln!("Pill warning is NOT animating");
@@ -465,7 +467,7 @@ impl HeimdallrLayer {
 
         if self.pill_countdown.step_animation() {
             eprintln!("Pill countdown animation");
-            self.pills_animation = true;
+            self.pills_are_animating = true;
             self.request_redraw("pill_countdown animation");
         } else {
             // eprintln!("Pill countdown is NOT animating");
@@ -481,13 +483,26 @@ impl HeimdallrLayer {
 
         if self.pill_security.step_animation() {
             eprintln!("Pill security animation");
-            self.pills_animation = true;
+            self.pills_are_animating = true;
             self.request_redraw("pill_security animation");
         } else {
             // eprintln!("Pill security is NOT animating");
         }
 
         let pill_security_rect = self.pill_security.get_current_rect();
+
+        // if self.batteries_pristine {
+            self.pill_devices.update_data(&cr, self.batteries.clone());
+        // }
+
+        if self.pill_devices.step_animation() {
+            eprintln!("Pill countdown animation");
+            self.pills_are_animating = true;
+            self.request_redraw("pill_devices animation");
+        } else {
+            // eprintln!("Pill countdown is NOT animating");
+        }
+        let pill_devices_rect = self.pill_devices.get_current_rect();
 
         let r = 8.0;
         let pill_bg_color: (f64, f64, f64, f64) = (0.1, 0.1, 0.15, 0.85);
@@ -506,7 +521,8 @@ impl HeimdallrLayer {
                 if pill_battery_rect.0 > 0.0 { pill_battery_rect.0 } else { 0.0 } +
                 if pill_countdown_rect.0 > 0.0 { pill_countdown_rect.0 } else { 0.0 } + 
                 if pill_security_rect.0 > 0.0 { pill_security_rect.0 } else { 0.0 } +
-                if self.icons.len() > 0 { (self.icons.len() as f64) * 20.0 } else { 0.0 }; // TODO: calculate pill_warnings width properly
+                if pill_devices_rect.0 > 0.0 { pill_devices_rect.0 } else { 0.0 } +
+                if pill_warnings_rect.0 > 0.0 { pill_warnings_rect.0 } else { 0.0 };
         let rect_height = 26.0;
         let rect_left = (self.width as f64 - rect_width) / 2.0;
         let rect_top = 2.0 + 24.0 * self.frame_model.notif_height_ratio;
@@ -561,6 +577,11 @@ impl HeimdallrLayer {
         if pill_security_rect.0 > 0.0 {
             self.pill_security.draw(&cr, pill_security_rect.0, rect_height, x, rect_top);
             x += pill_security_rect.0;
+        }
+
+        if pill_devices_rect.0 > 0.0 {
+            self.pill_devices.draw(&cr, pill_devices_rect.0, rect_height, x, rect_top);
+            x += pill_devices_rect.0;
         }
 
         if pill_warnings_rect.0 > 0.0 {

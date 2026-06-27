@@ -6,11 +6,7 @@ use std::time::{Duration, Instant};
 use colored::Colorize;
 
 use crate::{
-    countdown::Countdown,
-    dbg_println,
-    heimdallr_layer::AlarmIcon,
-    security::MicCameraStatus,
-    utils::{cr_text_layout, ease, get_color_gradient, rounded_rect_gradient, select_icon}
+    countdown::Countdown, data::{BatteryDevice, UPowerDeviceKind}, dbg_println, heimdallr_layer::AlarmIcon, security::MicCameraStatus, utils::{cr_text_layout, ease, get_color_gradient, rounded_rect_gradient, select_icon}
 };
 
 pub static PILL_FONT_SIZE: f64 = 14.0;
@@ -62,7 +58,7 @@ impl AnimationState {
 
     fn set_target(&mut self, new_target: (f64, f64)) -> bool {
         let t = match new_target {
-            (0.0, 0.0) => new_target,
+            (0.0, _y) => new_target,
             (x, y) => (x + PILL_MARGIN * 2.0, y)
         };
         let changed = self.target_size != t;
@@ -172,6 +168,7 @@ pub struct PillClock {
 
 impl PillTrait for PillClock {
     fn draw(&mut self, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64) {
+        // rounded_rect_gradient(&cr, x, y, rect_width, rect_height, 0.0, vec![(0.0, (1.0, 0.0, 0.0, 0.5))], crate::utils::GradientDirection::Horizontal, false, None);
         self.base.draw_centered(cr, rect_width, rect_height, x, y);
     }
 
@@ -353,14 +350,17 @@ impl PillLaptopBattery {
 
 pub struct PillWarnings {
     icons: Vec<AlarmIcon>,
+    bases: Vec<PillBase>,
     animation: AnimationState,
 }
 
 impl PillTrait for PillWarnings {
     fn draw(&mut self, cr: &Context, _rect_width: f64, rect_height: f64, x: f64, y: f64) {
-        let mut x = x;
+        // rounded_rect_gradient(&cr, x, y, _rect_width, rect_height, 0.0, vec![(0.0, (1.0, 0.0, 0.0, 0.35))], crate::utils::GradientDirection::Horizontal, false, None);
 
-        cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
+        let mut x = x + PILL_MARGIN;
+
+        /*cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
         cr.set_font_size(PILL_FONT_SIZE);
 
         for icon in &self.icons {
@@ -370,6 +370,10 @@ impl PillTrait for PillWarnings {
             cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
             cr.move_to(x, y + rect_height / 2.0 + 4.0);
             cr.show_text(&icon.symbol).unwrap();
+            x += 20.0;
+        }*/
+        for b in &self.bases {
+            b.draw_centered(cr, 20.0, rect_height, x, y);
             x += 20.0;
         }
         // dbg_println!("PillWarnings drawn in x {x:?}");
@@ -385,28 +389,54 @@ impl PillTrait for PillWarnings {
         sizes
     }
 
-    fn get_desired_rect(&mut self) -> (f64, f64) {
+    /* fn get_desired_rect(&mut self) -> (f64, f64) {
         (self.icons.len() as f64 * 20.0, 20.0)
-    }
+    } */
 }
 
 impl PillWarnings {
     pub fn new() -> Self {
         PillWarnings {
             icons: Vec::new(),
+            bases: Vec::new(),
             animation: AnimationState::new(),
         }
     }
 
-    pub fn update_data(&mut self, _cr: &cairo::Context, icons: Vec<AlarmIcon>) -> bool {
-        let changed_size = self.icons.len() != icons.len();
+    pub fn update_data(&mut self, cr: &cairo::Context, icons: Vec<AlarmIcon>) -> bool {
         self.icons = icons;
-        if changed_size {
-            let sizes = (self.icons.len() as f64 * 20.0, 20.0);
+        // self.bases = self.icons.iter().map(|b| )
+        let mut w = 0.0;
+        self.bases = Vec::new();
+        for i in &self.icons {
+            let (layout, sizes) = cr_text_layout(&cr, &i.symbol, PILL_FONT_SIZE).unwrap();
+            let color = get_color_gradient(i.warn);
+            let mut base = PillBase::new();
+            w += 20.0; // layout.width() as f64;
+            base.set_layout(layout, sizes, i.symbol.clone(), color);
+            self.bases.push(base);
+        }
+
+        let changed = w != self.animation.target_size.0;
+        if changed {
+            let sizes = (w, 20.0);
             dbg_println!("{} target:{sizes:?}", "PillWarnings update_data".blue());
             self.animation.set_target(sizes);
         }
-        changed_size
+        changed
+
+
+
+        /* if changed_size {
+            // if self.icons.len() > 0 {
+                let sizes = (self.icons.len() as f64 * 20.0, 20.0);
+                dbg_println!("{} target:{sizes:?}", "PillWarnings update_data".blue());
+                self.animation.set_target(sizes);
+            // } else {
+                // self.base.clear();
+            // }
+        }
+        changed_size */
     }
 }
 
@@ -460,5 +490,76 @@ impl PillSecurity {
 
         dbg_println!("{}", "PillSecurity update_data".blue());
         self.animation.set_target(target)
+    }
+}
+
+
+pub struct PillDevices {
+    batteries: Vec<BatteryDevice>,
+    animation: AnimationState,
+}
+
+impl PillTrait for PillDevices {
+    fn draw(&mut self, cr: &Context, _rect_width: f64, rect_height: f64, x: f64, y: f64) {
+
+        // rounded_rect_gradient(&cr, x, y, _rect_width, rect_height, 0.0, vec![(0.0, (1.0, 0.0, 0.0, 0.5))], crate::utils::GradientDirection::Horizontal, false, None);
+
+        let mut x = x + PILL_MARGIN;
+
+        // rounded_rect_gradient(&cr, x, y, PILL_FONT_SIZE, rect_height, 0.0, vec![(0.0, (0.0, 1.0, 0.0, 0.5))], crate::utils::GradientDirection::Horizontal, false, None);
+        // rounded_rect_gradient(&cr, x + PILL_FONT_SIZE, y, PILL_FONT_SIZE, rect_height, 0.0, vec![(0.0, (0.0, 0.0, 1.0, 0.5))], crate::utils::GradientDirection::Horizontal, false, None);
+
+        cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
+        cr.set_font_size(PILL_FONT_SIZE);
+
+        for b in &self.batteries {
+            let color = get_color_gradient(b.warn);
+            cr.set_source_rgba(color.0, color.1, color.2, color.3);
+            cr.move_to(x + 1.0, y + rect_height / 2.0 + 4.0);
+            let icon = match b.kind {
+                UPowerDeviceKind::Mouse => "󰦋",
+                UPowerDeviceKind::Phone => "󱆏",
+                UPowerDeviceKind::Tablet => "",
+                UPowerDeviceKind::RemoteControl => "󰻅",
+                UPowerDeviceKind::Speakers => "󰦢",
+                UPowerDeviceKind::Headphones => "󰥰",
+                UPowerDeviceKind::GamingInput => "󱤙",
+                UPowerDeviceKind::Keyboard => "󰌌",
+                _ => "󰂱"
+            };
+            cr.show_text(&icon).unwrap();
+            x += PILL_FONT_SIZE + 2.0;
+        }
+        // .iter().map(|b| format!("{}: {:.0}%", b.name, b.percentage)).collect::<Vec<_>>().join("  ·  ")
+    }
+
+    fn animation_state(&mut self) -> &mut AnimationState {
+        &mut self.animation
+    }
+
+    fn get_current_rect(&mut self) -> (f64, f64) {
+        let sizes = self.animation_state().current_size;
+        // dbg_println!("{} current_size:{sizes:?}", "PillDevices get_current_rect".red());
+        sizes
+    }
+}
+
+impl PillDevices {
+    pub fn new() -> Self {
+        PillDevices {
+            batteries: Vec::new(),
+            animation: AnimationState::new(),
+        }
+    }
+
+    pub fn update_data(&mut self, _cr: &cairo::Context, batteries: Vec<BatteryDevice>) -> bool {
+        let changed_size = self.batteries.len() != batteries.len();
+        self.batteries = batteries;
+        if changed_size {
+            let sizes = (self.batteries.len() as f64 * (PILL_FONT_SIZE + 2.0), 20.0);
+            dbg_println!("{} target:{sizes:?}", "PillBatteries update_data".blue());
+            self.animation.set_target(sizes);
+        }
+        changed_size
     }
 }
