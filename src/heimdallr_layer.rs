@@ -14,7 +14,7 @@ use cairo::FontSlant;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{clock::{ClockTrait, ClockWrapper, NoClock}, clock1::Clock1, clock2::Clock2, config::{ClockCfg, Config, FrameColor}, countdown::Countdown, data::BatteryDevice, dbg_println, notifications::Notification, pills::{PillBattery, PillClock, PillCountdown, PillSecurity, PillTrait, PillWarnings}, security::MicCameraStatus, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, draw_smart_border, get_color_gradient, log_to_file, mix_color, rounded_rect_gradient}};
+use crate::{clock::{ClockTrait, ClockWrapper, NoClock}, clock1::Clock1, clock2::Clock2, config::{ClockCfg, Config, FrameColor}, countdown::Countdown, data::BatteryDevice, dbg_println, notifications::Notification, pills::{PillLaptopBattery, PillClock, PillCountdown, PillSecurity, PillTrait, PillWarnings}, security::MicCameraStatus, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, draw_smart_border, get_color_gradient, log_to_file, mix_color, rounded_rect_gradient}};
 
 static DRAW_PILL: bool = true;
 static DRAW_OLD_UI: bool = false;
@@ -88,7 +88,7 @@ pub struct HeimdallrLayer {
     pub(crate) batteries_pristine: bool,
     pub(crate) timer: Countdown,
     pub(crate) pill_clock: PillClock,
-    pub(crate) pill_battery: PillBattery,
+    pub(crate) pill_battery: PillLaptopBattery,
     pub(crate) pill_warnings: PillWarnings,
     pub(crate) pill_security: PillSecurity,
     pub(crate) pill_countdown: PillCountdown,
@@ -146,7 +146,7 @@ impl HeimdallrLayer {
             batteries_pristine: false,
             timer: Countdown::new(),
             pill_clock: PillClock::new(),
-            pill_battery: PillBattery::new(),
+            pill_battery: PillLaptopBattery::new(),
             pill_warnings: PillWarnings::new(),
             pill_security: PillSecurity::new(),
             pill_countdown: PillCountdown::new(),

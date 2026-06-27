@@ -269,13 +269,13 @@ impl PillCountdown {
     }
 }
 
-pub struct PillBattery {
+pub struct PillLaptopBattery {
     base: PillBase,
     animation: AnimationState,
     battery: Option<crate::battery::BatteryStats>,
 }
 
-impl PillTrait for PillBattery {
+impl PillTrait for PillLaptopBattery {
     fn draw(&mut self, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64) {
         self.base.draw_centered(cr, rect_width, rect_height, x, y);
     }
@@ -285,9 +285,9 @@ impl PillTrait for PillBattery {
     }
 }
 
-impl PillBattery {
+impl PillLaptopBattery {
     pub fn new() -> Self {
-        PillBattery {
+        PillLaptopBattery {
             base: PillBase::new(),
             animation: AnimationState::new(),
             battery: None,
