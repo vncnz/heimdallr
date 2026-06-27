@@ -6,18 +6,16 @@ use smithay_client_toolkit::{
 };
 use wayland_client::{Connection, EventQueue, globals::{GlobalList, registry_queue_init}, protocol::{wl_compositor, wl_output::WlOutput, wl_region}};
 
-use std::{sync::mpsc::{self, Receiver, Sender}, time::{Duration, Instant}};
+use std::{sync::mpsc::{self, Receiver, Sender}, time::{Duration}};
 
 use smithay_client_toolkit::shell::WaylandSurface;
-
-use std::collections::HashMap;
 
 use std::panic;
 use std::thread;
 
 use colored::Colorize;
 
-use crate::{battery::BatteryStats, clock::{ClockTrait, ClockWrapper, NoClock}, clock1::Clock1, clock2::Clock2, commands::start_command_listener, countdown::Countdown, data::{BluetoothStats, RatatoskrSocket, UPowerDeviceKind}, heimdallr_layer::IconChange, notifications::Notification, pills::{PillBattery, PillClock, PillCountdown, PillSecurity, PillWarnings}, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, Animator, FrameModel, get_color_gradient, log_to_file, select_icon}};
+use crate::{battery::BatteryStats, commands::start_command_listener, data::{BluetoothStats, RatatoskrSocket, UPowerDeviceKind}, heimdallr_layer::IconChange, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, get_color_gradient, log_to_file, select_icon}};
 
 mod data;
 mod config;
