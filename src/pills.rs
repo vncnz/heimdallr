@@ -544,7 +544,7 @@ impl PillDevices {
         for b in &self.batteries {
             let icon = match b.kind {
                 UPowerDeviceKind::Mouse => if b.is_bluetooth { "󰦋" } else { "󰍽" },
-                UPowerDeviceKind::Phone => if b.is_bluetooth { "󱆏" } else { "󰏲" },
+                UPowerDeviceKind::Phone => if b.is_bluetooth { "󰏳" } else { "󰏲" },
                 UPowerDeviceKind::Tablet => "",
                 UPowerDeviceKind::RemoteControl => "󰻅",
                 UPowerDeviceKind::Speakers => "󰦢",
