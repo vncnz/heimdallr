@@ -373,8 +373,9 @@ impl PillTrait for PillWarnings {
             x += 20.0;
         }*/
         for b in &self.bases {
-            b.draw_centered(cr, 20.0, rect_height, x, y);
-            x += 20.0;
+            let width = b.cached_sizes.unwrap_or_default().0;
+            b.draw_centered(cr, width, rect_height, x, y);
+            x += width;
         }
         // dbg_println!("PillWarnings drawn in x {x:?}");
     }
@@ -496,6 +497,7 @@ impl PillSecurity {
 
 pub struct PillDevices {
     batteries: Vec<BatteryDevice>,
+    bases: Vec<PillBase>,
     animation: AnimationState,
 }
 
@@ -506,31 +508,11 @@ impl PillTrait for PillDevices {
 
         let mut x = x + PILL_MARGIN;
 
-        // rounded_rect_gradient(&cr, x, y, PILL_FONT_SIZE, rect_height, 0.0, vec![(0.0, (0.0, 1.0, 0.0, 0.5))], crate::utils::GradientDirection::Horizontal, false, None);
-        // rounded_rect_gradient(&cr, x + PILL_FONT_SIZE, y, PILL_FONT_SIZE, rect_height, 0.0, vec![(0.0, (0.0, 0.0, 1.0, 0.5))], crate::utils::GradientDirection::Horizontal, false, None);
-
-        cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
-        cr.set_font_size(PILL_FONT_SIZE);
-
-        for b in &self.batteries {
-            let color = get_color_gradient(b.warn);
-            cr.set_source_rgba(color.0, color.1, color.2, color.3);
-            cr.move_to(x + 1.0, y + rect_height / 2.0 + 4.0);
-            let icon = match b.kind {
-                UPowerDeviceKind::Mouse => "󰦋",
-                UPowerDeviceKind::Phone => "󱆏",
-                UPowerDeviceKind::Tablet => "",
-                UPowerDeviceKind::RemoteControl => "󰻅",
-                UPowerDeviceKind::Speakers => "󰦢",
-                UPowerDeviceKind::Headphones => "󰥰",
-                UPowerDeviceKind::GamingInput => "󱤙",
-                UPowerDeviceKind::Keyboard => "󰌌",
-                _ => "󰂱"
-            };
-            cr.show_text(&icon).unwrap();
-            x += PILL_FONT_SIZE + 2.0;
+        for b in &self.bases {
+            let width = b.cached_sizes.unwrap_or_default().0;
+            b.draw_centered(cr, width, rect_height, x, y);
+            x += width;
         }
-        // .iter().map(|b| format!("{}: {:.0}%", b.name, b.percentage)).collect::<Vec<_>>().join("  ·  ")
     }
 
     fn animation_state(&mut self) -> &mut AnimationState {
@@ -548,18 +530,48 @@ impl PillDevices {
     pub fn new() -> Self {
         PillDevices {
             batteries: Vec::new(),
+            bases: Vec::new(),
             animation: AnimationState::new(),
         }
     }
 
-    pub fn update_data(&mut self, _cr: &cairo::Context, batteries: Vec<BatteryDevice>) -> bool {
-        let changed_size = self.batteries.len() != batteries.len();
+    pub fn update_data(&mut self, cr: &cairo::Context, batteries: Vec<BatteryDevice>) -> bool {
+        // let changed_size = self.batteries.len() != batteries.len();
         self.batteries = batteries;
-        if changed_size {
-            let sizes = (self.batteries.len() as f64 * (PILL_FONT_SIZE + 2.0), 20.0);
+        
+        let mut w = 0.0;
+        self.bases = Vec::new();
+        for b in &self.batteries {
+            let icon = match b.kind {
+                UPowerDeviceKind::Mouse => "󰦋",
+                UPowerDeviceKind::Phone => "󱆏",
+                UPowerDeviceKind::Tablet => "",
+                UPowerDeviceKind::RemoteControl => "󰻅",
+                UPowerDeviceKind::Speakers => "󰦢",
+                UPowerDeviceKind::Headphones => "󰥰",
+                UPowerDeviceKind::GamingInput => "󱤙",
+                UPowerDeviceKind::Keyboard => "󰌌",
+                _ => "󰂱"
+            };
+            let text = format!("{icon} {:.0}%", b.percentage);
+            let (layout, sizes) = cr_text_layout(&cr, &text, PILL_FONT_SIZE).unwrap();
+            let color = get_color_gradient(b.warn);
+            let mut base = PillBase::new();
+            w += sizes.0; // layout.width() as f64;
+            base.set_layout(layout, sizes, text, color);
+            self.bases.push(base);
+
+            /* let sizes = (self.batteries.len() as f64 * (PILL_FONT_SIZE + 2.0), 20.0);
             dbg_println!("{} target:{sizes:?}", "PillBatteries update_data".blue());
+            self.animation.set_target(sizes); */
+        }
+        
+        let changed = w != self.animation.target_size.0;
+        if changed {
+            let sizes = (w, 20.0);
+            dbg_println!("{} target:{sizes:?}", "PillWarnings update_data".blue());
             self.animation.set_target(sizes);
         }
-        changed_size
+        changed
     }
 }
