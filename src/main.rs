@@ -487,6 +487,7 @@ fn main() {
                     app.ratatoskr_connected = new_ratatoskr_status;
                     if !new_ratatoskr_status {
                         app.icons.clear();
+                        app.update_devices_data(Vec::new());
                         /* let keys: Vec<String> = app.icons.keys().cloned().collect();
                         for iconkey in keys {
                             app.remove_icon(&iconkey);
