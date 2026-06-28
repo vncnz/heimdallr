@@ -38,6 +38,7 @@ pub trait HeimdallrLayerTrait {
     fn new (registry_state: RegistryState, output_state: OutputState, shm: Shm, config: Config);
     fn update_security_data (&mut self, data: MicCameraStatus);
     fn update_battery_data (&mut self, data: Option<crate::battery::BatteryStats>);
+    fn update_devices_data (&mut self, data: Vec<BatteryDevice>);
     fn check_redraw_timeout(&mut self);
     fn request_redraw(&mut self, _reason: &str);
     fn maybe_redraw(&mut self, qh: &QueueHandle<Self>);
@@ -162,6 +163,11 @@ impl HeimdallrLayer {
 
     pub fn update_battery_data (&mut self, data: Option<crate::battery::BatteryStats>) {
         self.battery_integrated = data;
+    }
+
+    pub fn update_devices_data (&mut self, data: Vec<BatteryDevice>) {
+        self.batteries = data;
+        self.batteries_pristine = true;
     }
 
     pub fn check_redraw_timeout(&mut self) {

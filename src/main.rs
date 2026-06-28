@@ -471,8 +471,7 @@ fn main() {
                             ); */
                         }
                         if app.batteries != b.devices {
-                            app.batteries = b.devices;
-                            app.batteries_pristine = true;
+                            app.update_devices_data(b.devices);
                             app.request_redraw("bt-batteries");
                         } else {
                             dbg_println!("{}", format!("Bluetooth battery status unchanged").yellow());
