@@ -498,10 +498,10 @@ impl HeimdallrLayer {
 
         let pill_security_rect = self.pill_security.get_current_rect();
 
-        // if self.batteries_pristine {
+        if self.batteries_pristine {
             self.pill_devices.update_data(&cr, self.batteries.clone());
             self.batteries_pristine = false;
-        // }
+        }
 
         if self.pill_devices.step_animation() {
             eprintln!("Pill countdown animation");
