@@ -329,7 +329,7 @@ impl HeimdallrLayer {
 
     fn check_batteries_data(&mut self, cr: &Context) {
         if self.batteries_pristine {
-            self.batteries_pristine = false;
+            if !DRAW_PILL { self.batteries_pristine = false; }
             let text = self.build_batteries_text();
             self.last_batteries_text = text;
             self.animator.animate_property(
@@ -457,9 +457,10 @@ impl HeimdallrLayer {
             self.pills_are_animating = true;
             self.request_redraw("pill_warning animation");
         } else {
-            // eprintln!("Pill warning is NOT animating");
+            eprintln!("Pill warning is NOT animating");
         }
         let pill_warnings_rect = self.pill_warnings.get_current_rect();
+        // eprintln!("pill_warnings_rect current rect {pill_warnings_rect:?}");
 
 
         /* Update countdown pill (to be unified) */
@@ -499,6 +500,7 @@ impl HeimdallrLayer {
 
         // if self.batteries_pristine {
             self.pill_devices.update_data(&cr, self.batteries.clone());
+            self.batteries_pristine = false;
         // }
 
         if self.pill_devices.step_animation() {

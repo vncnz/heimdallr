@@ -68,7 +68,7 @@ impl AnimationState {
         if changed {
             dbg_println!("{} new_target:{t:?} target_size:{ct:?} current_size:{current_size:?}", "changed target!".cyan());
         } else {
-            dbg_println!("{} new_target:{t:?} target_size:{ct:?} current_size:{current_size:?}", "NOT changed target!".blue());
+            // dbg_println!("{} new_target:{t:?} target_size:{ct:?} current_size:{current_size:?}", "NOT changed target!".blue());
         }
 
         if changed {
@@ -375,7 +375,7 @@ impl PillTrait for PillWarnings {
         for b in &self.bases {
             let width = b.cached_sizes.unwrap_or_default().0;
             b.draw_centered(cr, width, rect_height, x, y);
-            x += width;
+            x += width + 4.0;
         }
         // dbg_println!("PillWarnings drawn in x {x:?}");
     }
@@ -413,7 +413,8 @@ impl PillWarnings {
             let (layout, sizes) = cr_text_layout(&cr, &i.symbol, PILL_FONT_SIZE).unwrap();
             let color = get_color_gradient(i.warn);
             let mut base = PillBase::new();
-            w += 20.0; // layout.width() as f64;
+            if w > 0.0 { w += 4.0; }
+            w += sizes.0;
             base.set_layout(layout, sizes, i.symbol.clone(), color);
             self.bases.push(base);
         }
@@ -421,7 +422,8 @@ impl PillWarnings {
         let changed = w != self.animation.target_size.0;
         if changed {
             let sizes = (w, 20.0);
-            dbg_println!("{} target:{sizes:?}", "PillWarnings update_data".blue());
+            let old = self.animation.target_size;
+            dbg_println!("{} target:{sizes:?} old_target:{old:?}", "PillWarnings update_data".blue());
             self.animation.set_target(sizes);
         }
         changed
@@ -511,7 +513,7 @@ impl PillTrait for PillDevices {
         for b in &self.bases {
             let width = b.cached_sizes.unwrap_or_default().0;
             b.draw_centered(cr, width, rect_height, x, y);
-            x += width;
+            x += width + 4.0;
         }
     }
 
@@ -557,6 +559,7 @@ impl PillDevices {
             let (layout, sizes) = cr_text_layout(&cr, &text, PILL_FONT_SIZE).unwrap();
             let color = get_color_gradient(b.warn);
             let mut base = PillBase::new();
+            if w > 0.0 { w += 4.0; }
             w += sizes.0; // layout.width() as f64;
             base.set_layout(layout, sizes, text, color);
             self.bases.push(base);
