@@ -543,8 +543,8 @@ impl PillDevices {
         self.bases = Vec::new();
         for b in &self.batteries {
             let icon = match b.kind {
-                UPowerDeviceKind::Mouse => "󰦋",
-                UPowerDeviceKind::Phone => "󱆏",
+                UPowerDeviceKind::Mouse => if b.is_bluetooth { "󰦋" } else { "󰍽" },
+                UPowerDeviceKind::Phone => if b.is_bluetooth { "󱆏" } else { "󰏲" },
                 UPowerDeviceKind::Tablet => "",
                 UPowerDeviceKind::RemoteControl => "󰻅",
                 UPowerDeviceKind::Speakers => "󰦢",
