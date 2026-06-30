@@ -453,11 +453,11 @@ impl HeimdallrLayer {
 
         /* Update warnings pill animation */
         if self.pill_warnings.step_animation() {
-            eprintln!("Pill warning animation");
+            dbg_println!("Pill warning animation");
             self.pills_are_animating = true;
             self.request_redraw("pill_warning animation");
         } else {
-            eprintln!("Pill warning is NOT animating");
+            dbg_println!("Pill warning is NOT animating");
         }
         let pill_warnings_rect = self.pill_warnings.get_current_rect();
         // eprintln!("pill_warnings_rect current rect {pill_warnings_rect:?}");
@@ -473,7 +473,7 @@ impl HeimdallrLayer {
         self.pill_countdown.update_data(&cr, c);
 
         if self.pill_countdown.step_animation() {
-            eprintln!("Pill countdown animation");
+            dbg_println!("Pill countdown animation");
             self.pills_are_animating = true;
             self.request_redraw("pill_countdown animation");
         } else {
@@ -489,7 +489,7 @@ impl HeimdallrLayer {
         }
 
         if self.pill_security.step_animation() {
-            eprintln!("Pill security animation");
+            dbg_println!("Pill security animation");
             self.pills_are_animating = true;
             self.request_redraw("pill_security animation");
         } else {
@@ -504,7 +504,7 @@ impl HeimdallrLayer {
         }
 
         if self.pill_devices.step_animation() {
-            eprintln!("Pill countdown animation");
+            dbg_println!("Pill countdown animation");
             self.pills_are_animating = true;
             self.request_redraw("pill_devices animation");
         } else {
