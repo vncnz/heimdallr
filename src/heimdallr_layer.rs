@@ -16,8 +16,8 @@ use colored::Colorize;
 
 use crate::{clock::{ClockTrait, ClockWrapper, NoClock}, clock1::Clock1, clock2::Clock2, config::{ClockCfg, Config, FrameColor}, countdown::Countdown, data::BatteryDevice, dbg_println, notifications::Notification, pills::{PillClock, PillCountdown, PillDevices, PillLaptopBattery, PillSecurity, PillTrait, PillWarnings}, security::MicCameraStatus, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, draw_smart_border, get_color_gradient, log_to_file, mix_color, rounded_rect_gradient}};
 
-static DRAW_PILL: bool = true;
-pub static DRAW_OLD_UI: bool = false;
+// static DRAW_PILL: bool = true;
+// pub static DRAW_OLD_UI: bool = false;
 
 #[derive(PartialEq)]
 pub enum IconChange {
@@ -106,7 +106,7 @@ impl HeimdallrLayer {
         config: Config
     ) -> Self {
 
-        let clock = match (config.show_clock.clone(), DRAW_OLD_UI) {
+        let clock = match (config.show_clock.clone(), config.backend.is_legacy()) {
             (ClockCfg::Clock1, true) => ClockWrapper::Clock1(Clock1::new()),
             (ClockCfg::Clock2, true) => ClockWrapper::Clock2(Clock2::new()),
             _ => ClockWrapper::NoClock(NoClock::new())
@@ -288,9 +288,9 @@ impl HeimdallrLayer {
                 if self.notifications.len() > 0 { self.draw_notification(cr.clone()) }
 
                 self.draw_batteries(cr.clone());
-                if DRAW_OLD_UI { self.draw_security(cr.clone()); }
+                if self.config.backend.is_legacy() { self.draw_security(cr.clone()); }
                 // self.draw_timer_2(&cr);
-                if DRAW_PILL { self.draw_test_pill(&cr); }
+                if self.config.backend.is_pills() { self.draw_test_pill(&cr); }
 
                 let layer = self.layer.clone().unwrap();
                 let buffer = self.buffers[buffer_idx].as_ref().unwrap();
@@ -329,7 +329,7 @@ impl HeimdallrLayer {
 
     fn check_batteries_data(&mut self, cr: &Context) {
         if self.batteries_pristine {
-            if !DRAW_PILL { self.batteries_pristine = false; }
+            if !self.config.backend.is_legacy() { self.batteries_pristine = false; }
             let text = self.build_batteries_text();
             self.last_batteries_text = text;
             self.animator.animate_property(
@@ -363,7 +363,7 @@ impl HeimdallrLayer {
     fn check_security_data(&mut self, cr: &Context) {
         // Used by old UI, not by pills UI
         if self.security.pristine {
-            if !DRAW_PILL { self.security.pristine = false; }
+            if self.config.backend.is_legacy() { self.security.pristine = false; }
             let text = self.build_security_text();
             self.last_security_text = text;
             self.animator.animate_property(
@@ -718,8 +718,8 @@ impl HeimdallrLayer {
         let mut y_offset = self.height as f64 - 8.0; // parte dal basso
         let res_w = 24.0;
         // let res_h = if self.ratatoskr_connected { (self.icons.len() as f64) * 30.0 } else { 30.0 };
-        let res_h = if DRAW_OLD_UI { self.frame_model.icons_ratio * 24.0 } else { 0.0 };
-        let wob_h = if DRAW_OLD_UI { 24.0 * self.frame_model.wob_height } else { 0.0 };
+        let res_h = if self.config.backend.is_legacy() { self.frame_model.icons_ratio * 24.0 } else { 0.0 };
+        let wob_h = if self.config.backend.is_legacy() { 24.0 * self.frame_model.wob_height } else { 0.0 };
 
         // Draw rounded rectangle frame
         let thickness = 1.0;
@@ -781,7 +781,7 @@ impl HeimdallrLayer {
             cr.fill().unwrap();
         }
 
-        if DRAW_OLD_UI {
+        if self.config.backend.is_legacy() {
             // wob-like
             let mut steps = vec![(0.0, (1.0, 1.0, 1.0, self.frame_model.wob_height))];
             let xc = (self.width as f64) / 2.0;
@@ -854,7 +854,7 @@ impl HeimdallrLayer {
 
         // === Draw alarm icons ===
         
-        if DRAW_OLD_UI {
+        if self.config.backend.is_legacy() {
             let mut switched = true;
             for icon in self.icons.values() {
                 if switched {

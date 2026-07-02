@@ -17,10 +17,52 @@ pub enum ClockCfg {
     Clock2,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LayerBackend {
+    Pills,
+    Legacy,
+}
+impl LayerBackend {
+    pub fn is_legacy(&self) -> bool {
+        matches!(self, Self::Legacy)
+    }
+
+    pub fn is_pills(&self) -> bool {
+        !self.is_legacy()
+    }
+
+    fn from_json(value: Option<serde_json::Value>) -> Self {
+        match value {
+            Some(serde_json::Value::Null) | None => LayerBackend::Pills,
+
+            Some(serde_json::Value::String(s)) => match s.as_str() {
+                "pills" | "new" => LayerBackend::Pills,
+                "legacy" | "old" => LayerBackend::Legacy,
+                _ => {
+                    eprintln!(
+                        "Unrecognized value in backend config: {:?}. Accepted types are \"pills\", \"legacy\", null",
+                        s
+                    );
+                    LayerBackend::Pills
+                }
+            },
+
+            _ => {
+                eprintln!(
+                    "Invalid backend value in JSON configuration {:?}. Accepted types are \"pills\", \"legacy\", null",
+                    value
+                );
+                LayerBackend::Pills
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Config {
     pub frame_color: FrameColor,
     pub show_clock: ClockCfg,
+    pub backend: LayerBackend,
     pub show_always_bluetooth: bool,
     pub hide_missing_ratatoskr: bool
     // pub border_width: u32,
@@ -30,6 +72,7 @@ pub struct Config {
 struct RawConfig {
     frame_color: Option<serde_json::Value>,
     show_clock: Option<serde_json::Value>,
+    backend: Option<serde_json::Value>,
     show_always_bluetooth: Option<bool>,
     hide_missing_ratatoskr: Option<bool>
     // border_width: Option<u32>,
@@ -116,6 +159,7 @@ impl Config {
             RawConfig {
                 frame_color: None,
                 show_clock: None,
+                backend: None,
                 show_always_bluetooth: None,
                 hide_missing_ratatoskr: None
                 // border_width: None,
@@ -124,7 +168,8 @@ impl Config {
 
         Config {
             frame_color: FrameColor::from_json(raw.frame_color),
-            show_clock: ClockCfg::from_json(raw.show_clock), // raw.show_clock.unwrap_or(true),
+            show_clock: ClockCfg::from_json(raw.show_clock),
+            backend: LayerBackend::from_json(raw.backend),
             show_always_bluetooth: raw.show_always_bluetooth.unwrap_or(true),
             hide_missing_ratatoskr: raw.hide_missing_ratatoskr.unwrap_or(false)
             // border_width: raw.border_width.unwrap_or(2),
