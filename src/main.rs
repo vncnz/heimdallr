@@ -20,6 +20,8 @@ use crate::{battery::BatteryStats, commands::start_command_listener, data::{Blue
 mod data;
 mod config;
 mod heimdallr_layer;
+mod heimdallr_layer_old;
+mod heimdallr_layer_new;
 mod notifications;
 mod commands;
 mod utils;
@@ -34,7 +36,7 @@ mod pills;
 use config::Config;
 // use chrono;
 
-use crate::heimdallr_layer::HeimdallrLayer;
+use crate::heimdallr_layer_new::HeimdallrLayer;
 use crate::notifications::start_notification_listener;
 use crate::battery::start_battery_listener;
 
