@@ -373,7 +373,7 @@ pub fn cr_text_rotated_mixed(cr: &Context, text: &str, x: f64, y: f64, dx: f64, 
     Ok((w, h))
 }
 
-pub fn cr_text_layout(cr: &Context, text: &str, font_size: f64) -> Result<(pango::Layout, (f64, f64)), Error> {
+/* pub fn cr_text_layout(cr: &Context, text: &str, font_size: f64) -> Result<(pango::Layout, (f64, f64)), Error> {
 
     let layout = pangocairo::functions::create_layout(cr);
 
@@ -386,6 +386,33 @@ pub fn cr_text_layout(cr: &Context, text: &str, font_size: f64) -> Result<(pango
     // dbg_println!("ink_rect: {:?}   logical_rect: {:?}", ink_rect, logical_rect);
     let w = logical_rect.width() as f64 / pango::SCALE as f64;
     let h = logical_rect.height() as f64 / pango::SCALE as f64;
+    Ok((layout, (w, h)))
+} */
+
+pub fn cr_text_layout(cr: &Context, text: &str, font_size: f64, max_width: Option<f64>) -> Result<(pango::Layout, (f64, f64)), Error> {
+
+    let layout = pangocairo::functions::create_layout(cr);
+
+    let mut font_desc = pango::FontDescription::new();
+    font_desc.set_family("");
+    font_desc.set_absolute_size(font_size * pango::SCALE as f64);
+    layout.set_font_description(Some(&font_desc));
+    layout.set_text(text);
+
+    if let Some(width) = max_width {
+        layout.set_width((width * pango::SCALE as f64) as i32);
+        layout.set_wrap(pango::WrapMode::Word);
+        // layout.set_ellipsize(pango::EllipsizeMode::Middle);
+        // Se la versione di Pango è recente (Pango 1.50+), puoi forzare il bilanciamento 
+        // delle righe per evitare che l'ultima riga sia troppo corta.
+        // layout.set_line_spacing(1.0); // Opzionale, per gestire l'interlinea
+    }
+
+    let (_ink_rect, logical_rect) = layout.extents();
+    
+    let w = logical_rect.width() as f64 / pango::SCALE as f64;
+    let h = logical_rect.height() as f64 / pango::SCALE as f64;
+    
     Ok((layout, (w, h)))
 }
 
