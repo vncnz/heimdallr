@@ -14,7 +14,7 @@ use cairo::FontSlant;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{config::{Config, FrameColor}, countdown::Countdown, data::BatteryDevice, dbg_println, heimdallr_layer::{AlarmIcon, IconChange}, notifications::Notification, pills::{PillClock, PillCountdown, PillDevices, PillLaptopBattery, PillSecurity, PillTrait, PillWarnings}, security::MicCameraStatus, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, draw_smart_border, get_color_gradient, log_to_file, mix_color, rounded_rect_gradient}};
+use crate::{config::{Config, FrameColor}, countdown::Countdown, data::BatteryDevice, dbg_println, heimdallr_layer::{AlarmIcon, IconChange}, notifications::Notification, pills::{PillContainer, PillTrait}, security::MicCameraStatus, utils::{AnimationKey, Animator, FrameModel, cr_text_aligned, draw_smart_border, get_color_gradient, log_to_file, mix_color, rounded_rect_gradient}};
 
 static mut AVG_DUR: u128 = 0;
 static mut AVG_CNT: i64 = -5;
@@ -49,12 +49,7 @@ pub struct HeimdallrLayer {
     pub(crate) batteries: Vec<BatteryDevice>,
     pub(crate) batteries_pristine: bool,
     pub(crate) timer: Countdown,
-    pub(crate) pill_clock: PillClock,
-    pub(crate) pill_battery: PillLaptopBattery,
-    pub(crate) pill_warnings: PillWarnings,
-    pub(crate) pill_security: PillSecurity,
-    pub(crate) pill_countdown: PillCountdown,
-    pub(crate) pill_devices: PillDevices,
+    pub pill_container: PillContainer,
     pub(crate) pills_are_animating: bool
 
 }
@@ -97,12 +92,7 @@ impl HeimdallrLayer {
             batteries: vec![],
             batteries_pristine: false,
             timer: Countdown::new(),
-            pill_clock: PillClock::new(),
-            pill_battery: PillLaptopBattery::new(),
-            pill_warnings: PillWarnings::new(),
-            pill_security: PillSecurity::new(),
-            pill_countdown: PillCountdown::new(),
-            pill_devices: PillDevices::new(),
+            pill_container: PillContainer::new(),
             pills_are_animating: false
         }
     }
@@ -271,29 +261,12 @@ impl HeimdallrLayer {
         self.pills_are_animating = false;
         // I'm experimenting with new UI: some of this shit will be moved out of here, ofc!
 
-        self.pill_clock.update_data(&cr);
-        self.pill_battery.update_data(&cr, self.battery_integrated.clone());
+        // UPDATE DATA
+        let mut something_changed = self.pill_container.update_data_clock(&cr);
+        something_changed |= self.pill_container.update_data_battery(&cr, self.battery_integrated.clone());
 
         let icons: Vec<AlarmIcon> = self.icons.values().cloned().filter(|icon| icon.symbol != "󱫡" && icon.symbol != "󱫌").collect();
-        self.pill_warnings.update_data(&cr, icons);
-
-
-        /* Pills without animation */
-        let pill_clock_rect = self.pill_clock.get_desired_rect(); // pill_clock.get_current_rect();
-        let pill_battery_rect = self.pill_battery.get_desired_rect();
-
-
-        /* Update warnings pill animation */
-        if self.pill_warnings.step_animation() {
-            dbg_println!("Pill warning animation");
-            self.pills_are_animating = true;
-            self.request_redraw("pill_warning animation");
-        } else {
-            dbg_println!("Pill warning is NOT animating");
-        }
-        let pill_warnings_rect = self.pill_warnings.get_current_rect();
-        // eprintln!("pill_warnings_rect current rect {pill_warnings_rect:?}");
-
+        something_changed |= self.pill_container.update_data_warnings(&cr, icons);
 
         /* Update countdown pill (to be unified) */
         let c = Countdown {
@@ -302,47 +275,35 @@ impl HeimdallrLayer {
             current_pause_start: self.timer.current_pause_start,
             direction: self.timer.direction.clone()
         };
-        self.pill_countdown.update_data(&cr, c);
+        something_changed |= self.pill_container.update_data_countdown(&cr, c);
 
-        if self.pill_countdown.step_animation() {
-            dbg_println!("Pill countdown animation");
-            self.pills_are_animating = true;
-            self.request_redraw("pill_countdown animation");
-        } else {
-            // eprintln!("Pill countdown is NOT animating");
-        }
-        let pill_countdown_rect = self.pill_countdown.get_current_rect();
-
-        
-        /* Update security pill */
         if self.security.pristine {
-            self.pill_security.update_data(&cr, &self.security);
+            something_changed |= self.pill_container.update_data_security(&cr, &self.security);
             self.security.pristine = false;
         }
 
-        if self.pill_security.step_animation() {
-            dbg_println!("Pill security animation");
-            self.pills_are_animating = true;
-            self.request_redraw("pill_security animation");
-        } else {
-            // eprintln!("Pill security is NOT animating");
-        }
-
-        let pill_security_rect = self.pill_security.get_current_rect();
-
         if self.batteries_pristine {
-            self.pill_devices.update_data(&cr, self.batteries.clone());
+            something_changed |= self.pill_container.update_data_devices(&cr, self.batteries.clone());
             self.batteries_pristine = false;
         }
 
-        if self.pill_devices.step_animation() {
-            dbg_println!("Pill countdown animation");
-            self.pills_are_animating = true;
-            self.request_redraw("pill_devices animation");
-        } else {
-            // eprintln!("Pill countdown is NOT animating");
+        something_changed |= self.pill_container.update_data_notifications(&cr, &self.notifications);
+
+        if something_changed {
+            self.pill_container.recalculate_normal_target();
         }
-        let pill_devices_rect = self.pill_devices.get_current_rect();
+
+
+        // UPDATE ANIMATIONS
+        if self.pill_container.step_animation() {
+            self.pills_are_animating = true;
+            self.request_redraw("pill_container animation");
+        } else {
+            // eprintln!("Pill container is NOT animating");
+        }
+
+        // OLD?
+        
 
         let r = 8.0;
         let pill_bg_color: (f64, f64, f64, f64) = (0.1, 0.1, 0.15, 0.85);
@@ -356,17 +317,11 @@ impl HeimdallrLayer {
             FrameColor::None /* | FrameColor::Random */ => None
         };
 
-        let rect_width = 
-                pill_clock_rect.0 +
-                if pill_battery_rect.0 > 0.0 { pill_battery_rect.0 } else { 0.0 } +
-                if pill_countdown_rect.0 > 0.0 { pill_countdown_rect.0 } else { 0.0 } + 
-                if pill_security_rect.0 > 0.0 { pill_security_rect.0 } else { 0.0 } +
-                if pill_devices_rect.0 > 0.0 { pill_devices_rect.0 } else { 0.0 } +
-                if pill_warnings_rect.0 > 0.0 { pill_warnings_rect.0 } else { 0.0 };
-        let rect_height = 26.0;
+        let (rect_width, rect_height) = self.pill_container.get_current_rect();
+        let (rect_width_end, rect_height_end) = self.pill_container.get_desired_rect();
         let rect_left = (self.width as f64 - rect_width) / 2.0;
-        let rect_top = 2.0 + 24.0 * self.frame_model.notif_height_ratio;
-        let mut x = rect_left;
+        let rect_left_end = (self.width as f64 - rect_width_end) / 2.0;
+        let rect_top = 2.0/* + 24.0 * self.frame_model.notif_height_ratio */;
 
         let mut pill_bg_steps = vec![(0.0, pill_bg_color)];
 
@@ -401,33 +356,7 @@ impl HeimdallrLayer {
 
         rounded_rect_gradient(&cr, rect_left, rect_top, rect_width, rect_height, r, pill_bg_steps, crate::utils::GradientDirection::Horizontal, false, pill_border_color);
 
-        self.pill_clock.draw(&cr, pill_clock_rect.0, rect_height, x, rect_top);
-        x += pill_clock_rect.0;
-
-        if pill_battery_rect.0 > 0.0 {
-            self.pill_battery.draw(&cr, pill_battery_rect.0, rect_height, x, rect_top);
-            x += pill_battery_rect.0;
-        }
-
-        if pill_countdown_rect.0 > 0.0 {
-            self.pill_countdown.draw(&cr, pill_countdown_rect.0, rect_height, x, rect_top);
-            x += pill_countdown_rect.0;
-        }
-
-        if pill_security_rect.0 > 0.0 {
-            self.pill_security.draw(&cr, pill_security_rect.0, rect_height, x, rect_top);
-            x += pill_security_rect.0;
-        }
-
-        if pill_devices_rect.0 > 0.0 {
-            self.pill_devices.draw(&cr, pill_devices_rect.0, rect_height, x, rect_top);
-            x += pill_devices_rect.0;
-        }
-
-        if pill_warnings_rect.0 > 0.0 {
-            self.pill_warnings.draw(&cr, pill_warnings_rect.0, rect_height, x, rect_top);
-            x += pill_warnings_rect.0;
-        }
+        self.pill_container.draw(&cr, rect_width_end, rect_height, rect_left_end, rect_top);
     }
 
     fn update_timer_icon (&mut self) {
@@ -462,7 +391,7 @@ impl HeimdallrLayer {
         let h = self.height as f64;
         let w_hole = w - thickness - 2.0;
 
-        let top = thickness / 2.0 + /*if self.notifications.len() > 0 { 24.0 } else { 0.0 }*/24.0 * self.frame_model.notif_height_ratio;
+        let top = thickness / 2.0/* + / *if self.notifications.len() > 0 { 24.0 } else { 0.0 }* /24.0 * self.frame_model.notif_height_ratio */;
 
         // TODO: In the pill-ui, the hole will be always a rectangle, so we can use a simplified version of rounded_big_hole and remove the ReservedSpace stuff, don't we?
         // TODO: In the pill-ui we can also have rounded corners as separated surfaces? We lose the ability to have a border but we "lose" a lot of memory footprint too! But what if, in the future, pill will be able to expand vertically and host big component? We'll need potentially the entire screen in the buffer, just like now.
@@ -505,6 +434,8 @@ impl HeimdallrLayer {
     }
 
     fn draw_notification(&mut self, cr: Context) {
+        return;
+
         if self.notification_idx >= self.notifications.len() {
             self.notification_idx = self.notifications.len() - 1;
         }
@@ -570,6 +501,7 @@ impl HeimdallrLayer {
             // let id = list.iter().map(|x| x.id).max().unwrap_or();
             
             self.notifications.insert(0, new_notif);
+
             changed = true;
         }
 
