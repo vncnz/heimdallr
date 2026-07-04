@@ -10,7 +10,7 @@ fn generate_id() -> u32 {
     NEXT_ID.fetch_add(1, Ordering::Relaxed)
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Notification {
     pub app_name: String,
     pub summary: String,
