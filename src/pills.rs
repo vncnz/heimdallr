@@ -583,14 +583,26 @@ impl PillDevices {
 
 
 pub struct PillNotificationFull {
-    base: PillBase,
+    appname_base: PillBase,
+    body_base: PillBase,
     animation: AnimationState,
     last_notification: Option<crate::notifications::Notification>
 }
 
 impl PillTrait for PillNotificationFull {
     fn draw(&mut self, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64) {
-        self.base.draw_centered(&cr, rect_width, rect_height, x, y);
+        // self.body_base.draw_centered(&cr, rect_width, rect_height, x, y);
+
+        let mut x = x + PILL_MARGIN;
+        let mut y = y;
+
+        let sizes = self.appname_base.cached_sizes.unwrap_or_default();
+        self.appname_base.draw_centered(cr, sizes.0, sizes.1, x, y);
+        y += sizes.1 + 4.0;
+
+        let sizes = self.body_base.cached_sizes.unwrap_or_default();
+        self.body_base.draw_centered(cr, sizes.0, sizes.1, x, y);
+        y += sizes.1 + 4.0;
     }
 
     fn animation_state(&mut self) -> &mut AnimationState {
@@ -601,7 +613,8 @@ impl PillTrait for PillNotificationFull {
 impl PillNotificationFull {
     pub fn new() -> Self {
         PillNotificationFull {
-            base: PillBase::new(),
+            appname_base: PillBase::new(),
+            body_base: PillBase::new(),
             animation: AnimationState::new(),
             last_notification: None
         }
@@ -609,7 +622,7 @@ impl PillNotificationFull {
 
     pub fn update_data(&mut self, cr: &cairo::Context, notifications: &Vec<crate::notifications::Notification>) -> bool {
         let new_notif = notifications.last().cloned();
-        let changed = self.last_notification != new_notif;
+        // let changed = self.last_notification != new_notif;
         /* if changed {
             self.last_notification = new_notif;
             // eprintln!("{} last_notification: {:?}", "PillContainer update_data_notifications".red(), self.last_notification);
@@ -620,18 +633,35 @@ impl PillNotificationFull {
         } */
 
         let target = if let Some(notif) = new_notif {
+
+            let white = (1.0, 1.0, 1.0, 1.0);
+
+            let (appname_layout, appname_sizes) = cr_text_layout(&cr, &notif.app_name, PILL_FONT_SIZE - 3.0, Some(500.0)).unwrap();
+
+            let target = (appname_sizes.0, appname_sizes.1);
             
-            let color = (1.0, 1.0, 1.0, 1.0);
-            let text: &str = "EXAMPLE NOTIFICATION VERY LONG TEXT THAT SHOULD BE BALANCED AND WRAPPED IN THE PILL, BUT IT'S NOT IMPLEMENTED YET. THIS IS JUST A PLACEHOLDER FOR NOW.";
+            self.appname_base.set_layout(appname_layout, target, notif.app_name.to_string(), white);
+            
+            
+            // let datetime = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+            // let (datetime_layout, datetime_sizes) = cr_text_layout(&cr, &datetime, PILL_FONT_SIZE, Some(500.0)).unwrap();
 
-            let (layout, sizes) = cr_text_layout(&cr, &text, PILL_FONT_SIZE, Some(500.0)).unwrap();
-            let target = (sizes.0, sizes.1);
+            
+            // let text: &str = "EXAMPLE NOTIFICATION VERY LONG TEXT THAT SHOULD BE BALANCED AND WRAPPED IN THE PILL, BUT IT'S NOT IMPLEMENTED YET. THIS IS JUST A PLACEHOLDER FOR NOW.";
+            let text = if notif.body.is_empty() { notif.summary } else { notif.body };
 
-            self.base.set_layout(layout, target, text.to_string(), color);
+            let (body_layout, body_sizes) = cr_text_layout(&cr, &text, PILL_FONT_SIZE, Some(500.0)).unwrap();
+            let target = (body_sizes.0, body_sizes.1);
+
+            self.body_base.set_layout(body_layout, target, text.to_string(), white);
             // dbg_println!("{} {target:?}", "Notification target".blue());
-            target
+            (
+                appname_sizes.0.max(body_sizes.0),
+                appname_sizes.1 + body_sizes.1 + 4.0
+            )
         } else {
-            self.base.clear();
+            self.appname_base.clear();
+            self.body_base.clear();
             // dbg_println!("{} zero", "Notification target".blue());
             (0.0, 0.0)
         };
