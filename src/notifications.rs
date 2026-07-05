@@ -1,3 +1,4 @@
+use chrono::Local;
 use zbus::{ConnectionBuilder, dbus_interface, zvariant};
 use std::{collections::HashMap, sync::mpsc::Sender, time::{Duration, Instant}};
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -25,7 +26,8 @@ pub struct Notification {
     pub unmounting: bool,
     pub reboot: bool,
     pub replaces_id: u32,
-    pub unmounted: bool
+    pub unmounted: bool,
+    pub datetime: chrono::DateTime<chrono::Local>
 }
 
 #[derive(Clone)]
@@ -83,7 +85,8 @@ impl NotificationServer {
             replaces_id,
             unmounting, // : summary.contains("Unmounting"),
             unmounted,
-            reboot: summary.contains("Reboot recommended")
+            reboot: summary.contains("Reboot recommended"),
+            datetime: Local::now()
         };
         let _ = self.tx.send(new_notif);
 

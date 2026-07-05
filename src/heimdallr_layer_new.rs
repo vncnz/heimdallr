@@ -222,7 +222,7 @@ impl HeimdallrLayer {
                     .unwrap()
                 };
 
-                self.update_timer_icon();
+                // self.update_timer_icon();
 
                 let cr = Context::new(&surface).unwrap();
 
@@ -271,8 +271,7 @@ impl HeimdallrLayer {
         something_changed |= self.pill_container.update_data_countdown();
         something_changed |= self.pill_container.update_data_battery(self.battery_integrated.clone());
 
-        let icons: Vec<AlarmIcon> = self.icons.values().cloned().filter(|icon| icon.symbol != "󱫡" && icon.symbol != "󱫌").collect();
-        something_changed |= self.pill_container.update_data_warnings(icons);
+        // something_changed |= self.pill_container.update_data_warnings(&self.icons); // Moved
 
         /* Update countdown pill (to be unified) */
         /* let c = Countdown {
@@ -559,6 +558,9 @@ impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like
                 self.icons.len() as f64,
                 200
             ); */
+            if self.pill_container.update_data_warnings(&self.icons) {
+                self.request_redraw("pill_container animation");
+            }
             IconChange::Added
         }
     }
@@ -573,6 +575,12 @@ impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like
                 200
             );
         } */
+        if removed {
+            let icons: Vec<AlarmIcon> = self.icons.values().cloned().filter(|icon| icon.symbol != "󱫡" && icon.symbol != "󱫌").collect();
+            if self.pill_container.update_data_warnings(&self.icons) {
+                self.request_redraw("pill_container animation");
+            }
+        }
         removed
     }
 

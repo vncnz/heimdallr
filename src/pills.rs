@@ -2,7 +2,7 @@
 
 use cairo::{Context, FontSlant, Format, ImageSurface};
 use chrono::Local;
-use std::time::{Duration, Instant};
+use std::{collections::HashMap, time::{Duration, Instant}};
 use colored::Colorize;
 
 use crate::{
@@ -800,7 +800,8 @@ impl PillContainer {
         return changed
     }
 
-    pub fn update_data_warnings(&mut self, icons: Vec<AlarmIcon>) -> bool {
+    pub fn update_data_warnings(&mut self, icons: &HashMap<String, AlarmIcon>) -> bool {
+        let icons: Vec<AlarmIcon> = icons.values().cloned().filter(|icon| icon.symbol != "󱫡" && icon.symbol != "󱫌").collect();
         let changed = self.pill_warnings.update_data(&self.dummy_context, icons);
         if changed { self.pill_warnings_rect = self.pill_warnings.get_current_rect(); }
         return changed
