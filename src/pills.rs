@@ -1,6 +1,6 @@
 // I'm experimenting with new UI: some of this shit will be spread out in multiple files, ofc!
 
-use cairo::{Context, FontSlant};
+use cairo::{Context, FontSlant, Format, ImageSurface};
 use chrono::Local;
 use std::time::{Duration, Instant};
 use colored::Colorize;
@@ -264,11 +264,11 @@ impl PillCountdown {
             let target = if countdown.is_active() { (sizes.0, sizes.1) } else { (0.0, 0.0) };
 
             self.base.set_layout(layout, target, text.to_string(), color);
-            dbg_println!("{} {target:?}", "countdown target".blue());
+            // dbg_println!("{} {target:?}", "countdown target".blue());
             target
         } else {
             self.base.clear();
-            dbg_println!("{} zero", "countdown target".blue());
+            // dbg_println!("{} zero", "countdown target".blue());
             (0.0, 0.0)
         };
 
@@ -352,7 +352,7 @@ impl PillLaptopBattery {
             (0.0, 0.0)
         };
 
-        dbg_println!("{}", "PillBattery update_data".blue());
+        // dbg_println!("{}", "PillBattery update_data".blue());
         self.animation.set_target(target);
         true
     }
@@ -402,6 +402,7 @@ impl PillWarnings {
         let mut w = 0.0;
         self.bases = Vec::new();
         for i in &self.icons {
+            // dbg_println!("{} w:{w} icon:{:?} warn:{:?}", "PillWarnings update_data icon".red(), i.symbol, i.warn);
             let (layout, sizes) = cr_text_layout(&cr, &i.symbol, PILL_FONT_SIZE, None).unwrap();
             let color = get_color_gradient(i.warn);
             let mut base = PillBase::new();
@@ -412,28 +413,19 @@ impl PillWarnings {
         }
 
         let changed = w != self.animation.target_size.0;
+        // dbg_println!("{} w:{w} target:{} current:{} changed:{changed}", "PillWarnings update_data icon".red(), self.animation.target_size.0, self.animation.current_size.0);
         if changed {
             let sizes = (w, 20.0);
             let old = self.animation.target_size;
-            dbg_println!("{} target:{sizes:?} old_target:{old:?}", "PillWarnings update_data".blue());
+            // dbg_println!("{} new_target:{sizes:?} old_target:{old:?}", "PillWarnings update_data".blue());
             self.animation.set_target(sizes);
         }
         changed
-
-
-
-        /* if changed_size {
-            // if self.icons.len() > 0 {
-                let sizes = (self.icons.len() as f64 * 20.0, 20.0);
-                dbg_println!("{} target:{sizes:?}", "PillWarnings update_data".blue());
-                self.animation.set_target(sizes);
-            // } else {
-                // self.base.clear();
-            // }
-        }
-        changed_size */
     }
 }
+
+
+
 
 pub struct PillSecurity {
     base: PillBase,
@@ -634,11 +626,11 @@ impl PillNotificationFull {
             let target = (sizes.0, sizes.1);
 
             self.base.set_layout(layout, target, text.to_string(), color);
-            dbg_println!("{} {target:?}", "Notification target".blue());
+            // dbg_println!("{} {target:?}", "Notification target".blue());
             target
         } else {
             self.base.clear();
-            dbg_println!("{} zero", "Notification target".blue());
+            // dbg_println!("{} zero", "Notification target".blue());
             (0.0, 0.0)
         };
 
@@ -646,6 +638,23 @@ impl PillNotificationFull {
     }
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -658,6 +667,8 @@ pub struct PillContainer {
     mode: PillMode,
     last_notification: Option<crate::notifications::Notification>,
     animation: AnimationState,
+    dummy_surface: cairo::ImageSurface,
+    dummy_context: cairo::Context,
     // normal_target: (f64, f64),
 
     pill_clock: PillClock,
@@ -715,11 +726,14 @@ impl PillTrait for PillContainer {
 
 impl PillContainer {
     pub fn new() -> Self {
+        let dummy_surface = ImageSurface::create(Format::ARgb32, 1, 1).unwrap();
+        let dummy_context = Context::new(&dummy_surface).unwrap();
         PillContainer {
             mode: PillMode::Normal,
             last_notification: None,
             animation: AnimationState::new(),
-            // normal_target: (0.0, 0.0),
+            dummy_surface,
+            dummy_context,
 
             pill_clock: PillClock::new(),
             pill_battery: PillLaptopBattery::new(),
@@ -738,45 +752,45 @@ impl PillContainer {
         }
     }
 
-    pub fn update_data_clock(&mut self, cr: &cairo::Context) -> bool {
-        let changed = self.pill_clock.update_data(cr);
+    pub fn update_data_clock(&mut self) -> bool {
+        let changed = self.pill_clock.update_data(&self.dummy_context);
         if changed { self.pill_clock_rect = self.pill_clock.get_current_rect(); }
         return changed
     }
 
-    pub fn update_data_battery(&mut self, cr: &cairo::Context, battery: Option<crate::battery::BatteryStats>) -> bool {
-        let changed = self.pill_battery.update_data(cr, battery);
+    pub fn update_data_battery(&mut self, battery: Option<crate::battery::BatteryStats>) -> bool {
+        let changed = self.pill_battery.update_data(&self.dummy_context, battery);
         if changed { self.pill_battery_rect = self.pill_battery.get_current_rect(); }
         return changed
     }
 
-    pub fn update_data_warnings(&mut self, cr: &cairo::Context, icons: Vec<AlarmIcon>) -> bool {
-        let changed = self.pill_warnings.update_data(cr, icons);
+    pub fn update_data_warnings(&mut self, icons: Vec<AlarmIcon>) -> bool {
+        let changed = self.pill_warnings.update_data(&self.dummy_context, icons);
         if changed { self.pill_warnings_rect = self.pill_warnings.get_current_rect(); }
         return changed
     }
 
-    pub fn update_data_countdown(&mut self, cr: &cairo::Context, countdown: Countdown) -> bool {
-        let changed = self.pill_countdown.update_data(cr, countdown);
+    pub fn update_data_countdown(&mut self, countdown: Countdown) -> bool {
+        let changed = self.pill_countdown.update_data(&self.dummy_context, countdown);
         if changed { self.pill_countdown_rect = self.pill_countdown.get_current_rect(); }
         return changed
     }
 
-    pub fn update_data_security(&mut self, cr: &cairo::Context, security: &MicCameraStatus) -> bool {
-        let changed = self.pill_security.update_data(cr, security);
+    pub fn update_data_security(&mut self, security: &MicCameraStatus) -> bool {
+        let changed = self.pill_security.update_data(&self.dummy_context, security);
         if changed { self.pill_security_rect = self.pill_security.get_current_rect(); }
         return changed
     }
 
-    pub fn update_data_devices(&mut self, cr: &cairo::Context, batteries: Vec<BatteryDevice>) -> bool {
-        let changed = self.pill_devices.update_data(cr, batteries);
+    pub fn update_data_devices(&mut self, batteries: Vec<BatteryDevice>) -> bool {
+        let changed = self.pill_devices.update_data(&self.dummy_context, batteries);
         if changed { self.pill_devices_rect = self.pill_devices.get_current_rect(); }
         return changed
     }
     
-    pub fn update_data_notifications(&mut self, cr: &cairo::Context, notifications: &Vec<crate::notifications::Notification>) -> bool {
+    pub fn update_data_notifications(&mut self, notifications: &Vec<crate::notifications::Notification>) -> bool {
         let new_notif = notifications.last().cloned();
-        let notification_changed = self.pill_notification_full.update_data(cr, notifications);
+        let notification_changed = self.pill_notification_full.update_data(&self.dummy_context, notifications);
         let changed = self.last_notification != new_notif || notification_changed;
 
         if changed {
@@ -799,6 +813,8 @@ impl PillContainer {
     }
 
     fn draw_normal(&mut self, cr: &Context, _rect_width: f64, rect_height: f64, x: f64, y: f64) {
+        self.sync_child_rects_for_draw();
+        // self.recalculate_normal_target();
         /* if self.first_draw {
             self.recalculate_normal_target();
             self.first_draw = false;
@@ -844,12 +860,12 @@ impl PillContainer {
         self.pill_devices_rect = self.pill_devices.get_desired_rect(); */
 
         let rect_width =
-            self.pill_clock_rect.0 +
-            if self.pill_battery_rect.0 > 0.0 { self.pill_battery_rect.0 } else { 0.0 } +
-            if self.pill_warnings_rect.0 > 0.0 { self.pill_warnings_rect.0 } else { 0.0 } +
-            if self.pill_countdown_rect.0 > 0.0 { self.pill_countdown_rect.0 } else { 0.0 } +
-            if self.pill_security_rect.0 > 0.0 { self.pill_security_rect.0 } else { 0.0 } +
-            if self.pill_devices_rect.0 > 0.0 { self.pill_devices_rect.0 } else { 0.0 };
+            self.pill_clock.get_desired_rect().0 +
+            if self.pill_battery.get_desired_rect().0 > 0.0 { self.pill_battery.get_desired_rect().0 } else { 0.0 } +
+            if self.pill_warnings.get_desired_rect().0 > 0.0 { self.pill_warnings.get_desired_rect().0 } else { 0.0 } +
+            if self.pill_countdown.get_desired_rect().0 > 0.0 { self.pill_countdown.get_desired_rect().0 } else { 0.0 } +
+            if self.pill_security.get_desired_rect().0 > 0.0 { self.pill_security.get_desired_rect().0 } else { 0.0 } +
+            if self.pill_devices.get_desired_rect().0 > 0.0 { self.pill_devices.get_desired_rect().0 } else { 0.0 };
         
         dbg_println!("{} recalculate_normal_target rect_width:{rect_width:?}", "PillContainer".blue());
         dbg_println!("{} recalculate_normal_target rects: clock:{:?} battery:{:?} warnings:{:?} countdown:{:?} security:{:?} devices:{:?}", "PillContainer".blue(), self.pill_clock_rect, self.pill_battery_rect, self.pill_warnings_rect, self.pill_countdown_rect, self.pill_security_rect, self.pill_devices_rect);
@@ -867,5 +883,14 @@ impl PillContainer {
                 // self.animation.set_target(self.normal_target);
             }
         }
+    }
+
+    fn sync_child_rects_for_draw(&mut self) {
+        self.pill_clock_rect = self.pill_clock.get_current_rect();
+        self.pill_battery_rect = self.pill_battery.get_current_rect();
+        self.pill_warnings_rect = self.pill_warnings.get_current_rect();
+        self.pill_countdown_rect = self.pill_countdown.get_current_rect();
+        self.pill_security_rect = self.pill_security.get_current_rect();
+        self.pill_devices_rect = self.pill_devices.get_current_rect();
     }
 }

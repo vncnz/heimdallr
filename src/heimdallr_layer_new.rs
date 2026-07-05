@@ -262,11 +262,11 @@ impl HeimdallrLayer {
         // I'm experimenting with new UI: some of this shit will be moved out of here, ofc!
 
         // UPDATE DATA
-        let mut something_changed = self.pill_container.update_data_clock(&cr);
-        something_changed |= self.pill_container.update_data_battery(&cr, self.battery_integrated.clone());
+        let mut something_changed = self.pill_container.update_data_clock();
+        something_changed |= self.pill_container.update_data_battery(self.battery_integrated.clone());
 
         let icons: Vec<AlarmIcon> = self.icons.values().cloned().filter(|icon| icon.symbol != "󱫡" && icon.symbol != "󱫌").collect();
-        something_changed |= self.pill_container.update_data_warnings(&cr, icons);
+        something_changed |= self.pill_container.update_data_warnings(icons);
 
         /* Update countdown pill (to be unified) */
         let c = Countdown {
@@ -275,19 +275,19 @@ impl HeimdallrLayer {
             current_pause_start: self.timer.current_pause_start,
             direction: self.timer.direction.clone()
         };
-        something_changed |= self.pill_container.update_data_countdown(&cr, c);
+        something_changed |= self.pill_container.update_data_countdown(c);
 
         if self.security.pristine {
-            something_changed |= self.pill_container.update_data_security(&cr, &self.security);
+            something_changed |= self.pill_container.update_data_security(&self.security);
             self.security.pristine = false;
         }
 
         if self.batteries_pristine {
-            something_changed |= self.pill_container.update_data_devices(&cr, self.batteries.clone());
+            something_changed |= self.pill_container.update_data_devices(self.batteries.clone());
             self.batteries_pristine = false;
         }
 
-        something_changed |= self.pill_container.update_data_notifications(&cr, &self.notifications);
+        something_changed |= self.pill_container.update_data_notifications(&self.notifications);
 
         if something_changed {
             self.pill_container.recalculate_normal_target();
