@@ -30,7 +30,7 @@ pub struct HeimdallrLayer {
     pub(crate) first_configure: bool,
     // pub(crate) input_region: Option<wl_region::WlRegion>,
     pub(crate) icons: HashMap<String, AlarmIcon>,
-    pub(crate) battery_integrated: Option<crate::battery::BatteryStats>,
+    // pub(crate) battery_integrated: Option<crate::battery::BatteryStats>,
     pub(crate) needs_redraw: bool,
     pub(crate) last_redraw: Instant,
     pub(crate) redraw_interval: [Duration; 2],
@@ -74,7 +74,7 @@ impl HeimdallrLayer {
             // input_region: Some(empty_region),
             icons: HashMap::new(),
             ratatoskr_connected: false,
-            battery_integrated: None,
+            // battery_integrated: None,
             needs_redraw: true,
             last_redraw: Instant::now(),
             redraw_interval: [Duration::from_millis(1_000), Duration::from_millis(60_000)],
@@ -102,7 +102,11 @@ impl HeimdallrLayer {
     }
 
     pub fn update_battery_data (&mut self, data: Option<crate::battery::BatteryStats>) {
-        self.battery_integrated = data;
+        // self.battery_integrated = data;
+        if self.pill_container.update_data_battery(data) {
+            self.pill_container.recalculate_normal_target();
+            self.request_redraw("pill_container animation");
+        }
     }
 
     pub fn update_devices_data (&mut self, data: Vec<BatteryDevice>) {
@@ -269,7 +273,7 @@ impl HeimdallrLayer {
         // UPDATE DATA
         let mut something_changed = self.pill_container.update_data_clock();
         something_changed |= self.pill_container.update_data_countdown();
-        something_changed |= self.pill_container.update_data_battery(self.battery_integrated.clone());
+        // something_changed |= self.pill_container.update_data_battery(self.battery_integrated.clone());
 
         // something_changed |= self.pill_container.update_data_warnings(&self.icons); // Moved
 
@@ -559,6 +563,7 @@ impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like
                 200
             ); */
             if self.pill_container.update_data_warnings(&self.icons) {
+                self.pill_container.recalculate_normal_target();
                 self.request_redraw("pill_container animation");
             }
             IconChange::Added
@@ -576,8 +581,8 @@ impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like
             );
         } */
         if removed {
-            let icons: Vec<AlarmIcon> = self.icons.values().cloned().filter(|icon| icon.symbol != "󱫡" && icon.symbol != "󱫌").collect();
             if self.pill_container.update_data_warnings(&self.icons) {
+                self.pill_container.recalculate_normal_target();
                 self.request_redraw("pill_container animation");
             }
         }
