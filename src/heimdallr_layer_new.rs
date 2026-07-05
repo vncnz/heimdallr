@@ -110,6 +110,11 @@ impl HeimdallrLayer {
         self.batteries_pristine = true;
     }
 
+    pub fn set_countdown (&mut self, input: &str) -> Result<u64, &'static str> {
+        self.pill_container.set_countdown(input); // new
+        self.timer.fill_from_timespan(input) // old
+    }
+
     pub fn check_redraw_timeout(&mut self) {
 
         if self.timer.is_active() && self.last_redraw.elapsed() > Duration::from_secs(1) {
@@ -263,19 +268,20 @@ impl HeimdallrLayer {
 
         // UPDATE DATA
         let mut something_changed = self.pill_container.update_data_clock();
+        something_changed |= self.pill_container.update_data_countdown();
         something_changed |= self.pill_container.update_data_battery(self.battery_integrated.clone());
 
         let icons: Vec<AlarmIcon> = self.icons.values().cloned().filter(|icon| icon.symbol != "󱫡" && icon.symbol != "󱫌").collect();
         something_changed |= self.pill_container.update_data_warnings(icons);
 
         /* Update countdown pill (to be unified) */
-        let c = Countdown {
+        /* let c = Countdown {
             state: self.timer.state,
             total_paused_time: self.timer.total_paused_time,
             current_pause_start: self.timer.current_pause_start,
             direction: self.timer.direction.clone()
         };
-        something_changed |= self.pill_container.update_data_countdown(c);
+        something_changed |= self.pill_container.update_data_countdown(c); */
 
         if self.security.pristine {
             something_changed |= self.pill_container.update_data_security(&self.security);

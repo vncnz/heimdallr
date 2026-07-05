@@ -139,6 +139,10 @@ impl HeimdallrLayer {
         self.batteries_pristine = true;
     }
 
+    pub fn set_countdown (&mut self, input: &str) -> Result<u64, &'static str> {
+        self.timer.fill_from_timespan(input)
+    }
+
     pub fn check_redraw_timeout(&mut self) {
 
         if self.timer.is_active() && self.last_redraw.elapsed() > Duration::from_secs(1) {
@@ -258,8 +262,6 @@ impl HeimdallrLayer {
 
                 self.draw_batteries(cr.clone());
                 if self.config.backend.is_legacy() { self.draw_security(cr.clone()); }
-                // self.draw_timer_2(&cr);
-                if self.config.backend.is_pills() { self.draw_test_pill(&cr); }
 
                 let layer = self.layer.clone().unwrap();
                 let buffer = self.buffers[buffer_idx].as_ref().unwrap();
@@ -401,169 +403,6 @@ impl HeimdallrLayer {
                 // let w = cr.text_extents(&text).unwrap().width();
                 // cr_text_aligned(cr.clone(), app.into(), self.width / 2.0, 0.5, 0.0);
             } */
-        }
-    }
-
-    fn draw_test_pill (&mut self, cr: &Context) {
-        self.pills_are_animating = false;
-        // I'm experimenting with new UI: some of this shit will be moved out of here, ofc!
-
-        self.pill_clock.update_data(&cr);
-        self.pill_battery.update_data(&cr, self.battery_integrated.clone());
-
-        let icons: Vec<AlarmIcon> = self.icons.values().cloned().filter(|icon| icon.symbol != "󱫡" && icon.symbol != "󱫌").collect();
-        self.pill_warnings.update_data(&cr, icons);
-
-
-        /* Pills without animation */
-        let pill_clock_rect = self.pill_clock.get_desired_rect(); // pill_clock.get_current_rect();
-        let pill_battery_rect = self.pill_battery.get_desired_rect();
-
-
-        /* Update warnings pill animation */
-        if self.pill_warnings.step_animation() {
-            dbg_println!("Pill warning animation");
-            self.pills_are_animating = true;
-            self.request_redraw("pill_warning animation");
-        } else {
-            dbg_println!("Pill warning is NOT animating");
-        }
-        let pill_warnings_rect = self.pill_warnings.get_current_rect();
-        // eprintln!("pill_warnings_rect current rect {pill_warnings_rect:?}");
-
-
-        /* Update countdown pill (to be unified) */
-        let c = Countdown {
-            state: self.timer.state,
-            total_paused_time: self.timer.total_paused_time,
-            current_pause_start: self.timer.current_pause_start,
-            direction: self.timer.direction.clone()
-        };
-        self.pill_countdown.update_data(&cr, c);
-
-        if self.pill_countdown.step_animation() {
-            dbg_println!("Pill countdown animation");
-            self.pills_are_animating = true;
-            self.request_redraw("pill_countdown animation");
-        } else {
-            // eprintln!("Pill countdown is NOT animating");
-        }
-        let pill_countdown_rect = self.pill_countdown.get_current_rect();
-
-        
-        /* Update security pill */
-        if self.security.pristine {
-            self.pill_security.update_data(&cr, &self.security);
-            self.security.pristine = false;
-        }
-
-        if self.pill_security.step_animation() {
-            dbg_println!("Pill security animation");
-            self.pills_are_animating = true;
-            self.request_redraw("pill_security animation");
-        } else {
-            // eprintln!("Pill security is NOT animating");
-        }
-
-        let pill_security_rect = self.pill_security.get_current_rect();
-
-        if self.batteries_pristine {
-            self.pill_devices.update_data(&cr, self.batteries.clone());
-            self.batteries_pristine = false;
-        }
-
-        if self.pill_devices.step_animation() {
-            dbg_println!("Pill countdown animation");
-            self.pills_are_animating = true;
-            self.request_redraw("pill_devices animation");
-        } else {
-            // eprintln!("Pill countdown is NOT animating");
-        }
-        let pill_devices_rect = self.pill_devices.get_current_rect();
-
-        let r = 8.0;
-        let pill_bg_color: (f64, f64, f64, f64) = (0.1, 0.1, 0.15, 0.85);
-        let mut pill_border_color: Option<(f64, f64, f64, f64)> = match self.config.frame_color {
-            FrameColor::Rgba(r, g, b, a) => Some((r, g, b, a)),
-            FrameColor::WorstResource => self
-                .icons
-                .values()
-                .max_by(|a, b| a.warn.partial_cmp(&b.warn).unwrap_or(std::cmp::Ordering::Equal))
-                .map(|icon| icon.color),
-            FrameColor::None /* | FrameColor::Random */ => None
-        };
-
-        let rect_width = 
-                pill_clock_rect.0 +
-                if pill_battery_rect.0 > 0.0 { pill_battery_rect.0 } else { 0.0 } +
-                if pill_countdown_rect.0 > 0.0 { pill_countdown_rect.0 } else { 0.0 } + 
-                if pill_security_rect.0 > 0.0 { pill_security_rect.0 } else { 0.0 } +
-                if pill_devices_rect.0 > 0.0 { pill_devices_rect.0 } else { 0.0 } +
-                if pill_warnings_rect.0 > 0.0 { pill_warnings_rect.0 } else { 0.0 };
-        let rect_height = 26.0;
-        let rect_left = (self.width as f64 - rect_width) / 2.0;
-        let rect_top = 2.0 + 24.0 * self.frame_model.notif_height_ratio;
-        let mut x = rect_left;
-
-        let mut pill_bg_steps = vec![(0.0, pill_bg_color)];
-
-        // wob-like
-        if self.frame_model.wob_height > 0.0 { // if self.wob_expiration.is_some() {
-            let wob_color_base = (0.6, 0.6, 0.7, pill_bg_color.3);
-            let wob_color = mix_color(pill_bg_color, wob_color_base, self.frame_model.wob_height);
-            pill_border_color = Some(mix_color(pill_border_color.unwrap_or((0.0, 0.0, 0.0, 0.0)), wob_color_base, self.frame_model.wob_height));
-            let mut steps = vec![(0.0, wob_color)]; // TODO remove links to global animation system?
-            steps.push((self.wob_value, pill_bg_color));
-            pill_bg_steps = steps;
-        }
-
-        cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
-        cr.set_font_size(16.0);
-
-        /* let steps = vec![
-            (0.0, (color.0, color.1, color.2, color.3)),
-            (self.timer.progress(), (color.0, color.1, color.2, 0.5))
-        ]; */
-        // rounded_rect_gradient(&cr, rect_right - rect_width, rect_top, rect_width, rect_height, r, steps, crate::utils::GradientDirection::Horizontal, false, Some((0.0, 0.0, 0.0, 0.0)));
-
-        /* let frame_color = match self.config.frame_color {
-            FrameColor::Rgba(r, g, b, a) => Some((r, g, b, a)),
-            FrameColor::WorstResource => self
-                .icons
-                .values()
-                .max_by(|a, b| a.warn.partial_cmp(&b.warn).unwrap_or(std::cmp::Ordering::Equal))
-                .map(|icon| icon.color),
-            FrameColor::None /* | FrameColor::Random */ => None
-        }; */
-
-        rounded_rect_gradient(&cr, rect_left, rect_top, rect_width, rect_height, r, pill_bg_steps, crate::utils::GradientDirection::Horizontal, false, pill_border_color);
-
-        self.pill_clock.draw(&cr, pill_clock_rect.0, rect_height, x, rect_top);
-        x += pill_clock_rect.0;
-
-        if pill_battery_rect.0 > 0.0 {
-            self.pill_battery.draw(&cr, pill_battery_rect.0, rect_height, x, rect_top);
-            x += pill_battery_rect.0;
-        }
-
-        if pill_countdown_rect.0 > 0.0 {
-            self.pill_countdown.draw(&cr, pill_countdown_rect.0, rect_height, x, rect_top);
-            x += pill_countdown_rect.0;
-        }
-
-        if pill_security_rect.0 > 0.0 {
-            self.pill_security.draw(&cr, pill_security_rect.0, rect_height, x, rect_top);
-            x += pill_security_rect.0;
-        }
-
-        if pill_devices_rect.0 > 0.0 {
-            self.pill_devices.draw(&cr, pill_devices_rect.0, rect_height, x, rect_top);
-            x += pill_devices_rect.0;
-        }
-
-        if pill_warnings_rect.0 > 0.0 {
-            self.pill_warnings.draw(&cr, pill_warnings_rect.0, rect_height, x, rect_top);
-            x += pill_warnings_rect.0;
         }
     }
 

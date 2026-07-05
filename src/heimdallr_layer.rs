@@ -53,6 +53,7 @@ pub trait HeimdallrLayerTrait {
 static mut AVG_DUR: u128 = 0;
 static mut AVG_CNT: i64 = -5;
 
+// ! To be deleted
 pub struct HeimdallrLayer {
     pub(crate) registry_state: RegistryState,
     pub(crate) output_state: OutputState,
@@ -470,7 +471,7 @@ impl HeimdallrLayer {
             current_pause_start: self.timer.current_pause_start,
             direction: self.timer.direction.clone()
         };
-        self.pill_countdown.update_data(&cr, c);
+        // self.pill_countdown.update_data(&cr, c);
 
         if self.pill_countdown.step_animation() {
             dbg_println!("Pill countdown animation");

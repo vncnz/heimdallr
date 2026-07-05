@@ -217,6 +217,7 @@ pub struct PillCountdown {
     base: PillBase,
     animation: AnimationState,
     last_status: (bool, String),
+    timer: Countdown
 }
 
 impl PillTrait for PillCountdown {
@@ -243,25 +244,26 @@ impl PillCountdown {
             base: PillBase::new(), // with_size((58.0, 20.0)),
             animation: AnimationState::new(),
             last_status: (false, "".into()),
+            timer: Countdown::new()
         }
     }
 
-    pub fn update_data(&mut self, cr: &cairo::Context, countdown: Countdown) -> bool {
-        let (status, time) = countdown.format_custom_duration();
+    pub fn update_data(&mut self, cr: &cairo::Context) -> bool {
+        let (status, time) = self.timer.format_custom_duration();
         if self.last_status.0 == status && self.last_status.1 == time {
             return false;
         }
 
-        let target = if countdown.is_active() {
+        let target = if self.timer.is_active() {
             self.last_status = (status, time.clone());
 
-            let w = if status { 1.0 } else { countdown.get_warning() };
+            let w = if status { 1.0 } else { self.timer.get_warning() };
             let icon = if status { "󱫌" } else { "󱫡" };
             let color = if status { (0.0, 0.0, 0.0, 1.0) } else { get_color_gradient(w) };
-            let text: &str = if countdown.is_active() { &format!("{icon} {time}") } else { "" };
+            let text: &str = if self.timer.is_active() { &format!("{icon} {time}") } else { "" };
 
             let (layout, sizes) = cr_text_layout(&cr, &text, PILL_FONT_SIZE, None).unwrap();
-            let target = if countdown.is_active() { (sizes.0, sizes.1) } else { (0.0, 0.0) };
+            let target = if self.timer.is_active() { (sizes.0, sizes.1) } else { (0.0, 0.0) };
 
             self.base.set_layout(layout, target, text.to_string(), color);
             // dbg_println!("{} {target:?}", "countdown target".blue());
@@ -758,6 +760,10 @@ impl PillContainer {
         return changed
     }
 
+    pub fn set_countdown (&mut self, input: &str) -> Result<u64, &'static str> {
+        self.pill_countdown.timer.fill_from_timespan(input) // FIXME: this should be in the pill itself
+    }
+
     pub fn update_data_battery(&mut self, battery: Option<crate::battery::BatteryStats>) -> bool {
         let changed = self.pill_battery.update_data(&self.dummy_context, battery);
         if changed { self.pill_battery_rect = self.pill_battery.get_current_rect(); }
@@ -770,8 +776,8 @@ impl PillContainer {
         return changed
     }
 
-    pub fn update_data_countdown(&mut self, countdown: Countdown) -> bool {
-        let changed = self.pill_countdown.update_data(&self.dummy_context, countdown);
+    pub fn update_data_countdown(&mut self) -> bool {
+        let changed = self.pill_countdown.update_data(&self.dummy_context);
         if changed { self.pill_countdown_rect = self.pill_countdown.get_current_rect(); }
         return changed
     }

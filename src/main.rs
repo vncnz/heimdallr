@@ -353,7 +353,7 @@ fn main() {
                     let mut wob_effect = false;
                     match parts.as_slice() {
                         ["timer", value_str] => {
-                            match app.timer.fill_from_timespan(value_str) {
+                            match app.set_countdown(value_str) {
                                 Ok(secs) => {
                                     if secs > 0 {
                                         // app.update_timer_icon();
