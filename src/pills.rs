@@ -693,7 +693,7 @@ impl PillNotificationFull {
 
 enum PillMode {
     Normal,
-    Notification
+    Notification(u8)
 }
 
 pub struct PillContainer {
@@ -730,7 +730,7 @@ impl PillTrait for PillContainer {
     fn draw(&mut self, cr: &Context, _rect_width: f64, rect_height: f64, x: f64, y: f64) {
         match self.mode {
             PillMode::Normal => self.draw_normal(cr, _rect_width, rect_height, x, y),
-            PillMode::Notification => self.draw_notification(cr, _rect_width, rect_height, x, y)
+            PillMode::Notification(_) => self.draw_notification(cr, _rect_width, rect_height, x, y)
         }
     }
 
@@ -839,7 +839,7 @@ impl PillContainer {
             self.last_notification = new_notif;
 
             if self.last_notification.is_some() {
-                self.mode = PillMode::Notification;
+                self.mode = PillMode::Notification(self.last_notification.as_ref().unwrap().urgency);
                 self.animation.set_target(self.pill_notification_full.get_desired_rect());
             } else {
                 self.mode = PillMode::Normal;
@@ -848,6 +848,13 @@ impl PillContainer {
         }
 
         changed
+    }
+
+    pub fn get_bg_color(&self) -> (f64, f64, f64, f64) {
+        match self.mode {
+            PillMode::Notification(2) => (0.3, 0.1, 0.15, 0.85),
+            _ => (0.1, 0.1, 0.15, 0.85)
+        }
     }
 
     fn draw_notification(&mut self, cr: &Context, _rect_width: f64, rect_height: f64, x: f64, y: f64) {
@@ -920,7 +927,7 @@ impl PillContainer {
                 // self.normal_target = (fake_width, rect_height);
                 self.animation.set_target((fake_width, rect_height));
             }
-            PillMode::Notification => {
+            PillMode::Notification(_) => {
                 // I don't want to change the target when in notification mode, so I cache the value and restore it when switching back to normal mode
                 // self.animation.set_target(self.normal_target);
             }

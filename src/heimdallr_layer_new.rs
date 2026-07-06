@@ -314,7 +314,7 @@ impl HeimdallrLayer {
         
 
         let r = 8.0;
-        let pill_bg_color: (f64, f64, f64, f64) = (0.1, 0.1, 0.15, 0.85);
+        let pill_bg_color: (f64, f64, f64, f64) = self.pill_container.get_bg_color();
         let mut pill_border_color: Option<(f64, f64, f64, f64)> = match self.config.frame_color {
             FrameColor::Rgba(r, g, b, a) => Some((r, g, b, a)),
             FrameColor::WorstResource => self
