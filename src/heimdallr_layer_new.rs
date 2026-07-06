@@ -48,7 +48,7 @@ pub struct HeimdallrLayer {
     pub(crate) security: crate::security::MicCameraStatus,
     pub(crate) batteries: Vec<BatteryDevice>,
     pub(crate) batteries_pristine: bool,
-    pub(crate) timer: Countdown,
+    // pub(crate) timer: Countdown,
     pub pill_container: PillContainer,
     pub(crate) pills_are_animating: bool
 
@@ -91,7 +91,7 @@ impl HeimdallrLayer {
             security: MicCameraStatus { mic_active: vec!(), camera_active: vec!(), pristine: false },
             batteries: vec![],
             batteries_pristine: false,
-            timer: Countdown::new(),
+            // timer: Countdown::new(),
             pill_container: PillContainer::new(),
             pills_are_animating: false
         }
@@ -115,13 +115,12 @@ impl HeimdallrLayer {
     }
 
     pub fn set_countdown (&mut self, input: &str) -> Result<u64, &'static str> {
-        self.pill_container.set_countdown(input); // new
-        self.timer.fill_from_timespan(input) // old
+        self.pill_container.set_countdown(input)
     }
 
     pub fn check_redraw_timeout(&mut self) {
 
-        if self.timer.is_active() && self.last_redraw.elapsed() > Duration::from_secs(1) {
+        if self.pill_container.is_countdown_active() && self.last_redraw.elapsed() > Duration::from_secs(1) {
             self.request_redraw("timer tick");
         } else if self.last_redraw.elapsed() > self.redraw_interval[1] {
             self.request_redraw("time");
@@ -368,7 +367,7 @@ impl HeimdallrLayer {
         self.pill_container.draw(&cr, rect_width_end, rect_height, rect_left_end, rect_top);
     }
 
-    fn update_timer_icon (&mut self) {
+    /* fn update_timer_icon (&mut self) {
         // Used by old UI (no pill UI)
         // 󱫟 for pause
         // 󱫌 alert
@@ -380,7 +379,7 @@ impl HeimdallrLayer {
         } else {
             self.remove_icon("timer");
         }
-    }
+    } */
 
     fn draw_myframe(&mut self, cr: Context) {
         // cr.set_operator(cairo::Operator::Source);

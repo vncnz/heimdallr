@@ -270,6 +270,7 @@ impl PillCountdown {
             target
         } else {
             self.base.clear();
+            self.last_status.0 = false;
             // dbg_println!("{} zero", "countdown target".blue());
             (0.0, 0.0)
         };
@@ -792,6 +793,10 @@ impl PillContainer {
 
     pub fn set_countdown (&mut self, input: &str) -> Result<u64, &'static str> {
         self.pill_countdown.timer.fill_from_timespan(input) // FIXME: this should be in the pill itself
+    }
+
+    pub fn is_countdown_active (&self) -> bool {
+        self.pill_countdown.timer.is_active()
     }
 
     pub fn update_data_battery(&mut self, battery: Option<crate::battery::BatteryStats>) -> bool {
