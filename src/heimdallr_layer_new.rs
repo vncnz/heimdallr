@@ -553,6 +553,10 @@ impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like
             },
         );
         if already_present {
+            if self.pill_container.update_data_warnings(&self.icons) {
+                self.pill_container.recalculate_normal_target();
+                self.request_redraw("pill_container animation");
+            }
             IconChange::Changed
         } else {
             /* self.animator.animate_property(

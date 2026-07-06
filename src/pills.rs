@@ -852,8 +852,8 @@ impl PillContainer {
 
     pub fn get_bg_color(&self) -> (f64, f64, f64, f64) {
         match self.mode {
-            PillMode::Notification(2) => (0.3, 0.1, 0.15, 0.85),
-            _ => (0.1, 0.1, 0.15, 0.85)
+            PillMode::Notification(2) => (0.27, 0.11, 0.22, 0.85), // (0.3, 0.15, 0.2, 0.85),
+            _ => (0.11, 0.22, 0.27, 0.85) // (0.1, 0.1, 0.15, 0.85)
         }
     }
 
