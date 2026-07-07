@@ -325,7 +325,7 @@ impl PillLaptopBattery {
                 let bat_symb: String = match bat.state {
                     crate::battery::BatteryState::Charging => format!("󱐋 {}", eta),
                     crate::battery::BatteryState::Discharging => format!("󰯆 {}", eta),
-                    crate::battery::BatteryState::NotCharging => "󱞝".into(),
+                    crate::battery::BatteryState::NotCharging => "󱧥".into(),
                     _ => {
                         let slice: &[&str] = &[
                             "󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹",
