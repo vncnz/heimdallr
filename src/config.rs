@@ -23,17 +23,10 @@ pub enum LayerBackend {
     Legacy,
 }
 impl LayerBackend {
-    pub fn is_legacy(&self) -> bool {
-        matches!(self, Self::Legacy)
-    }
-
-    pub fn is_pills(&self) -> bool {
-        !self.is_legacy()
-    }
 
     fn from_json(value: Option<serde_json::Value>) -> Self {
         match value {
-            Some(serde_json::Value::Null) | None => LayerBackend::Pills,
+            Some(serde_json::Value::Null) | Option::None => LayerBackend::Pills,
 
             Some(serde_json::Value::String(s)) => match s.as_str() {
                 "pills" | "new" => LayerBackend::Pills,
@@ -82,7 +75,7 @@ impl FrameColor {
     fn from_json(value: Option<serde_json::Value>) -> Self {
         match value {
             Some(serde_json::Value::Null) => FrameColor::None,
-            None => FrameColor::None,
+            Option::None => FrameColor::None,
 
             Some(serde_json::Value::String(s)) => match s.as_str() {
                 "random" => {
@@ -126,7 +119,7 @@ impl ClockCfg {
     fn from_json(value: Option<serde_json::Value>) -> Self {
         match value {
             Some(serde_json::Value::Null) => ClockCfg::None,
-            None => ClockCfg::None,
+            Option::None => ClockCfg::None,
 
             Some(serde_json::Value::String(s)) => match s.as_str() {
                 "clock1" => { ClockCfg::Clock1 },

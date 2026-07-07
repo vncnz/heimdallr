@@ -15,19 +15,19 @@ use std::thread;
 
 use colored::Colorize;
 
-use crate::{battery::BatteryStats, commands::start_command_listener, data::{BluetoothStats, RatatoskrSocket, UPowerDeviceKind}, heimdallr_layer::IconChange, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, get_color_gradient, log_to_file, select_icon}};
+use crate::{battery::BatteryStats, commands::start_command_listener, config::LayerBackend::Legacy, data::{BluetoothStats, IconChange, RatatoskrSocket, UPowerDeviceKind}, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, get_color_gradient, log_to_file, select_icon}};
 
 mod data;
 mod config;
-mod heimdallr_layer;
-mod heimdallr_layer_old;
+// mod heimdallr_layer;
+// mod heimdallr_layer_old;
+//mod clock;
+//mod clock1;
+//mod clock2;
 mod heimdallr_layer_new;
 mod notifications;
 mod commands;
 mod utils;
-mod clock;
-mod clock1;
-mod clock2;
 mod battery;
 mod security;
 mod countdown;
@@ -461,7 +461,7 @@ fn main() {
                                     UPowerDeviceKind::Keyboard => "󰌌",
                                     _ => "󰂱"
                                 };
-                                if (config.show_always_bluetooth || dev.warn >= 0.3) && config.backend.is_legacy() {
+                                if (config.show_always_bluetooth || dev.warn >= 0.3) && config.backend == Legacy {
                                     let _added = app.add_icon(&iconkey, icon, get_color_gradient(dev.warn), dev.warn, None);
                                 }
                             }

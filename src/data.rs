@@ -166,3 +166,19 @@ if let Ok(data) = sock.rx.try_recv() {
     }
 }
  */
+
+
+ #[derive(PartialEq)]
+pub enum IconChange {
+    Added,
+    Changed,
+    // Removed,
+    None
+}
+#[derive(Clone)]
+pub struct AlarmIcon {
+    pub symbol: String,
+    pub color: (f64, f64, f64, f64), // RGBA
+    pub warn: f64,
+    pub info: Option<String>
+}

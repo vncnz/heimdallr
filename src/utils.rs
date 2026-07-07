@@ -63,9 +63,9 @@ pub fn select_icon<T: Clone>(min: f64, max: f64, value: f64, icons: &[T]) -> Opt
     let range = (max - min) as f64;
     let norm = (value - min) as f64 / range;
 
-    let idx = ((norm * icons.len() as f64).floor() as usize).min(icons.len() - 1);
+    let idx: usize = ((norm * icons.len() as f64).floor() as usize).min(icons.len() - 1);
 
-    Some(icons[idx].clone())
+    icons.get(idx).cloned()
 }
 
 fn hsv_to_rgb(h: f64, s: f64, v: f64) -> (u8, u8, u8) {

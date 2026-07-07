@@ -19,20 +19,6 @@ use crate::{clock::{ClockTrait, ClockWrapper, NoClock}, clock1::Clock1, clock2::
 // static DRAW_PILL: bool = true;
 // pub static DRAW_OLD_UI: bool = false;
 
-#[derive(PartialEq)]
-pub enum IconChange {
-    Added,
-    Changed,
-    // Removed,
-    None
-}
-#[derive(Clone)]
-pub struct AlarmIcon {
-    pub symbol: String,
-    pub color: (f64, f64, f64, f64), // RGBA
-    pub warn: f64,
-    pub info: Option<String>
-}
 /* Trait that I'll use in the future, maybe
 pub trait HeimdallrLayerTrait {
     fn new (registry_state: RegistryState, output_state: OutputState, shm: Shm, config: Config);

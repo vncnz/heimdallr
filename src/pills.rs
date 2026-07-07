@@ -1,12 +1,12 @@
 // I'm experimenting with new UI: some of this shit will be spread out in multiple files, ofc!
 
-use cairo::{Context, FontSlant, Format, ImageSurface};
+use cairo::{Context, Format, ImageSurface};
 use chrono::Local;
 use std::{collections::HashMap, time::{Duration, Instant}};
 use colored::Colorize;
 
 use crate::{
-    countdown::Countdown, data::{BatteryDevice, UPowerDeviceKind}, dbg_println, heimdallr_layer::AlarmIcon, notifications, security::MicCameraStatus, utils::{cr_text_layout, ease, get_color_gradient, rounded_rect_gradient, select_icon}
+    countdown::Countdown, data::{BatteryDevice, UPowerDeviceKind}, dbg_println, data::AlarmIcon, security::MicCameraStatus, utils::{cr_text_layout, ease, get_color_gradient, rounded_rect_gradient, select_icon}
 };
 
 pub static PILL_FONT_SIZE: f64 = 14.0;

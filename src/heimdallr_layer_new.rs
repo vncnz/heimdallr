@@ -14,7 +14,7 @@ use cairo::FontSlant;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{config::{Config, FrameColor}, countdown::Countdown, data::BatteryDevice, dbg_println, heimdallr_layer::{AlarmIcon, IconChange}, notifications::Notification, pills::{PillContainer, PillTrait}, security::MicCameraStatus, utils::{AnimationKey, Animator, FrameModel, cr_text_aligned, draw_smart_border, get_color_gradient, log_to_file, mix_color, rounded_rect_gradient}};
+use crate::{config::{Config, FrameColor}, data::BatteryDevice, dbg_println, data::{AlarmIcon, IconChange}, notifications::Notification, pills::{PillContainer, PillTrait}, security::MicCameraStatus, utils::{AnimationKey, Animator, FrameModel, cr_text_aligned, draw_smart_border, log_to_file, mix_color, rounded_rect_gradient}};
 
 static mut AVG_DUR: u128 = 0;
 static mut AVG_CNT: i64 = -5;
@@ -230,7 +230,6 @@ impl HeimdallrLayer {
                 let cr = Context::new(&surface).unwrap();
 
                 self.draw_myframe(cr.clone());
-                if self.notifications.len() > 0 { self.draw_notification(cr.clone()) }
 
                 self.draw_test_pill(&cr);
 
@@ -326,7 +325,7 @@ impl HeimdallrLayer {
         };
 
         let (rect_width, rect_height) = self.pill_container.get_current_rect();
-        let (rect_width_end, rect_height_end) = self.pill_container.get_desired_rect();
+        let (rect_width_end, _rect_height_end) = self.pill_container.get_desired_rect();
         let rect_left = (self.width as f64 - rect_width) / 2.0;
         let rect_left_end = (self.width as f64 - rect_width_end) / 2.0;
         let rect_top = 2.0/* + 24.0 * self.frame_model.notif_height_ratio */;
@@ -441,7 +440,7 @@ impl HeimdallrLayer {
 
     }
 
-    fn draw_notification(&mut self, cr: Context) {
+    /* fn draw_notification(&mut self, cr: Context) {
         return;
 
         if self.notification_idx >= self.notifications.len() {
@@ -485,7 +484,7 @@ impl HeimdallrLayer {
             format!("{} / {}", notif_to_show.summary, notif_to_show.body)
         };
         cr_text_aligned(cr.clone(), msg, x, top, 0.0, 0.5);
-    }
+    } */
 
     pub fn update_notification_list (&mut self, new_notif_opt: Option<Notification>) {
 
