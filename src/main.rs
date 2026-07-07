@@ -276,21 +276,20 @@ fn main() {
     let (demo_tx, demo_rx) = mpsc::channel::<(String, String)>();
 
 
-    if false {
+    if true {
         thread::spawn(move || {
             let actions = vec![
-                ("battery", "true", Duration::from_secs(2)),
-                ("battery", "false", Duration::from_secs(1)),
-                ("wob", "0.35", Duration::from_secs(2)),
+                // ("battery", "true", Duration::from_secs(2)),
+                // ("battery", "false", Duration::from_secs(1)),
+                ("wob", "0.35", Duration::from_secs(4)),
                 ("wob", "0.45", Duration::from_millis(200)),
                 ("wob", "0.55", Duration::from_millis(300)),
                 ("wob", "0.65", Duration::from_millis(200)),
                 ("timer", "5s", Duration::from_secs(3)),
-                // ("battery", "0.8", Duration::from_secs(1)),
-                ("security", "on", Duration::from_secs(3)),
+                ("security", "on", Duration::from_secs(2)),
                 ("security", "off", Duration::from_secs(2)),
                 ("timer", "off", Duration::from_secs(3)),
-                ("notification", "Some believe that every library looks like a splendid cemetery of human thoughts and ideas. Could librarians be called grave-diggers? However that may be, like a cemetery, a library will never stop being of use.", Duration::from_secs(2))
+                ("notification", "The endless noise will put a lock on your open mind, and it will tear your soul apart. Run away from the tragedy, and find the essence of silence that remains inside.", Duration::from_secs(2))
             ];
 
             for (kind, value, delay) in actions {
