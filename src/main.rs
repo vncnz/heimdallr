@@ -15,7 +15,7 @@ use std::thread;
 
 use colored::Colorize;
 
-use crate::{battery::BatteryStats, commands::start_command_listener, config::LayerBackend::Legacy, data::{BluetoothStats, IconChange, RatatoskrSocket, UPowerDeviceKind}, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, get_color_gradient, log_to_file, select_icon}};
+use crate::{battery::{BatteryState, BatteryStats}, commands::start_command_listener, config::LayerBackend::Legacy, data::{BluetoothStats, IconChange, RatatoskrSocket, UPowerDeviceKind}, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, get_color_gradient, log_to_file, select_icon}};
 
 mod data;
 mod config;
@@ -279,6 +279,8 @@ fn main() {
     if false {
         thread::spawn(move || {
             let actions = vec![
+                ("battery", "true", Duration::from_secs(2)),
+                ("battery", "false", Duration::from_secs(1)),
                 ("wob", "0.35", Duration::from_secs(2)),
                 ("wob", "0.45", Duration::from_millis(200)),
                 ("wob", "0.55", Duration::from_millis(300)),
@@ -288,7 +290,7 @@ fn main() {
                 ("security", "on", Duration::from_secs(3)),
                 ("security", "off", Duration::from_secs(2)),
                 ("timer", "off", Duration::from_secs(3)),
-                ("notification", "Some believe that every library looks like a splendid cemetery of human thoughts and ideas. Could librarians be called grave-diggers? However that may be, like a cemetery, a library will never stop being of use.", Duration::from_secs(1))
+                ("notification", "Some believe that every library looks like a splendid cemetery of human thoughts and ideas. Could librarians be called grave-diggers? However that may be, like a cemetery, a library will never stop being of use.", Duration::from_secs(2))
             ];
 
             for (kind, value, delay) in actions {
@@ -364,22 +366,17 @@ fn main() {
                     let _ = app.update_notification_list(Some(notif));
                     app.request_redraw("demo notification");
                 },
-                /* ("battery", level) => {
-                    if let Ok(lvl) = level.parse::<f64>() {
+                ("battery", charging_str) => {
+                    if let Ok(charging) = charging_str.parse::<bool>() {
                         let bat = BatteryStats {
-                            percentage: lvl,
-                            state: "Discharging".to_string(),
-                            eta: Some(3600.0),
-                            icon: "󰁹".to_string(),
-                            color: "#55FF00".to_string(),
-                            warn: 0.0,
-                            watt: 5.0,
-                            capacity: 50000.0
+                            percentage: 60.0,
+                            state: if charging { BatteryState::Charging } else { BatteryState::Discharging },
+                            eta_minutes: Some(if charging { 34.0 } else { 312.0 })
                         };
                         app.update_battery_data(Some(bat));
                         app.request_redraw("demo battery");
                     }
-                }, */
+                },
                 _ => {
                     eprintln!("Unknown demo command: {} {}", kind, value);
                 }
