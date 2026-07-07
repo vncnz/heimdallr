@@ -440,52 +440,6 @@ impl HeimdallrLayer {
 
     }
 
-    /* fn draw_notification(&mut self, cr: Context) {
-        return;
-
-        if self.notification_idx >= self.notifications.len() {
-            self.notification_idx = self.notifications.len() - 1;
-        }
-        // icon example: /home/vncnz/.cache/ignis/notifications/images/64
-        cr.set_operator(cairo::Operator::Over);
-
-        // let top = thickness / 2.0 + if self.notifications.len() > 0 { 24.0 } else { 0.0 };
-        let top = 12.0;
-        let notif_to_show = &self.notifications[0];
-
-        cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
-
-        let mut x = 25.0;
-
-        cr.set_font_size(16.0);
-        if let FrameColor::Rgba(r,g,b,a) = self.config.frame_color {
-            cr.set_source_rgba(r,g,b,if self.notifications.len() > 1 { a } else { a/2.0 } );
-        } else {
-            cr.set_source_rgba(1.0,1.0,1.0,if self.notifications.len() > 1 { 1.0 } else { 0.5 } );
-        }
-        let idx = format!("{}/{}", self.notification_idx+1, self.notifications.len());
-        let (idx_width, _) = cr_text_aligned(cr.clone(), idx, x, top, 0.0, 0.5);
-        x += idx_width + 10.0;
-
-        cr.set_font_size(16.0);
-        if notif_to_show.urgency == 2 {
-            cr.set_source_rgba(1.0, 0.3, 0.3, 1.0);
-        } else {
-            cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
-        }
-        let (twidth, _) = cr_text_aligned(cr.clone(), notif_to_show.app_name.clone(), x, top, 0.0, 0.5);
-        x += twidth + 10.0;
-
-        cr.set_font_size(14.0);
-        cr.set_source_rgba(1.0, 1.0, 1.0, 0.9);
-        let msg = if notif_to_show.body.is_empty() {
-            notif_to_show.summary.clone()
-        } else {
-            format!("{} / {}", notif_to_show.summary, notif_to_show.body)
-        };
-        cr_text_aligned(cr.clone(), msg, x, top, 0.0, 0.5);
-    } */
-
     pub fn update_notification_list (&mut self, new_notif_opt: Option<Notification>) {
 
         let mut changed: bool = false;
