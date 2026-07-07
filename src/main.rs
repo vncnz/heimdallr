@@ -273,6 +273,31 @@ fn main() {
         });
     });
 
+    let (demo_tx, demo_rx) = mpsc::channel::<(String, String)>();
+
+
+    if false {
+        thread::spawn(move || {
+            let actions = vec![
+                ("wob", "0.35", Duration::from_secs(2)),
+                ("wob", "0.45", Duration::from_millis(200)),
+                ("wob", "0.55", Duration::from_millis(300)),
+                ("wob", "0.65", Duration::from_millis(200)),
+                ("timer", "5s", Duration::from_secs(3)),
+                // ("battery", "0.8", Duration::from_secs(1)),
+                ("security", "on", Duration::from_secs(3)),
+                ("security", "off", Duration::from_secs(2)),
+                ("timer", "off", Duration::from_secs(3)),
+            ];
+
+            for (kind, value, delay) in actions {
+                std::thread::sleep(delay);
+                let _ = demo_tx.send((kind.to_string(), value.to_string()));
+            }
+        });
+    }
+
+
     loop {
         let _ = event_queue.dispatch_pending(&mut app);
         sock.poll_messages();
@@ -297,6 +322,49 @@ fn main() {
 
         // Dispatch wayland events
         let _ = event_queue.dispatch_pending(&mut app);
+
+        if let Ok((kind, value)) = demo_rx.try_recv() {
+            match (kind.as_str(), value.as_str()) {
+                ("timer", time) => {
+                    app.set_countdown(&value).ok();
+                    app.request_redraw("demo timer");
+                },
+                ("security", "on") => {
+                    app.update_security_data(MicCameraStatus { mic_active: vec!["Firefox".to_string()], camera_active: vec![], pristine: true });
+                    app.request_redraw("demo security on");
+                },
+                ("security", "off") => {
+                    app.update_security_data(MicCameraStatus { mic_active: vec!(), camera_active: vec!(), pristine: true });
+                    app.request_redraw("demo security off");
+                },
+                ("wob", val) => {
+                    if let Ok(value) = val.parse::<f64>() {
+                        app.show_value(value, None);
+                    } else {
+                        eprintln!("Invalid wob value: {}", val);
+                    }
+                },
+                /* ("battery", level) => {
+                    if let Ok(lvl) = level.parse::<f64>() {
+                        let bat = BatteryStats {
+                            percentage: lvl,
+                            state: "Discharging".to_string(),
+                            eta: Some(3600.0),
+                            icon: "󰁹".to_string(),
+                            color: "#55FF00".to_string(),
+                            warn: 0.0,
+                            watt: 5.0,
+                            capacity: 50000.0
+                        };
+                        app.update_battery_data(Some(bat));
+                        app.request_redraw("demo battery");
+                    }
+                }, */
+                _ => {
+                    eprintln!("Unknown demo command: {} {}", kind, value);
+                }
+            }
+        }
 
         if let Ok(bat) = rx_battery.try_recv() {
             app.update_battery_data(Some(bat));
@@ -324,12 +392,12 @@ fn main() {
                 "hide_notification" => {
                     println!("hide!");
                     if app.remove_notification() {
-                        app.animator.animate_property(
+                        /* app.animator.animate_property(
                             &app.frame_model,
                             AnimationKey::NotificationHeight,
                             if app.notifications.len() > 0 { 1.0 } else { 0.0 },
                             200
-                        );
+                        ); */
                         app.request_redraw("hide_notification");
                     } else {
                         eprintln!("--- No remove?");
@@ -392,13 +460,13 @@ fn main() {
                         }
                     };
                     if wob_effect {
-                        app.animator.animate_property(
+                        /* app.animator.animate_property(
                             &app.frame_model,
                             AnimationKey::WobHeightRatio,
                             1.0,
                             500
                         );
-                        app.request_redraw("external value event");
+                        app.request_redraw("external value event"); */
                     }
                 }
             };

@@ -612,6 +612,10 @@ impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like
         let changed = self.wob_expiration.is_none() || self.wob_value != value;
         self.wob_expiration = Some(Instant::now() + Duration::from_millis(2000));
         self.wob_value = value.clamp(0.0, 1.0);
+        if changed {
+            self.animator.animate_property(&self.frame_model, AnimationKey::WobHeightRatio, 1.0, 200);
+            self.request_redraw("wob value changed");
+        }
         changed
     }
 }
