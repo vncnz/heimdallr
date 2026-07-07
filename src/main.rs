@@ -288,6 +288,7 @@ fn main() {
                 ("security", "on", Duration::from_secs(3)),
                 ("security", "off", Duration::from_secs(2)),
                 ("timer", "off", Duration::from_secs(3)),
+                ("notification", "Some believe that every library looks like a splendid cemetery of human thoughts and ideas. Could librarians be called grave-diggers? However that may be, like a cemetery, a library will never stop being of use.", Duration::from_secs(1))
             ];
 
             for (kind, value, delay) in actions {
@@ -343,6 +344,25 @@ fn main() {
                     } else {
                         eprintln!("Invalid wob value: {}", val);
                     }
+                },
+                ("notification", text) => {
+                    let notif = Notification {
+                        app_name: "Demo notification".to_string(),
+                        summary: "Demo notification".to_string(),
+                        body: text.to_string(),
+                        urgency: 1,
+                        received_at: std::time::Instant::now(),
+                        expired_at: Some(std::time::Instant::now() + Duration::from_secs(3)),
+                        app_icon: "dialog-information".to_string(),
+                        id: 0,
+                        replaces_id: 0,
+                        unmounting: false,
+                        unmounted: false,
+                        reboot: false,
+                        datetime: chrono::Local::now()
+                    };
+                    let _ = app.update_notification_list(Some(notif));
+                    app.request_redraw("demo notification");
                 },
                 /* ("battery", level) => {
                     if let Ok(lvl) = level.parse::<f64>() {
