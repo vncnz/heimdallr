@@ -12,7 +12,7 @@ use crate::{
 pub static PILL_FONT_SIZE: f64 = 14.0;
 pub static PILL_MARGIN: f64 = 6.0;
 
-struct AnimationState {
+pub struct AnimationState {
     current_size: (f64, f64),
     target_size: (f64, f64),
     animation_from: (f64, f64),
