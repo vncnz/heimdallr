@@ -339,7 +339,7 @@ impl PillLaptopBattery {
                 let bat_color = match bat.state {
                     crate::battery::BatteryState::Charging => (0.1, 1.0, 0.2, 1.0),
                     crate::battery::BatteryState::Discharging => {
-                        get_color_gradient(((100.0 - bat.percentage) / 200.0) + 0.5)
+                        get_color_gradient(((100.0 - bat.percentage) / 100.0).max(0.35))
                     }
                     crate::battery::BatteryState::NotCharging => (0.6, 0.6, 1.0, 1.0),
                     crate::battery::BatteryState::FullyCharged => (0.5, 0.5, 0.8, 0.8),
