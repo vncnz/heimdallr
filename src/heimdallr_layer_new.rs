@@ -14,7 +14,7 @@ use cairo::FontSlant;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{config::{Config, FrameColor}, data::BatteryDevice, dbg_println, data::{AlarmIcon, IconChange}, notifications::Notification, pills::{PillContainer, PillTrait}, security::MicCameraStatus, utils::{AnimationKey, Animator, FrameModel, cr_text_aligned, draw_smart_border, log_to_file, mix_color, rounded_rect_gradient}};
+use crate::{config::{Config, FrameColor}, data::BatteryDevice, dbg_println, data::{AlarmIcon, IconChange}, notifications::Notification, pills::{Pill, PillModuleTrait}, security::MicCameraStatus, utils::{AnimationKey, Animator, FrameModel, draw_smart_border, log_to_file, mix_color, rounded_rect_gradient}};
 
 static mut AVG_DUR: u128 = 0;
 static mut AVG_CNT: i64 = -5;
@@ -49,7 +49,7 @@ pub struct HeimdallrLayer {
     pub(crate) batteries: Vec<BatteryDevice>,
     pub(crate) batteries_pristine: bool,
     // pub(crate) timer: Countdown,
-    pub pill_container: PillContainer,
+    pub pill_container: Pill,
     pub(crate) pills_are_animating: bool
 
 }
@@ -92,7 +92,7 @@ impl HeimdallrLayer {
             batteries: vec![],
             batteries_pristine: false,
             // timer: Countdown::new(),
-            pill_container: PillContainer::new(),
+            pill_container: Pill::new(),
             pills_are_animating: false
         }
     }

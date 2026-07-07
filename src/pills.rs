@@ -91,7 +91,7 @@ impl AnimationState {
     }
 }
 
-pub trait PillTrait {
+pub trait PillModuleTrait {
     fn draw(&mut self, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64);
     fn animation_state(&mut self) -> &mut AnimationState;
 
@@ -108,16 +108,16 @@ pub trait PillTrait {
     }
 }
 
-struct PillBase {
+struct PillModuleBase {
     cached_layout: Option<pango::Layout>,
     cached_sizes: Option<(f64, f64)>,
     cached_text: Option<String>,
     cached_color: Option<(f64, f64, f64, f64)>,
 }
 
-impl PillBase {
+impl PillModuleBase {
     fn new() -> Self {
-        PillBase {
+        PillModuleBase {
             cached_layout: None,
             cached_sizes: None,
             cached_text: None,
@@ -126,7 +126,7 @@ impl PillBase {
     }
 
     fn with_size(size: (f64, f64)) -> Self {
-        PillBase {
+        PillModuleBase {
             cached_layout: None,
             cached_sizes: Some(size),
             cached_text: None,
@@ -171,12 +171,12 @@ impl PillBase {
     }
 }
 
-pub struct PillClock {
-    base: PillBase,
+pub struct PillModuleClock {
+    base: PillModuleBase,
     animation: AnimationState,
 }
 
-impl PillTrait for PillClock {
+impl PillModuleTrait for PillModuleClock {
     fn draw(&mut self, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64) {
         // rounded_rect_gradient(&cr, x, y, rect_width, rect_height, 0.0, vec![(0.0, (1.0, 0.0, 0.0, 0.5))], crate::utils::GradientDirection::Horizontal, false, None);
         self.base.draw_centered(cr, rect_width, rect_height, x, y);
@@ -187,10 +187,10 @@ impl PillTrait for PillClock {
     }
 }
 
-impl PillClock {
+impl PillModuleClock {
     pub fn new() -> Self {
-        PillClock {
-            base: PillBase::with_size((45.0, 20.0)),
+        PillModuleClock {
+            base: PillModuleBase::with_size((45.0, 20.0)),
             animation: AnimationState::with_size((45.0, 20.0)),
         }
     }
@@ -213,14 +213,14 @@ impl PillClock {
     }
 }
 
-pub struct PillCountdown {
-    base: PillBase,
+pub struct PillModuleCountdown {
+    base: PillModuleBase,
     animation: AnimationState,
     last_status: (bool, String),
     timer: Countdown
 }
 
-impl PillTrait for PillCountdown {
+impl PillModuleTrait for PillModuleCountdown {
     fn draw(&mut self, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64) {
 
         if self.last_status.0 {
@@ -238,10 +238,10 @@ impl PillTrait for PillCountdown {
     }
 }
 
-impl PillCountdown {
+impl PillModuleCountdown {
     pub fn new() -> Self {
-        PillCountdown {
-            base: PillBase::new(), // with_size((58.0, 20.0)),
+        PillModuleCountdown {
+            base: PillModuleBase::new(), // with_size((58.0, 20.0)),
             animation: AnimationState::new(),
             last_status: (false, "".into()),
             timer: Countdown::new()
@@ -279,13 +279,13 @@ impl PillCountdown {
     }
 }
 
-pub struct PillLaptopBattery {
-    base: PillBase,
+pub struct PillModuleLaptopBattery {
+    base: PillModuleBase,
     animation: AnimationState,
     battery: Option<crate::battery::BatteryStats>,
 }
 
-impl PillTrait for PillLaptopBattery {
+impl PillModuleTrait for PillModuleLaptopBattery {
     fn draw(&mut self, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64) {
         self.base.draw_centered(cr, rect_width, rect_height, x, y);
     }
@@ -295,10 +295,10 @@ impl PillTrait for PillLaptopBattery {
     }
 }
 
-impl PillLaptopBattery {
+impl PillModuleLaptopBattery {
     pub fn new() -> Self {
-        PillLaptopBattery {
-            base: PillBase::new(),
+        PillModuleLaptopBattery {
+            base: PillModuleBase::new(),
             animation: AnimationState::new(),
             battery: None,
         }
@@ -361,13 +361,13 @@ impl PillLaptopBattery {
     }
 }
 
-pub struct PillWarnings {
+pub struct PillModuleWarnings {
     icons: Vec<AlarmIcon>,
-    bases: Vec<PillBase>,
+    bases: Vec<PillModuleBase>,
     animation: AnimationState,
 }
 
-impl PillTrait for PillWarnings {
+impl PillModuleTrait for PillModuleWarnings {
     fn draw(&mut self, cr: &Context, _rect_width: f64, rect_height: f64, x: f64, y: f64) {
         // rounded_rect_gradient(&cr, x, y, _rect_width, rect_height, 0.0, vec![(0.0, (1.0, 0.0, 0.0, 0.35))], crate::utils::GradientDirection::Horizontal, false, None);
 
@@ -390,9 +390,9 @@ impl PillTrait for PillWarnings {
     }
 }
 
-impl PillWarnings {
+impl PillModuleWarnings {
     pub fn new() -> Self {
-        PillWarnings {
+        PillModuleWarnings {
             icons: Vec::new(),
             bases: Vec::new(),
             animation: AnimationState::new(),
@@ -408,7 +408,7 @@ impl PillWarnings {
             // dbg_println!("{} w:{w} icon:{:?} warn:{:?}", "PillWarnings update_data icon".red(), i.symbol, i.warn);
             let (layout, sizes) = cr_text_layout(&cr, &i.symbol, PILL_FONT_SIZE, None).unwrap();
             let color = get_color_gradient(i.warn);
-            let mut base = PillBase::new();
+            let mut base = PillModuleBase::new();
             if w > 0.0 { w += 4.0; }
             w += sizes.0;
             base.set_layout(layout, sizes, i.symbol.clone(), color);
@@ -430,12 +430,12 @@ impl PillWarnings {
 
 
 
-pub struct PillSecurity {
-    base: PillBase,
+pub struct PillModuleSecurity {
+    base: PillModuleBase,
     animation: AnimationState,
 }
 
-impl PillTrait for PillSecurity {
+impl PillModuleTrait for PillModuleSecurity {
     fn draw(&mut self, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64) {
         if self.base.cached_layout.is_some() {
             let r = 2.0;
@@ -450,10 +450,10 @@ impl PillTrait for PillSecurity {
     }
 }
 
-impl PillSecurity {
+impl PillModuleSecurity {
     pub fn new() -> Self {
-        PillSecurity {
-            base: PillBase::new(),
+        PillModuleSecurity {
+            base: PillModuleBase::new(),
             animation: AnimationState::new()
         }
     }
@@ -484,13 +484,13 @@ impl PillSecurity {
 }
 
 
-pub struct PillDevices {
+pub struct PillModuleDevices {
     batteries: Vec<BatteryDevice>,
-    bases: Vec<PillBase>,
+    bases: Vec<PillModuleBase>,
     animation: AnimationState,
 }
 
-impl PillTrait for PillDevices {
+impl PillModuleTrait for PillModuleDevices {
     fn draw(&mut self, cr: &Context, _rect_width: f64, rect_height: f64, x: f64, y: f64) {
 
         // rounded_rect_gradient(&cr, x, y, _rect_width, rect_height, 0.0, vec![(0.0, (1.0, 0.0, 0.0, 0.5))], crate::utils::GradientDirection::Horizontal, false, None);
@@ -515,9 +515,9 @@ impl PillTrait for PillDevices {
     }
 }
 
-impl PillDevices {
+impl PillModuleDevices {
     pub fn new() -> Self {
-        PillDevices {
+        PillModuleDevices {
             batteries: Vec::new(),
             bases: Vec::new(),
             animation: AnimationState::new(),
@@ -545,7 +545,7 @@ impl PillDevices {
             let text = format!("{icon} {:.0}%", b.percentage);
             let (layout, sizes) = cr_text_layout(&cr, &text, PILL_FONT_SIZE, None).unwrap();
             let color = get_color_gradient(b.warn);
-            let mut base = PillBase::new();
+            let mut base = PillModuleBase::new();
             if w > 0.0 { w += 4.0; }
             w += sizes.0; // layout.width() as f64;
             base.set_layout(layout, sizes, text, color);
@@ -584,14 +584,14 @@ impl PillDevices {
 
 
 pub struct PillNotificationFull {
-    appname_base: PillBase,
-    body_base: PillBase,
+    appname_base: PillModuleBase,
+    body_base: PillModuleBase,
     animation: AnimationState,
     last_notification: Option<crate::notifications::Notification>
 }
 
-impl PillTrait for PillNotificationFull {
-    fn draw(&mut self, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64) {
+impl PillModuleTrait for PillNotificationFull {
+    fn draw(&mut self, cr: &Context, _rect_width: f64, _rect_height: f64, x: f64, y: f64) {
         // self.body_base.draw_centered(&cr, rect_width, rect_height, x, y);
 
         let mut x = x + PILL_MARGIN;
@@ -614,8 +614,8 @@ impl PillTrait for PillNotificationFull {
 impl PillNotificationFull {
     pub fn new() -> Self {
         PillNotificationFull {
-            appname_base: PillBase::new(),
-            body_base: PillBase::new(),
+            appname_base: PillModuleBase::new(),
+            body_base: PillModuleBase::new(),
             animation: AnimationState::new(),
             last_notification: None
         }
@@ -696,20 +696,20 @@ enum PillMode {
     Notification(u8)
 }
 
-pub struct PillContainer {
+pub struct Pill {
     mode: PillMode,
     last_notification: Option<crate::notifications::Notification>,
     animation: AnimationState,
-    dummy_surface: cairo::ImageSurface,
+    // dummy_surface: cairo::ImageSurface,
     dummy_context: cairo::Context,
     // normal_target: (f64, f64),
 
-    pill_clock: PillClock,
-    pill_battery: PillLaptopBattery,
-    pill_warnings: PillWarnings,
-    pill_security: PillSecurity,
-    pill_countdown: PillCountdown,
-    pill_devices: PillDevices,
+    pill_clock: PillModuleClock,
+    pill_battery: PillModuleLaptopBattery,
+    pill_warnings: PillModuleWarnings,
+    pill_security: PillModuleSecurity,
+    pill_countdown: PillModuleCountdown,
+    pill_devices: PillModuleDevices,
 
     pill_clock_rect: (f64, f64),
     pill_battery_rect: (f64, f64),
@@ -719,10 +719,10 @@ pub struct PillContainer {
     pill_devices_rect: (f64, f64),
 
     pill_notification_full: PillNotificationFull,
-    pill_notification_full_rect: (f64, f64)
+    // pill_notification_full_rect: (f64, f64)
 }
 
-impl PillTrait for PillContainer {
+impl PillModuleTrait for Pill {
     fn animation_state(&mut self) -> &mut AnimationState {
         &mut self.animation
     }
@@ -757,23 +757,23 @@ impl PillTrait for PillContainer {
     }
 }
 
-impl PillContainer {
+impl Pill {
     pub fn new() -> Self {
         let dummy_surface = ImageSurface::create(Format::ARgb32, 1, 1).unwrap();
         let dummy_context = Context::new(&dummy_surface).unwrap();
-        PillContainer {
+        Pill {
             mode: PillMode::Normal,
             last_notification: None,
             animation: AnimationState::new(),
-            dummy_surface,
+            // dummy_surface,
             dummy_context,
 
-            pill_clock: PillClock::new(),
-            pill_battery: PillLaptopBattery::new(),
-            pill_warnings: PillWarnings::new(),
-            pill_security: PillSecurity::new(),
-            pill_countdown: PillCountdown::new(),
-            pill_devices: PillDevices::new(),
+            pill_clock: PillModuleClock::new(),
+            pill_battery: PillModuleLaptopBattery::new(),
+            pill_warnings: PillModuleWarnings::new(),
+            pill_security: PillModuleSecurity::new(),
+            pill_countdown: PillModuleCountdown::new(),
+            pill_devices: PillModuleDevices::new(),
             pill_notification_full: PillNotificationFull::new(),    
             pill_clock_rect: (0.0, 0.0),
             pill_battery_rect: (0.0, 0.0),
@@ -781,7 +781,7 @@ impl PillContainer {
             pill_security_rect: (0.0, 0.0),
             pill_countdown_rect: (0.0, 0.0),
             pill_devices_rect: (0.0, 0.0),
-            pill_notification_full_rect: (0.0, 0.0)
+            // pill_notification_full_rect: (0.0, 0.0)
         }
     }
 
