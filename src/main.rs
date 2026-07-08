@@ -276,19 +276,19 @@ fn main() {
     let (demo_tx, demo_rx) = mpsc::channel::<(String, String)>();
 
 
-    if true {
+    if false {
         thread::spawn(move || {
             let actions = vec![
-                // ("battery", "true", Duration::from_secs(2)),
-                // ("battery", "false", Duration::from_secs(1)),
-                ("wob", "0.35", Duration::from_secs(4)),
+                ("battery", "false", Duration::from_secs(5)),
+                ("battery", "true", Duration::from_secs(2)),
+                ("security", "on", Duration::from_secs(4)),
+                ("security", "off", Duration::from_secs(2)),
+                ("wob", "0.35", Duration::from_secs(1)),
                 ("wob", "0.45", Duration::from_millis(200)),
                 ("wob", "0.55", Duration::from_millis(300)),
                 ("wob", "0.65", Duration::from_millis(200)),
-                ("timer", "5s", Duration::from_secs(3)),
-                ("security", "on", Duration::from_secs(2)),
-                ("security", "off", Duration::from_secs(2)),
-                ("timer", "off", Duration::from_secs(3)),
+                ("timer", "3s", Duration::from_secs(3)),
+                ("timer", "off", Duration::from_secs(6)),
                 ("notification", "The endless noise will put a lock on your open mind, and it will tear your soul apart. Run away from the tragedy, and find the essence of silence that remains inside.", Duration::from_secs(2))
             ];
 
@@ -370,7 +370,7 @@ fn main() {
                         let bat = BatteryStats {
                             percentage: 60.0,
                             state: if charging { BatteryState::Charging } else { BatteryState::Discharging },
-                            eta_minutes: Some(if charging { 34.0 } else { 312.0 })
+                            eta_minutes: Some(if charging { 12.0 } else { 312.0 })
                         };
                         app.update_battery_data(Some(bat));
                         app.request_redraw("demo battery");

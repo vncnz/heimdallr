@@ -1,13 +1,29 @@
 # heimdallr - ᚺᛖᛁᛗᛞᚨᛚᚱ
 
 Heimdallr is a minimal Wayland overlay that shows system state only when it matters.
-No bars, no noise — just timely information at the edge of your screen.
+A minimal morphing pill, no noise — just timely information floating on your screen.
 
 ## About the name
 
 From wikipedia:
 
 > In Norse mythology, Heimdall (from Old Norse Heimdallr; modern Icelandic Heimdallur) is a god. He is the son of Odin and nine sisters. Heimdall keeps watch for invaders and the onset of Ragnarök from his dwelling Himinbjörg, where the burning rainbow bridge Bifröst meets the sky. He is attested as possessing foreknowledge and keen senses, particularly eyesight and hearing.
+
+
+## UI preview
+
+<p align="center">
+  <video src="screenshots/pill_ui_recording.mp4" autoplay loop muted playsinline width="100%"></video>
+</p>
+
+In this demo:
+- **Clock + battery status:** Displays the current time and battery charging state (including ETA).
+- **Battery discharge:** Dynamically transitions to show discharging status and updated ETA.
+- **Microphone indicator:** Automatically expands when Firefox accesses the audio input.
+- **Level indicator:** Demonstrates a wob-like overlay, ideal for real-time volume or brightness adjustments.
+- **Timer & stopwatch:** A 3-second countdown triggers, hits zero, and seamlessly switches to tracking elapsed time once completed.
+- **System notification:** Displays an incoming desktop notification with dynamic resizing.
+- **Resource warning:** Displays an alert icon when high system temperature is detected.
 
 ## About this project
 
