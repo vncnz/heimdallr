@@ -35,11 +35,15 @@ The aim of this project is to show several kinds of information:
 - show estimated time to full battery charge/discharge
 - show notifications
 
-After several experiments, I came up with this solution. Using a custom SVG shape, I rounded the screen corners. In the bottom-left corner, the frame reserves space for several icons, visible only when needed, indicating which resources are in a warning state (e.g. RAM almost full, low WLAN signal, and so on).
+After several experiments, I came up with this solution. Using a custom SVG shape, I rounded the screen corners. Inside the pill, every functionality can show its data if needed.
 
-On the right side, there is a “linear clock” with an arrow indicating the current time. On the same clock, an icon shows the battery’s estimated time to full charge (a green bolt) or to full discharge (a red skull).
+The clock is a constant presence, the only one for most of the time.
 
-All this information takes virtually no useful space on the screen.
+The second element is an indicator for the battery if you are using a laptop. An icon and a text show the battery’s estimated time to full charge (next to a green bolt) or to full discharge (next to a red skull)
+
+One or more dedicated warning icons appear dynamically only when system resources require attention (e.g., high temperature, low WLAN signal, or low battery). No icons are shown when there are no alarms.
+
+Over the time, more and more features were added.
 
 Resource data (such as CPU, RAM, and disk usage) is retrieved via a Unix socket from another of my projects, Ratatoskr, which is also available on [GitHub](https://github.com/vncnz/ratatoskr).
 
@@ -47,14 +51,14 @@ Ratatoskr is optional: if you choose not to run it, Heimdallr will not display r
 
 Battery status, level, and estimated time remaining are collected by Heimdallr itself, so you will always have access to this information.
 
-Initially, I implemented this UI using the Ignis framework (Python + GTK), but it was consuming about 176 MB of RAM. So I rewrote the UI in Rust, communicating directly with Wayland and avoiding the GTK toolkit. With this approach, memory usage dropped to approximately 34 MB on my laptop.
+Initially, I implemented the previous version of UI using the Ignis framework (Python + GTK), but it was consuming about 176 MB of RAM. So I rewrote the UI in Rust, communicating directly with Wayland and avoiding the GTK toolkit. With this approach, memory usage dropped to approximately 34 MB on my laptop. Now, adding new functionalities, memory usage is 43 MB.
 The impact on average load is around 0.01, so really small. I measured the impact on average load as the ratio between the time spent with the Heimdallr process in "Running" or "disk-sleep" status and the total measurement time.
 
 ---
 
 Oh, if the screen looks too empty, that’s by design: I like minimalism. No status bar, Niri as WM, and this is my daily driver.
 
-## Screenshots
+## Screenshots (old UI)
 
 Clock1, light blue border; battery charging; high RAM, medium load, and light disk usage alarms:
 ![With border, several icons, charging](./screenshots/with_border_and_icons.png)
@@ -84,8 +88,8 @@ You can configure frame color and clock presence with a json file in ```~/.confi
 ```json
 {
     "frame_color": [red,green,blue,alpha] | "worst-resource" | "random" | null,
-    "show_clock": "clock1" / "clock2" / null,
-    "show_always_bluetooth": true / false,
+    "show_clock": "clock1" / "clock2" / null, // Deprecated in pill-ui
+    "show_always_bluetooth": true / false, // Deprecated in pill-ui
     "hide_missing_ratatoskr": true / false
 }
 ```
@@ -95,8 +99,8 @@ For example:
 ```json
 {
     "frame_color": [0.2, 0.6, 1.0, 1.0],
-    "show_clock": "clock1",
-    "show_always_bluetooth": true,
+    // "show_clock": "clock1",
+    // "show_always_bluetooth": true,
     "hide_missing_ratatoskr": true
 }
 ```
@@ -118,18 +122,20 @@ Default values are the following:
 
 ## Notifications
 
-Now, Heimdallr listen to notifications. When there is a notification, the upper section of the frame become thicker to accomodate the notification.
-Only one notification can be shown at any given moment, on a single line of text, with the following format:
+Now, Heimdallr listen to notifications. When there is a notification, the pill changes its size to accomodate the notification.
+Only one notification can be shown at any given moment, on several lines if needed, with the following format:
 
-> 1/3 **[app_name]** &nbsp;&nbsp;&nbsp;[summary] / [body]
+> **[app_name]**
+> 
+> [body if not empty, summary otherwise]
 
 Normal notifications gets a timeout of 3 seconds, critical notifications lasts until eternity and beyond.
 
 You can browse and remove notifications with following commands:
 
 - echo hide_notification > /tmp/heimdallr_cmds
-- echo prev_notification > /tmp/heimdallr_cmds
-- echo next_notification > /tmp/heimdallr_cmds
+- echo prev_notification > /tmp/heimdallr_cmds // Deprecated in pill UI
+- echo next_notification > /tmp/heimdallr_cmds // Deprecated in pill UI
 
 You don't need to create /tmp/heimdallr_cmds file, it is created automatically by Heimdallr and it is a named pipe (aka a fifo special file): you write in it your command and it's all.
 
@@ -258,6 +264,7 @@ You can set the "timer" in stopwatch mode using the command `timer up`. Time sta
 - Plugin system?
 - Show again last notification on cmd retrieving?
 - Autohide clock?
+- wob-like functionality: add color or warning (with automatico color selection) in cmd
 
 ## Known bugs
 
