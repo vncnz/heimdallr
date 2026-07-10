@@ -342,8 +342,8 @@ impl HeimdallrLayer {
             pill_bg_steps = steps;
         }
 
-        cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
-        cr.set_font_size(16.0);
+        // cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
+        // cr.set_font_size(16.0);
 
         /* let steps = vec![
             (0.0, (color.0, color.1, color.2, color.3)),
