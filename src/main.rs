@@ -15,7 +15,7 @@ use std::thread;
 
 use colored::Colorize;
 
-use crate::{battery::{BatteryState, BatteryStats}, commands::start_command_listener, config::LayerBackend::Legacy, data::{BluetoothStats, IconChange, RatatoskrSocket, UPowerDeviceKind}, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{AnimationKey, get_color_gradient, log_to_file, select_icon}};
+use crate::{battery::{BatteryState, BatteryStats}, commands::start_command_listener, config::LayerBackend::Legacy, data::{BluetoothStats, IconChange, RatatoskrSocket, UPowerDeviceKind}, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{get_color_gradient, log_to_file, select_icon}};
 
 mod data;
 mod config;
@@ -156,48 +156,6 @@ fn main() {
         Shm::bind(&globals, &qh).unwrap(),
         config.clone()
     );
-    /* let mut app = HeimdallrLayer {
-        registry_state: RegistryState::new(&globals),
-        output_state: OutputState::new(&globals, &qh),
-        shm,
-        pool: None,
-        layer: None,
-        width: 1,
-        height: 1,
-        first_configure: true,
-        // input_region: Some(empty_region),
-        icons: HashMap::new(),
-        ratatoskr_connected: false,
-        battery_integrated: None,
-        needs_redraw: true,
-        last_redraw: Instant::now(),
-        redraw_interval: [Duration::from_millis(1_000), Duration::from_millis(60_000)],
-        buffers: [None, None],
-        current_buffer_idx: 0,
-        config: config.clone(),
-        notifications: vec![],
-        notification_idx: 0,
-        wob_expiration: None,
-        wob_value: 0.0,
-        animator: Animator::new(),
-        frame_model: FrameModel::new(),
-        is_waiting_for_frame: false,
-        clock,
-        security: MicCameraStatus { mic_active: vec!(), camera_active: vec!(), pristine: false },
-        last_security_width: 0.0,
-        last_security_text: "".to_string(),
-        batteries: vec![],
-        last_batteries_width: 0.0,
-        last_batteries_text: "".to_string(),
-        batteries_pristine: false,
-        timer: Countdown::new(),
-        pill_clock: PillClock::new(),
-        pill_battery: PillBattery::new(),
-        pill_warnings: PillWarnings::new(),
-        pill_security: PillSecurity::new(),
-        pill_countdown: PillCountdown::new(),
-        pills_animation: false
-    }; */
 
     if !config.hide_missing_ratatoskr {
         app.add_icon("ratatoskr", "󰠗", get_color_gradient(1.0), 1.0, None);
@@ -325,6 +283,7 @@ fn main() {
         // Dispatch wayland events
         let _ = event_queue.dispatch_pending(&mut app);
 
+        // Dispatch demo events
         if let Ok((kind, value)) = demo_rx.try_recv() {
             match (kind.as_str(), value.as_str()) {
                 ("timer", time) => {
@@ -400,7 +359,7 @@ fn main() {
             log_to_file(format!("{:?}", status).to_string());
             println!("{}", format!("{:?}", status).red());
             app.update_security_data(status);
-            app.request_redraw("security updated");
+            app.request_redraw("security updated"); // TODO: in the new system, pill will know if it needs redraw, without forcing here
         }
 
         if let Ok(cmd) = rx_cmds.try_recv() {
@@ -408,12 +367,6 @@ fn main() {
                 "hide_notification" => {
                     println!("hide!");
                     if app.remove_notification() {
-                        /* app.animator.animate_property(
-                            &app.frame_model,
-                            AnimationKey::NotificationHeight,
-                            if app.notifications.len() > 0 { 1.0 } else { 0.0 },
-                            200
-                        ); */
                         app.request_redraw("hide_notification");
                     } else {
                         eprintln!("--- No remove?");

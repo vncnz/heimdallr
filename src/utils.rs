@@ -256,7 +256,7 @@ impl FrameModel {
 
     pub fn set(&mut self, id: AnimationKey, val: f64) {
         match id {
-            AnimationKey::NotificationHeight => self.notif_height_ratio = val,
+            AnimationKey::NotificationHeight => self.notif_height_ratio = val, // TODO: Deprecated
             AnimationKey::IconsHeight => self.icons_ratio = val,
             AnimationKey::WobHeightRatio => self.wob_height = val,
             AnimationKey::SecurityNotchRatio => self.security_height = val,
@@ -266,7 +266,7 @@ impl FrameModel {
 
     pub fn get(&self, id: AnimationKey) -> f64 {
         match id {
-            AnimationKey::NotificationHeight => self.notif_height_ratio,
+            AnimationKey::NotificationHeight => self.notif_height_ratio, // TODO: Deprecated
             AnimationKey::IconsHeight => self.icons_ratio,
             AnimationKey::WobHeightRatio => self.wob_height,
             AnimationKey::SecurityNotchRatio => self.security_height,
@@ -274,21 +274,6 @@ impl FrameModel {
         }
     }
 }
-
-/*
-self.animator.animate_property(
-    AnimationKey::NotificationHeight,
-    self.alpha,
-    1.0,
-    Duration::from_millis(120),
-    {
-        let ptr = &mut self.alpha as *mut f32;
-        move |v| unsafe {
-            *ptr = v;
-        }
-    }
-);
-*/
 
 pub fn cr_text_aligned (cr: Context, text: String, x: f64, y: f64, dx: f64, dy: f64) -> (f64, f64) {
     // if v != 0.0 || h != 0.0 {

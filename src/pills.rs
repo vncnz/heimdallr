@@ -195,12 +195,12 @@ impl PillModuleClock {
         }
     }
 
-    pub fn update_data(&mut self, cr: &cairo::Context) -> bool {
+    pub fn update_data(&mut self, cr: &cairo::Context) -> (bool, bool) {
         let date = Local::now();
         let text = date.format("%H:%M").to_string();
 
         if self.base.cached_text.as_ref() == Some(&text) {
-            return false;
+            return (false, false);
         }
 
         let (layout, sizes) = cr_text_layout(&cr, &text, PILL_FONT_SIZE, None).unwrap();
@@ -208,8 +208,7 @@ impl PillModuleClock {
 
         self.base.set_layout(layout, sizes, text, color);
         dbg_println!("{} target:{sizes:?}", "PillClock update_data".blue());
-        self.animation.set_target(sizes);
-        true
+        (true, self.animation.set_target(sizes))
     }
 }
 
@@ -248,15 +247,13 @@ impl PillModuleCountdown {
         }
     }
 
-    pub fn update_data(&mut self, cr: &cairo::Context) -> bool {
-        let (status, time) = self.timer.format_custom_duration();
+    pub fn update_data(&mut self, cr: &cairo::Context) -> (bool, bool) {
+        let (status, time) = self.timer.format_custom_duration(); // TODO: Optimizable!
         if self.last_status.0 == status && self.last_status.1 == time {
-            return false;
+            return (false, false);
         }
 
         let target = if self.timer.is_active() {
-            self.last_status = (status, time.clone());
-
             let w = if status { 1.0 } else { self.timer.get_warning() };
             let icon = if status { "󱫌" } else { "󱫡" };
             let color = if status { (0.0, 0.0, 0.0, 1.0) } else { get_color_gradient(w) };
@@ -270,12 +267,12 @@ impl PillModuleCountdown {
             target
         } else {
             self.base.clear();
-            self.last_status.0 = false;
             // dbg_println!("{} zero", "countdown target".blue());
             (0.0, 0.0)
         };
+        self.last_status = (status, time.clone());
 
-        self.animation.set_target(target)
+        (true, self.animation.set_target(target))
     }
 }
 
@@ -399,7 +396,7 @@ impl PillModuleWarnings {
         }
     }
 
-    pub fn update_data(&mut self, cr: &cairo::Context, icons: Vec<AlarmIcon>) -> bool {
+    pub fn update_data(&mut self, cr: &cairo::Context, icons: Vec<AlarmIcon>) -> (bool, bool) {
         self.icons = icons;
         // self.bases = self.icons.iter().map(|b| )
         let mut w = 0.0;
@@ -421,9 +418,10 @@ impl PillModuleWarnings {
             let sizes = (w, 20.0);
             let old = self.animation.target_size;
             // dbg_println!("{} new_target:{sizes:?} old_target:{old:?}", "PillWarnings update_data".blue());
-            self.animation.set_target(sizes);
+            (true, self.animation.set_target(sizes))
+        } else {
+            (false, false)
         }
-        changed
     }
 }
 
@@ -704,6 +702,9 @@ pub struct Pill {
     dummy_context: cairo::Context,
     // normal_target: (f64, f64),
 
+    pub needs_redraw: bool,
+    pub needs_recalc: bool,
+
     pill_clock: PillModuleClock,
     pill_battery: PillModuleLaptopBattery,
     pill_warnings: PillModuleWarnings,
@@ -732,6 +733,7 @@ impl PillModuleTrait for Pill {
             PillMode::Normal => self.draw_normal(cr, _rect_width, rect_height, x, y),
             PillMode::Notification(_) => self.draw_notification(cr, _rect_width, rect_height, x, y)
         }
+        self.needs_redraw = false;
     }
 
     fn step_animation(&mut self) -> bool {
@@ -768,6 +770,9 @@ impl Pill {
             // dummy_surface,
             dummy_context,
 
+            needs_redraw: true,
+            needs_recalc: true,
+
             pill_clock: PillModuleClock::new(),
             pill_battery: PillModuleLaptopBattery::new(),
             pill_warnings: PillModuleWarnings::new(),
@@ -787,8 +792,12 @@ impl Pill {
 
     pub fn update_data_clock(&mut self) -> bool {
         let changed = self.pill_clock.update_data(&self.dummy_context);
-        if changed { self.pill_clock_rect = self.pill_clock.get_current_rect(); }
-        return changed
+        if changed.1 {
+            self.pill_clock_rect = self.pill_clock.get_current_rect();
+            self.needs_recalc = true;
+        }
+        if changed.0 { self.needs_redraw = true; }
+        return changed.0 || changed.1
     }
 
     pub fn set_countdown (&mut self, input: &str) -> Result<u64, &'static str> {
@@ -808,19 +817,31 @@ impl Pill {
     pub fn update_data_warnings(&mut self, icons: &HashMap<String, AlarmIcon>) -> bool {
         let icons: Vec<AlarmIcon> = icons.values().cloned().filter(|icon| icon.symbol != "󱫡" && icon.symbol != "󱫌").collect();
         let changed = self.pill_warnings.update_data(&self.dummy_context, icons);
-        if changed { self.pill_warnings_rect = self.pill_warnings.get_current_rect(); }
-        return changed
+        if changed.1 {
+            self.pill_warnings_rect = self.pill_warnings.get_current_rect();
+            self.needs_recalc = true;
+        }
+        if changed.0 { self.needs_redraw = true; }
+        return changed.0 || changed.1
     }
 
     pub fn update_data_countdown(&mut self) -> bool {
         let changed = self.pill_countdown.update_data(&self.dummy_context);
-        if changed { self.pill_countdown_rect = self.pill_countdown.get_current_rect(); }
-        return changed
+        if changed.1 {
+            self.pill_countdown_rect = self.pill_countdown.get_current_rect();
+            self.needs_recalc = true;
+        }
+        if changed.0 { self.needs_redraw = true; }
+        return changed.0 || changed.1
     }
 
     pub fn update_data_security(&mut self, security: &MicCameraStatus) -> bool {
         let changed = self.pill_security.update_data(&self.dummy_context, security);
-        if changed { self.pill_security_rect = self.pill_security.get_current_rect(); }
+        if changed {
+            self.pill_security_rect = self.pill_security.get_current_rect();
+            self.needs_recalc = true; // Well, to have the same width on change is very unlikely, I can set true without check
+            self.needs_redraw = true;
+        }
         return changed
     }
 
@@ -907,6 +928,8 @@ impl Pill {
         self.pill_countdown_rect = self.pill_countdown.get_desired_rect();
         self.pill_security_rect = self.pill_security.get_desired_rect();
         self.pill_devices_rect = self.pill_devices.get_desired_rect(); */
+
+        self.needs_recalc = false;
 
         let rect_width =
             self.pill_clock.get_desired_rect().0 +

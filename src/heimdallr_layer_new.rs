@@ -9,7 +9,6 @@ use std::{num::NonZeroU32, time::{Duration, Instant}};
 use smithay_client_toolkit::shell::WaylandSurface;
 
 use std::collections::HashMap;
-use cairo::FontSlant;
 
 use wayland_client::Dispatch;
 use colored::Colorize;
@@ -45,7 +44,7 @@ pub struct HeimdallrLayer {
     pub(crate) animator: Animator,
     pub(crate) frame_model: FrameModel,
     pub(crate) is_waiting_for_frame: bool,
-    pub(crate) security: crate::security::MicCameraStatus,
+    // pub(crate) security: crate::security::MicCameraStatus,
     pub(crate) batteries: Vec<BatteryDevice>,
     pub(crate) batteries_pristine: bool,
     // pub(crate) timer: Countdown,
@@ -77,7 +76,7 @@ impl HeimdallrLayer {
             // battery_integrated: None,
             needs_redraw: true,
             last_redraw: Instant::now(),
-            redraw_interval: [Duration::from_millis(1_000), Duration::from_millis(60_000)],
+            redraw_interval: [Duration::from_millis(500), Duration::from_millis(60_000)],
             buffers: [None, None],
             current_buffer_idx: 0,
             config,
@@ -88,7 +87,7 @@ impl HeimdallrLayer {
             animator: Animator::new(),
             frame_model: FrameModel::new(),
             is_waiting_for_frame: false,
-            security: MicCameraStatus { mic_active: vec!(), camera_active: vec!(), pristine: false },
+            // security: MicCameraStatus { mic_active: vec!(), camera_active: vec!(), pristine: false },
             batteries: vec![],
             batteries_pristine: false,
             // timer: Countdown::new(),
@@ -98,7 +97,8 @@ impl HeimdallrLayer {
     }
 
     pub fn update_security_data (&mut self, data: MicCameraStatus) {
-        self.security = data;
+        self.pill_container.update_data_security(&data);
+        // self.security = data; // TODO: Deprecated? Remove it?
     }
 
     pub fn update_battery_data (&mut self, data: Option<crate::battery::BatteryStats>) {
@@ -120,9 +120,11 @@ impl HeimdallrLayer {
 
     pub fn check_redraw_timeout(&mut self) {
 
-        if self.pill_container.is_countdown_active() && self.last_redraw.elapsed() > Duration::from_secs(1) {
+        // if self.pill_container.is_countdown_active() && self.last_redraw.elapsed() > Duration::from_secs(1) {
+        if self.pill_container.update_data_countdown() {
             self.request_redraw("timer tick");
-        } else if self.last_redraw.elapsed() > self.redraw_interval[1] {
+        // } else if self.last_redraw.elapsed() > self.redraw_interval[1] {
+        } else if self.pill_container.update_data_clock() {
             self.request_redraw("time");
         }
     }
@@ -136,6 +138,13 @@ impl HeimdallrLayer {
 
         // Now, updateNotificationList is for both adding new, and removing expired, notifications
         self.update_notification_list(None);
+
+        if self.pill_container.needs_redraw || self.pill_container.needs_recalc {
+            self.needs_redraw = true;
+            eprintln!("=============== DIRTY PILL ============");
+        } else {
+            // eprintln!("=============== CLEAN PILL ============");
+        }
 
         // Check if wob-like must be closed
         if let Some(exp) = self.wob_expiration {
@@ -269,8 +278,8 @@ impl HeimdallrLayer {
         // I'm experimenting with new UI: some of this shit will be moved out of here, ofc!
 
         // UPDATE DATA
-        let mut something_changed = self.pill_container.update_data_clock();
-        something_changed |= self.pill_container.update_data_countdown();
+        let mut something_changed = false;
+        // something_changed |= self.pill_container.update_data_countdown();
         // something_changed |= self.pill_container.update_data_battery(self.battery_integrated.clone());
 
         // something_changed |= self.pill_container.update_data_warnings(&self.icons); // Moved
@@ -284,10 +293,8 @@ impl HeimdallrLayer {
         };
         something_changed |= self.pill_container.update_data_countdown(c); */
 
-        if self.security.pristine {
-            something_changed |= self.pill_container.update_data_security(&self.security);
-            self.security.pristine = false;
-        }
+        // TODO: continue with logic moving: every pill updates and returns (needs_redraw, needs_recalc).
+        // Draw method runs if needs_redraw is true, recalculate_normal_target is done if needs_recalc is true
 
         if self.batteries_pristine {
             something_changed |= self.pill_container.update_data_devices(self.batteries.clone());
@@ -296,7 +303,8 @@ impl HeimdallrLayer {
 
         something_changed |= self.pill_container.update_data_notifications(&self.notifications);
 
-        if something_changed {
+        if something_changed || self.pill_container.needs_recalc {
+            dbg_println!("===============   RECALC   ============");
             self.pill_container.recalculate_normal_target();
         }
 
@@ -398,7 +406,7 @@ impl HeimdallrLayer {
         let h = self.height as f64;
         let w_hole = w - thickness - 2.0;
 
-        let top = thickness / 2.0/* + / *if self.notifications.len() > 0 { 24.0 } else { 0.0 }* /24.0 * self.frame_model.notif_height_ratio */;
+        let top = thickness / 2.0;
 
         // TODO: In the pill-ui, the hole will be always a rectangle, so we can use a simplified version of rounded_big_hole and remove the ReservedSpace stuff, don't we?
         // TODO: In the pill-ui we can also have rounded corners as separated surfaces? We lose the ability to have a border but we "lose" a lot of memory footprint too! But what if, in the future, pill will be able to expand vertically and host big component? We'll need potentially the entire screen in the buffer, just like now.
@@ -473,12 +481,6 @@ impl HeimdallrLayer {
         changed = changed || (a != b);
 
         if changed {
-            self.animator.animate_property(
-                &self.frame_model,
-                AnimationKey::NotificationHeight,
-                if self.notifications.len() > 0 { 1.0 } else { 0.0 },
-                200
-            );
             self.request_redraw("notifications updated");
         }
 
@@ -507,8 +509,8 @@ impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like
         );
         if already_present {
             if self.pill_container.update_data_warnings(&self.icons) {
-                self.pill_container.recalculate_normal_target();
-                self.request_redraw("pill_container animation");
+                // self.pill_container.recalculate_normal_target();
+                // self.request_redraw("pill_container animation");
             }
             IconChange::Changed
         } else {
@@ -519,8 +521,8 @@ impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like
                 200
             ); */
             if self.pill_container.update_data_warnings(&self.icons) {
-                self.pill_container.recalculate_normal_target();
-                self.request_redraw("pill_container animation");
+                // self.pill_container.recalculate_normal_target();
+                // self.request_redraw("pill_container animation");
             }
             IconChange::Added
         }
@@ -538,8 +540,8 @@ impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like
         } */
         if removed {
             if self.pill_container.update_data_warnings(&self.icons) {
-                self.pill_container.recalculate_normal_target();
-                self.request_redraw("pill_container animation");
+                // self.pill_container.recalculate_normal_target();
+                // self.request_redraw("pill_container animation");
             }
         }
         removed
