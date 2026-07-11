@@ -864,8 +864,11 @@ impl Pill {
                 self.animation.set_target(self.pill_notification_full.get_desired_rect());
             } else {
                 self.mode = PillMode::Normal;
-                self.recalculate_normal_target();
+                // self.recalculate_normal_target();
+                self.needs_recalc = true;
             }
+
+            self.needs_redraw = true;
         }
 
         changed

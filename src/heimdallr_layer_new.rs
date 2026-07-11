@@ -301,8 +301,6 @@ impl HeimdallrLayer {
             self.batteries_pristine = false;
         }
 
-        something_changed |= self.pill_container.update_data_notifications(&self.notifications);
-
         if something_changed || self.pill_container.needs_recalc {
             dbg_println!("===============   RECALC   ============");
             self.pill_container.recalculate_normal_target();
@@ -448,7 +446,7 @@ impl HeimdallrLayer {
 
     }
 
-    pub fn update_notification_list (&mut self, new_notif_opt: Option<Notification>) {
+    pub fn update_notification_list (&mut self, new_notif_opt: Option<Notification>) -> bool {
 
         let mut changed: bool = false;
         if let Some(new_notif) = new_notif_opt {
@@ -481,8 +479,10 @@ impl HeimdallrLayer {
         changed = changed || (a != b);
 
         if changed {
+            self.pill_container.update_data_notifications(&self.notifications);
             self.request_redraw("notifications updated");
         }
+        changed
 
     }
 }
@@ -514,12 +514,6 @@ impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like
             }
             IconChange::Changed
         } else {
-            /* self.animator.animate_property(
-                &self.frame_model,
-                AnimationKey::IconsHeight,
-                self.icons.len() as f64,
-                200
-            ); */
             if self.pill_container.update_data_warnings(&self.icons) {
                 // self.pill_container.recalculate_normal_target();
                 // self.request_redraw("pill_container animation");
@@ -530,14 +524,6 @@ impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like
 
     pub fn remove_icon(&mut self, id: &str) -> bool {
         let removed = self.icons.remove(id).is_some();
-        /* if removed {
-            self.animator.animate_property(
-                &self.frame_model,
-                AnimationKey::IconsHeight,
-                self.icons.len() as f64,
-                200
-            );
-        } */
         if removed {
             if self.pill_container.update_data_warnings(&self.icons) {
                 // self.pill_container.recalculate_normal_target();
@@ -548,6 +534,7 @@ impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like
     }
 
     pub fn remove_notification(&mut self) -> bool {
+        self.pill_container.update_data_notifications(&self.notifications);
         if self.notifications.len() > self.notification_idx {
             self.notifications.remove(self.notification_idx);
             if self.notification_idx > self.notifications.len() { self.notification_idx = 0 }
