@@ -847,7 +847,14 @@ impl Pill {
 
     pub fn update_data_devices(&mut self, batteries: Vec<BatteryDevice>) -> bool {
         let changed = self.pill_devices.update_data(&self.dummy_context, batteries);
-        if changed { self.pill_devices_rect = self.pill_devices.get_current_rect(); }
+        if changed {
+            // eprintln!("{}", format!("old_rect {:?}   new_rect {:?}    to be updated? {}", self.pill_devices_rect, new_rect, self.pill_devices_rect != new_rect).red());
+            if self.pill_devices_rect != self.pill_devices.get_desired_rect() {
+                self.pill_devices_rect = self.pill_devices.get_current_rect();
+                self.needs_recalc = true;
+            }
+            self.needs_redraw = true;
+        }
         return changed
     }
     

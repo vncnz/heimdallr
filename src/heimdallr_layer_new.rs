@@ -112,6 +112,7 @@ impl HeimdallrLayer {
     pub fn update_devices_data (&mut self, data: Vec<BatteryDevice>) {
         self.batteries = data;
         self.batteries_pristine = true;
+        let _ = self.pill_container.update_data_devices(self.batteries.clone());
     }
 
     pub fn set_countdown (&mut self, input: &str) -> Result<u64, &'static str> {
@@ -293,13 +294,13 @@ impl HeimdallrLayer {
         };
         something_changed |= self.pill_container.update_data_countdown(c); */
 
-        // TODO: continue with logic moving: every pill updates and returns (needs_redraw, needs_recalc).
+        // TODO: continue with logic moving: every pill updates and returns (needs_redraw, needs_recalc). These flags are written in PillContainer, too.
         // Draw method runs if needs_redraw is true, recalculate_normal_target is done if needs_recalc is true
 
-        if self.batteries_pristine {
+        /* if self.batteries_pristine {
             something_changed |= self.pill_container.update_data_devices(self.batteries.clone());
             self.batteries_pristine = false;
-        }
+        } */
 
         if something_changed || self.pill_container.needs_recalc {
             dbg_println!("===============   RECALC   ============");
