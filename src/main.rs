@@ -287,7 +287,7 @@ fn main() {
         if let Ok((kind, value)) = demo_rx.try_recv() {
             match (kind.as_str(), value.as_str()) {
                 ("timer", time) => {
-                    app.set_countdown(&value).ok();
+                    app.set_countdown(&time).ok();
                     app.request_redraw("demo timer");
                 },
                 ("security", "on") => {

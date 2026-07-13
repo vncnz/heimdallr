@@ -416,7 +416,7 @@ impl PillModuleWarnings {
         // dbg_println!("{} w:{w} target:{} current:{} changed:{changed}", "PillWarnings update_data icon".red(), self.animation.target_size.0, self.animation.current_size.0);
         if changed {
             let sizes = (w, 20.0);
-            let old = self.animation.target_size;
+            // let old = self.animation.target_size;
             // dbg_println!("{} new_target:{sizes:?} old_target:{old:?}", "PillWarnings update_data".blue());
             (true, self.animation.set_target(sizes))
         } else {
@@ -585,14 +585,14 @@ pub struct PillNotificationFull {
     appname_base: PillModuleBase,
     body_base: PillModuleBase,
     animation: AnimationState,
-    last_notification: Option<crate::notifications::Notification>
+    // last_notification: Option<crate::notifications::Notification>
 }
 
 impl PillModuleTrait for PillNotificationFull {
     fn draw(&mut self, cr: &Context, _rect_width: f64, _rect_height: f64, x: f64, y: f64) {
         // self.body_base.draw_centered(&cr, rect_width, rect_height, x, y);
 
-        let mut x = x + PILL_MARGIN;
+        let x = x + PILL_MARGIN;
         let mut y = y;
 
         let sizes = self.appname_base.cached_sizes.unwrap_or_default();
@@ -601,7 +601,7 @@ impl PillModuleTrait for PillNotificationFull {
 
         let sizes = self.body_base.cached_sizes.unwrap_or_default();
         self.body_base.draw_centered(cr, sizes.0, sizes.1, x, y);
-        y += sizes.1 + 4.0;
+        // *y += sizes.1 + 4.0;
     }
 
     fn animation_state(&mut self) -> &mut AnimationState {
@@ -615,7 +615,7 @@ impl PillNotificationFull {
             appname_base: PillModuleBase::new(),
             body_base: PillModuleBase::new(),
             animation: AnimationState::new(),
-            last_notification: None
+            // last_notification: None
         }
     }
 
@@ -804,9 +804,9 @@ impl Pill {
         self.pill_countdown.timer.fill_from_timespan(input) // FIXME: this should be in the pill itself
     }
 
-    pub fn is_countdown_active (&self) -> bool {
+    /* pub fn is_countdown_active (&self) -> bool {
         self.pill_countdown.timer.is_active()
-    }
+    } */
 
     pub fn update_data_battery(&mut self, battery: Option<crate::battery::BatteryStats>) -> bool {
         let changed = self.pill_battery.update_data(&self.dummy_context, battery);
@@ -859,6 +859,7 @@ impl Pill {
     }
     
     pub fn update_data_notifications(&mut self, notifications: &Vec<crate::notifications::Notification>) -> bool {
+        // eprintln!("{} {}", "Updating notifications vec, len".red(), notifications.len());
         let new_notif = notifications.first().cloned();
         let changed = self.last_notification != new_notif;
         // eprintln!("{} len {} changed {changed}", "Updating notifications vec".red(), notifications.len());
@@ -873,11 +874,15 @@ impl Pill {
             } else {
                 self.mode = PillMode::Normal;
                 // self.recalculate_normal_target();
+                // eprintln!("{} len {} changed {changed} needs_recalc true", "Updating notifications vec".red(), notifications.len());
                 self.needs_recalc = true;
             }
 
+            // eprintln!("{} len {} changed {changed} needs_redraw true", "Updating notifications vec".red(), notifications.len());
             self.needs_redraw = true;
         }
+
+        // eprintln!("{} {:?}", "Now last_notification is ".red(), self.last_notification);
 
         changed
     }
@@ -927,7 +932,7 @@ impl Pill {
 
         if self.pill_warnings_rect.0 > 0.0 {
             self.pill_warnings.draw(&cr, self.pill_warnings_rect.0, rect_height, x, y);
-            x += self.pill_warnings_rect.0;
+            // *x += self.pill_warnings_rect.0;
         }
         // dbg_println!("PillContainer drawn in x {x:?}");
     }

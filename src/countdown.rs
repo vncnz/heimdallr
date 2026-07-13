@@ -149,15 +149,15 @@ impl Countdown {
         }
     }
 
-    pub fn pause(&mut self) {
+    /* pub fn pause(&mut self) {
         if self.current_pause_start.is_none() && self.state.is_some() {
             self.current_pause_start = Some(Instant::now());
         }
-    }
+    } */
 
-    pub fn resume(&mut self) {
+    /* pub fn resume(&mut self) {
         if let Some(pause_start) = self.current_pause_start.take() {
             self.total_paused_time += pause_start.elapsed();
         }
-    }
+    } */
 }
