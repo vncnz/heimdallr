@@ -619,8 +619,8 @@ impl PillNotificationFull {
         }
     }
 
-    pub fn update_data(&mut self, cr: &cairo::Context, notifications: &Vec<crate::notifications::Notification>) -> bool {
-        let new_notif = notifications.last().cloned();
+    pub fn update_data(&mut self, cr: &cairo::Context, new_notif: Option<crate::notifications::Notification>) -> bool {
+        // let new_notif = notifications.first().cloned();
         // let changed = self.last_notification != new_notif;
         /* if changed {
             self.last_notification = new_notif;
@@ -860,11 +860,12 @@ impl Pill {
     
     pub fn update_data_notifications(&mut self, notifications: &Vec<crate::notifications::Notification>) -> bool {
         let new_notif = notifications.first().cloned();
-        let notification_changed = self.pill_notification_full.update_data(&self.dummy_context, notifications);
-        let changed = self.last_notification != new_notif || notification_changed;
+        let changed = self.last_notification != new_notif;
+        // eprintln!("{} len {} changed {changed}", "Updating notifications vec".red(), notifications.len());
 
         if changed {
-            self.last_notification = new_notif;
+            let _ = self.pill_notification_full.update_data(&self.dummy_context, new_notif);
+            self.last_notification = notifications.first().cloned();
 
             if self.last_notification.is_some() {
                 self.mode = PillMode::Notification(self.last_notification.as_ref().unwrap().urgency);
