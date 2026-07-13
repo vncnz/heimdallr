@@ -412,6 +412,12 @@ impl HeimdallrLayer {
             
             self.notifications.insert(0, new_notif);
 
+            self.notifications.sort_by_key(|item| {
+                // false comes before true, so Some items (notifications with expiration) go to the front, None (notif. without expiration) to the back.
+                // Within Some, notifications are sorted chronologically (oldest notification first).
+                (item.expired_at.is_none(), item.expired_at)
+            });
+
             changed = true;
         }
 
