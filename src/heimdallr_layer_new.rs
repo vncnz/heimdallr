@@ -348,43 +348,10 @@ impl HeimdallrLayer {
             pill_bg_steps = steps;
         }
 
-        // cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
-        // cr.set_font_size(16.0);
-
-        /* let steps = vec![
-            (0.0, (color.0, color.1, color.2, color.3)),
-            (self.timer.progress(), (color.0, color.1, color.2, 0.5))
-        ]; */
-        // rounded_rect_gradient(&cr, rect_right - rect_width, rect_top, rect_width, rect_height, r, steps, crate::utils::GradientDirection::Horizontal, false, Some((0.0, 0.0, 0.0, 0.0)));
-
-        /* let frame_color = match self.config.frame_color {
-            FrameColor::Rgba(r, g, b, a) => Some((r, g, b, a)),
-            FrameColor::WorstResource => self
-                .icons
-                .values()
-                .max_by(|a, b| a.warn.partial_cmp(&b.warn).unwrap_or(std::cmp::Ordering::Equal))
-                .map(|icon| icon.color),
-            FrameColor::None /* | FrameColor::Random */ => None
-        }; */
-
         rounded_rect_gradient(&cr, rect_left, rect_top, rect_width, rect_height, r, pill_bg_steps, crate::utils::GradientDirection::Horizontal, false, pill_border_color);
 
         self.pill_container.draw(&cr, rect_width_end, rect_height, rect_left_end, rect_top);
     }
-
-    /* fn update_timer_icon (&mut self) {
-        // Used by old UI (no pill UI)
-        // 󱫟 for pause
-        // 󱫌 alert
-        if self.timer.is_active() {
-            let status = self.timer.format_custom_duration();
-            let w = if status.0 { 1.0 } else { self.timer.get_warning() };
-            let icon = if status.0 { "󱫌" } else { "󱫡" };
-            self.add_icon("timer", icon, get_color_gradient(w), w, Some(status.1));
-        } else {
-            self.remove_icon("timer");
-        }
-    } */
 
     fn draw_myframe(&mut self, cr: Context) {
         // cr.set_operator(cairo::Operator::Source);
