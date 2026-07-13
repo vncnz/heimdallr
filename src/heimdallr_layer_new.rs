@@ -37,7 +37,6 @@ pub struct HeimdallrLayer {
     pub(crate) current_buffer_idx: usize,
     pub(crate) config: crate::config::Config,
     pub(crate) notifications: Vec<crate::notifications::Notification>,
-    pub(crate) notification_idx: usize,
     pub(crate) wob_value: f64,
     pub(crate) wob_expiration: Option<Instant>,
     pub(crate) ratatoskr_connected: bool,
@@ -81,7 +80,7 @@ impl HeimdallrLayer {
             current_buffer_idx: 0,
             config,
             notifications: vec![],
-            notification_idx: 0,
+            // notification_idx: 0,
             wob_expiration: None,
             wob_value: 0.0,
             animator: Animator::new(),
@@ -483,20 +482,18 @@ impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like
     }
 
     pub fn remove_notification(&mut self) -> bool {
-        if self.notifications.len() > self.notification_idx {
-            self.notifications.remove(self.notification_idx);
+        if self.notifications.len() > 0 {
+            self.notifications.remove(0);
             self.pill_container.update_data_notifications(&self.notifications);
-            if self.notification_idx > self.notifications.len() { self.notification_idx = 0 }
-            return true
+            true
+        } else {
+            false
         }
-        return false
     }
     
+    #[deprecated]
     pub fn show_notification(&mut self, new_idx: i32) -> bool {
-        if new_idx >= 0 && new_idx < self.notifications.len() as i32 {
-           self.notification_idx = new_idx as usize;
-           return true
-        }
+        eprintln!("{} ({new_idx})", "Removed functionality".yellow());
         false
     }
 

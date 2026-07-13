@@ -373,14 +373,12 @@ fn main() {
                     }
                 },
                 "prev_notification" => {
-                    println!("prev!");
-                    if app.show_notification(app.notification_idx as i32 - 1) {
+                    if app.show_notification(-1) {
                         app.request_redraw("prev_notification");
                     }
                 },
                 "next_notification" => {
-                    println!("next!");
-                    if app.show_notification(app.notification_idx as i32 + 1) {
+                    if app.show_notification(1) {
                         app.request_redraw("next_notification");
                     }
                 },

@@ -856,6 +856,7 @@ impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like
     }
     
     pub fn show_notification(&mut self, new_idx: i32) -> bool {
+        let new_idx = self.notification_idx + new_idx;
         if new_idx >= 0 && new_idx < self.notifications.len() as i32 {
            self.notification_idx = new_idx as usize;
            return true
