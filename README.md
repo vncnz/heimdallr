@@ -264,7 +264,7 @@ You can set the "timer" in stopwatch mode using the command `timer up`. Time sta
 - Plugin system?
 - Show again last notification on cmd retrieving?
 - Autohide clock?
-- wob-like functionality: add color or warning (with automatico color selection) in cmd
+- wob-like functionality: add color or warning (with automatic color selection) in cmd
 
 ## Known bugs
 
