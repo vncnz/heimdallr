@@ -479,6 +479,7 @@ impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like
     pub fn remove_notification(&mut self) -> bool {
         if self.notifications.len() > self.notification_idx {
             self.notifications.remove(self.notification_idx);
+            self.pill_container.update_data_notifications(&self.notifications);
             if self.notification_idx > self.notifications.len() { self.notification_idx = 0 }
             return true
         }
