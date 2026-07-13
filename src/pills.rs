@@ -859,7 +859,7 @@ impl Pill {
     }
     
     pub fn update_data_notifications(&mut self, notifications: &Vec<crate::notifications::Notification>) -> bool {
-        let new_notif = notifications.last().cloned();
+        let new_notif = notifications.first().cloned();
         let notification_changed = self.pill_notification_full.update_data(&self.dummy_context, notifications);
         let changed = self.last_notification != new_notif || notification_changed;
 
