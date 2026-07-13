@@ -54,7 +54,7 @@ impl LayerBackend {
 #[derive(Debug, Clone)]
 pub struct Config {
     pub frame_color: FrameColor,
-    pub show_clock: ClockCfg,
+    // pub show_clock: ClockCfg,
     pub backend: LayerBackend,
     pub show_always_bluetooth: bool,
     pub hide_missing_ratatoskr: bool
@@ -161,7 +161,7 @@ impl Config {
 
         Config {
             frame_color: FrameColor::from_json(raw.frame_color),
-            show_clock: ClockCfg::from_json(raw.show_clock),
+            // show_clock: ClockCfg::from_json(raw.show_clock),
             backend: LayerBackend::from_json(raw.backend),
             show_always_bluetooth: raw.show_always_bluetooth.unwrap_or(true),
             hide_missing_ratatoskr: raw.hide_missing_ratatoskr.unwrap_or(false)
