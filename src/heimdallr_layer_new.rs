@@ -276,33 +276,8 @@ impl HeimdallrLayer {
 
     fn draw_test_pill (&mut self, cr: &Context) {
         self.pills_are_animating = false;
-        // I'm experimenting with new UI: some of this shit will be moved out of here, ofc!
 
-        // UPDATE DATA
-        let mut something_changed = false;
-        // something_changed |= self.pill_container.update_data_countdown();
-        // something_changed |= self.pill_container.update_data_battery(self.battery_integrated.clone());
-
-        // something_changed |= self.pill_container.update_data_warnings(&self.icons); // Moved
-
-        /* Update countdown pill (to be unified) */
-        /* let c = Countdown {
-            state: self.timer.state,
-            total_paused_time: self.timer.total_paused_time,
-            current_pause_start: self.timer.current_pause_start,
-            direction: self.timer.direction.clone()
-        };
-        something_changed |= self.pill_container.update_data_countdown(c); */
-
-        // TODO: continue with logic moving: every pill updates and returns (needs_redraw, needs_recalc). These flags are written in PillContainer, too.
-        // Draw method runs if needs_redraw is true, recalculate_normal_target is done if needs_recalc is true
-
-        /* if self.batteries_pristine {
-            something_changed |= self.pill_container.update_data_devices(self.batteries.clone());
-            self.batteries_pristine = false;
-        } */
-
-        if something_changed || self.pill_container.needs_recalc {
+        if self.pill_container.needs_recalc {
             dbg_println!("===============   RECALC   ============");
             self.pill_container.recalculate_normal_target();
         }
