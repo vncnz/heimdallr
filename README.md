@@ -254,7 +254,7 @@ Used icon is based on device type and, for several types, bluetooth or wired con
 - ~~(performance) Send battery signal only if something is changed~~ Done!
 - (robustness) Check devices on system resume?
 - ~~(code) Evaluate a modular system in which each component keeps a cache and private infos~~ Done with new pill UI
-- (UX) Put temporary notification always before important ones (because the latter doesn't expire!)
+- ~~(UX) Put temporary notification always before important ones (because the latter doesn't expire!)~~ Done!
 - (UX) Manage those situations where the "unmounted" notification arrives instants before the "mounting" notification
 - ~~Reduce quantity of damaged surface (wl_surface.damage_buffer only for changed areas)~~ it's not worth it
 
