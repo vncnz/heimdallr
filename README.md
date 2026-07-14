@@ -86,8 +86,8 @@ You can configure frame color and clock presence with a json file in ```~/.confi
 ```json
 {
     "frame_color": [red,green,blue,alpha] | "worst-resource" | "random" | null,
-    "show_clock": "clock1" / "clock2" / null, // Deprecated in pill-ui
-    "show_always_bluetooth": true / false, // Deprecated in pill-ui
+    // "show_clock": "clock1" / "clock2" / null, // Deprecated in pill-ui
+    // "show_always_bluetooth": true / false, // Deprecated in pill-ui
     "hide_missing_ratatoskr": true / false
 }
 ```
