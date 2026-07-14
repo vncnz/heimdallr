@@ -214,9 +214,13 @@ tm 1m30s
 tm off
 ```
 
-When a timer is active, Heimdallr updates the UI at least once a second. In your alarms area you'll see a new icon.
+When a timer is active, Heimdallr updates the UI at least once a second.
 
-The timer icon starts green and gradually shifts to yellow as it nears expiration. Once the timer expires, the icon turns red, and the displayed value starts counting up (indicating how much time has passed since the deadline).
+The timer icon-and-text starts green and gradually shifts to yellow as it nears expiration. Once the timer expires, the background turns red, and the displayed value starts counting up (indicating how much time has passed since the deadline).
+
+![Timer running example](./screenshots/timer_running.png)
+![Timer zero example](./screenshots/timer_zero.png)
+![Timer expired example](./screenshots/timer_expired.png)
 
 ## Stopwatch
 
