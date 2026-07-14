@@ -56,6 +56,14 @@ The impact on average load is around 0.01, so really small. I measured the impac
 
 Oh, if the screen looks too empty, that’s by design: I like minimalism. No status bar, Niri as WM, and this is my daily driver.
 
+## Screenshots (new UI)
+
+Full screen, clock, battery charging:
+![Charging, fullscreen](./screenshots/fullscreen_recharging.png)
+
+Battery discharging; medium RAM alarm:
+![Running on battery, medium RAM warning](./screenshots/on_battery_and_medium_ram.png)
+
 ## Screenshots (old UI)
 
 Clock1, light blue border; battery charging; high RAM, medium load, and light disk usage alarms:
