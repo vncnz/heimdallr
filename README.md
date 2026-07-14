@@ -153,18 +153,18 @@ For example: ```echo "0.35" > /tmp/heimdallr_cmds```
 
 ![Wob-like example](./screenshots/wob_like.png)
 
-## Clock styles
+## ~~Clock styles~~
 
-Now, Heimdallr offers two distinct clock styles to display the current time and the estimated battery charge/discharge time. Both clocks are positioned on the right edge of the screen, ensuring minimal intrusion while providing essential information at a glance.
+~~Now, Heimdallr offers two distinct clock styles to display the current time and the estimated battery charge/discharge time. Both clocks are positioned on the right edge of the screen, ensuring minimal intrusion while providing essential information at a glance.~~
 
-### Available Styles
+### ~~Available Styles~~
 
-- **Clock1**: a sleek, minimalist design with a linear arrow indicating the current time. The battery status is represented by an icon (a green bolt for charging or a red skull for discharging) integrated into the clock’s layout. Hour numbers are shown to assist with quick time reading and markers are displayed as small triangles every 3 hours, with larger, blue triangles every 6 hours for easier orientation.
-- **Clock2**: this clock consists of notches, each representing one hour; every 6 hours, a notch is highlighted in blue for better readability. The current time is indicated by a white (or blue) fill that progresses along the notches. Battery status and eta is shown as a colored fill (green for charging, red for discharging) that extends the time indicator.
+- ~~**Clock1**: a sleek, minimalist design with a linear arrow indicating the current time. The battery status is represented by an icon (a green bolt for charging or a red skull for discharging) integrated into the clock’s layout. Hour numbers are shown to assist with quick time reading and markers are displayed as small triangles every 3 hours, with larger, blue triangles every 6 hours for easier orientation.~~
+- ~~**Clock2**: this clock consists of notches, each representing one hour; every 6 hours, a notch is highlighted in blue for better readability. The current time is indicated by a white (or blue) fill that progresses along the notches. Battery status and eta is shown as a colored fill (green for charging, red for discharging) that extends the time indicator.~~
 
-You can choose between these styles, or disable the clock entirely, via the configuration file. This flexibility allows you to tailor Heimdallr’s appearance to your aesthetic preferences or functional needs.
+~~You can choose between these styles, or disable the clock entirely, via the configuration file. This flexibility allows you to tailor Heimdallr’s appearance to your aesthetic preferences or functional needs.~~
 
-**For Developers:** The clock system is built around the ClockTrait, making it easy to extend or create custom clock styles. Fork the project and experiment with your own designs!
+~~**For Developers:** The clock system is built around the ClockTrait, making it easy to extend or create custom clock styles. Fork the project and experiment with your own designs!~~
 
 ## Security warning feature
 
@@ -221,6 +221,14 @@ The timer icon starts green and gradually shifts to yellow as it nears expiratio
 ## Stopwatch
 
 You can set the "timer" in stopwatch mode using the command `timer up`. Time starts from zero and move forward, like when the timer is expired but the icon remains green. Like in timer mode, you can remove the timer/stopwatch with the command `timer off`.
+
+## External batteries
+
+Heimdallr displays a list of all devices detected by upower: for example, your mouse connected through bluetooth or your phone that is charging through an usb; you can see the latter example in the following screenshot.
+
+Used icon is based on device type and, for several types, bluetooth or wired connection: mouse (bt/wired), phone (bt/wired), tablet, remote controller, speakers, headphones, gamepads, keyboard, other (bt/wired).
+
+![Batteries example](./screenshots/batteries.png)
 
 
 ## TODOs
