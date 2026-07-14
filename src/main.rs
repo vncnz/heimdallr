@@ -496,9 +496,9 @@ fn main() {
                                     UPowerDeviceKind::Keyboard => "󰌌",
                                     _ => "󰂱"
                                 };
-                                if (config.show_always_bluetooth || dev.warn >= 0.3) && config.backend == Legacy {
+                                /* if (config.show_always_bluetooth || dev.warn >= 0.3) {
                                     let _added = app.add_icon(&iconkey, icon, get_color_gradient(dev.warn), dev.warn, None);
-                                }
+                                } */
                             }
                         }
                         if app.batteries != b.devices {

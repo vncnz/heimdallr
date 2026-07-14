@@ -55,7 +55,7 @@ impl LayerBackend {
 pub struct Config {
     pub frame_color: FrameColor,
     pub show_clock: ClockCfg,
-    pub backend: LayerBackend,
+    // pub backend: LayerBackend,
     pub show_always_bluetooth: bool,
     pub hide_missing_ratatoskr: bool
     // pub border_width: u32,
@@ -65,7 +65,7 @@ pub struct Config {
 struct RawConfig {
     frame_color: Option<serde_json::Value>,
     show_clock: Option<serde_json::Value>,
-    backend: Option<serde_json::Value>,
+    // backend: Option<serde_json::Value>,
     show_always_bluetooth: Option<bool>,
     hide_missing_ratatoskr: Option<bool>
     // border_width: Option<u32>,
@@ -152,7 +152,7 @@ impl Config {
             RawConfig {
                 frame_color: None,
                 show_clock: None,
-                backend: None,
+                // backend: None,
                 show_always_bluetooth: None,
                 hide_missing_ratatoskr: None
                 // border_width: None,
@@ -162,7 +162,7 @@ impl Config {
         Config {
             frame_color: FrameColor::from_json(raw.frame_color),
             show_clock: ClockCfg::from_json(raw.show_clock),
-            backend: LayerBackend::from_json(raw.backend),
+            // backend: LayerBackend::from_json(raw.backend),
             show_always_bluetooth: raw.show_always_bluetooth.unwrap_or(true),
             hide_missing_ratatoskr: raw.hide_missing_ratatoskr.unwrap_or(false)
             // border_width: raw.border_width.unwrap_or(2),
