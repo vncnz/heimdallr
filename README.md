@@ -12,9 +12,11 @@ From wikipedia:
 
 ## UI preview
 
-<p align="center">
+<!-- <p align="center">
   <video src="screenshots/pill_ui_recording.mp4" autoplay loop muted playsinline width="100%"></video>
-</p>
+</p> -->
+
+[![Watch the video]([screenshots/pill_ui_recording.mp4](https://raw.githubusercontent.com/vncnz/heimdallr/pill-ui/screenshots/pill_ui_recording.mp4))](https://raw.githubusercontent.com/vncnz/heimdallr/pill-ui/screenshots/pill_ui_recording.mp4)
 
 In this demo:
 - **Clock + battery status:** Displays the current time and battery charging state (including ETA).
