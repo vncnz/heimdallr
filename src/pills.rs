@@ -529,16 +529,19 @@ impl PillModuleDevices {
         let mut w = 0.0;
         self.bases = Vec::new();
         for b in &self.batteries {
-            let icon = match b.kind {
-                UPowerDeviceKind::Mouse => if b.is_bluetooth { "󰦋" } else { "󰍽" },
-                UPowerDeviceKind::Phone => if b.is_bluetooth { "󰏳" } else { "󰏲" },
-                UPowerDeviceKind::Tablet => "",
-                UPowerDeviceKind::RemoteControl => "󰻅",
-                UPowerDeviceKind::Speakers => "󰦢",
-                UPowerDeviceKind::Headphones => "󰥰",
-                UPowerDeviceKind::GamingInput => "󱤙",
-                UPowerDeviceKind::Keyboard => "󰌌",
-                _ => "󰂱"
+            let icon = match (&b.kind, b.is_bluetooth) {
+                (UPowerDeviceKind::Mouse, true) => "󰦋",
+                (UPowerDeviceKind::Mouse, false) => "󰍽",
+                (UPowerDeviceKind::Phone, true) => "󰏳",
+                (UPowerDeviceKind::Phone, false) => "󰏲",
+                (UPowerDeviceKind::Tablet, _) => "",
+                (UPowerDeviceKind::RemoteControl, _) => "󰻅",
+                (UPowerDeviceKind::Speakers, _) => "󰦢",
+                (UPowerDeviceKind::Headphones, _) => "󰥰",
+                (UPowerDeviceKind::GamingInput, _) => "󱤙",
+                (UPowerDeviceKind::Keyboard, _) => "󰌌",
+                (_, true) => "󰂱",
+                (_, false) => "󰾰"
             };
             let text = format!("{icon} {:.0}%", b.percentage);
             let (layout, sizes) = cr_text_layout(&cr, &text, PILL_FONT_SIZE, None).unwrap();
