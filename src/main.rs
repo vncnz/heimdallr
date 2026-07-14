@@ -472,7 +472,7 @@ fn main() {
                 log_to_file(format!("{:?}", data));
                 if let Some(blue) = &data.data {
                     if let Ok(b) = BluetoothStats::deserialize(blue.clone()) {
-                        if config.show_always_bluetooth {
+                        /* if config.show_always_bluetooth {
                             let keys: Vec<String> = app.icons
                                 .keys()
                                 .filter(|k| k.starts_with("bt-"))
@@ -496,11 +496,8 @@ fn main() {
                                     UPowerDeviceKind::Keyboard => "󰌌",
                                     _ => "󰂱"
                                 };
-                                /* if (config.show_always_bluetooth || dev.warn >= 0.3) {
-                                    let _added = app.add_icon(&iconkey, icon, get_color_gradient(dev.warn), dev.warn, None);
-                                } */
                             }
-                        }
+                        } */
                         if app.batteries != b.devices {
                             app.update_devices_data(b.devices);
                             app.request_redraw("bt-batteries");
