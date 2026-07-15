@@ -237,6 +237,10 @@ fn main() {
     if false {
         thread::spawn(move || {
             let actions = vec![
+                ("warning-ram", "0.9", Duration::from_secs(1)),
+                //("warning-load", "0.6", Duration::from_secs(1)),
+                //("warning-disk", "0.31", Duration::from_secs(1))
+                /*
                 ("battery", "false", Duration::from_secs(5)),
                 ("battery", "true", Duration::from_secs(2)),
                 ("security", "on", Duration::from_secs(4)),
@@ -247,7 +251,7 @@ fn main() {
                 ("wob", "0.65", Duration::from_millis(200)),
                 ("timer", "3s", Duration::from_secs(3)),
                 ("timer", "off", Duration::from_secs(6)),
-                ("notification", "The endless noise will put a lock on your open mind, and it will tear your soul apart. Run away from the tragedy, and find the essence of silence that remains inside.", Duration::from_secs(2))
+                ("notification", "The endless noise will put a lock on your open mind, and it will tear your soul apart. Run away from the tragedy, and find the essence of silence that remains inside.", Duration::from_secs(2)) */
             ];
 
             for (kind, value, delay) in actions {
@@ -335,6 +339,25 @@ fn main() {
                         app.request_redraw("demo battery");
                     }
                 },
+                ("warning-ram", w) => {
+                    if let Ok(w) = w.parse::<f64>() {
+                        if w > 0.3 { app.add_icon("demoram", "󰘚", get_color_gradient(w), w, None); }
+                        else { app.remove_icon("demoram"); }
+                    }
+                },
+                ("warning-load", w) => {
+                    if let Ok(w) = w.parse::<f64>() {
+                        if w > 0.3 { app.add_icon("demoload", "󰬢", get_color_gradient(w), w, None); }
+                        else { app.remove_icon("demoload"); }
+                    }
+                },
+                ("warning-disk", w) => {
+                    if let Ok(w) = w.parse::<f64>() {
+                        if w > 0.3 { app.add_icon("demodisk", "󰋊", get_color_gradient(w), w, None); }
+                        else { app.remove_icon("demodisk"); }
+                    }
+                },
+                // "󰞃"
                 _ => {
                     eprintln!("Unknown demo command: {} {}", kind, value);
                 }

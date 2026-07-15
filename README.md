@@ -67,6 +67,15 @@ Battery discharging; low RAM alarm:
 Battery charging; medium network alarm:
 ![Running on battery, medium net warning](./screenshots/charging_medium_net_warning.png)
 
+Battery discharging; very high RAM alarm:
+![Charging, very high RAM warning](./screenshots/very_high_ram.png)
+
+Battery charging; several alarms:
+![Charging, several warnings](./screenshots/medium_load_low_disk_medium_temp.png)
+
+Battery charging; several alarms (more):
+![Charging, several warnings](./screenshots/several_warnings.png)
+
 ## Screenshots (old UI)
 
 Clock1, light blue border; battery charging; high RAM, medium load, and light disk usage alarms:
