@@ -61,6 +61,9 @@ Oh, if the screen looks too empty, that’s by design: I like minimalism. No (fu
 Full screen, clock, battery charging:
 ![Charging, fullscreen](./screenshots/fullscreen_recharging.png)
 
+Usual state (just the clock):
+![Clock](./screenshots/clean_status.png)
+
 Battery discharging; low RAM alarm:
 ![Running on battery, low RAM warning](./screenshots/on_battery_and_medium_ram.png)
 
@@ -273,7 +276,7 @@ Used icon is based on device type and, for several types, bluetooth or wired con
 - ~~(UI) Different UI for the batteries of the devices?~~ (sorta) done!
 - ~~(performance) Send battery signal only if something is changed~~ Done!
 - (robustness) Check devices on system resume?
-- ~~(code) Evaluate a modular system in which each component keeps a cache and private infos~~ Done with new pill UI
+- ~~(code) Evaluate a modular system in which each component keeps a cache and private info~~ Done with new pill UI
 - ~~(UX) Put temporary notification always before important ones (because the latter doesn't expire!)~~ Done!
 - (UX) Manage those situations where the "unmounted" notification arrives instants before the "mounting" notification
 - ~~Reduce quantity of damaged surface (wl_surface.damage_buffer only for changed areas)~~ it's not worth it
@@ -300,4 +303,3 @@ Used icon is based on device type and, for several types, bluetooth or wired con
 
 - ~~Sometimes heimdallr terminates itself after system suspension/resume~~ Fixed!
 - ~~Sometimes, closing an urgent notifications doesn't restore normal frame width~~ Fixed!
-- ~~Sometimes, a bluetooth device keeps to be shown after it is shut off~~ upower's behaviour (used by ratatoskr) when mouse is charging through usb. Now, Ratatoskr can distinguish between upower devices with active and non-active bluetooth connection
