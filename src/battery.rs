@@ -77,8 +77,9 @@ impl PartialEq for BatteryStats {
 
         match (self.eta_minutes, other.eta_minutes) {
             (Some(eta1), Some(eta2)) => {
-                const THRESHOLD: f64 = 1.0;
-                (eta1 - eta2).abs() < THRESHOLD
+                // const THRESHOLD: f64 = 1.0;
+                // (eta1 - eta2).abs() < THRESHOLD
+                eta1.ceil() == eta2.ceil()
             }
             _ => self.eta_minutes == other.eta_minutes,
         }
