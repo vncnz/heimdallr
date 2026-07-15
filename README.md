@@ -54,7 +54,7 @@ The impact on average load is around 0.01, so really small. I measured the impac
 
 ---
 
-Oh, if the screen looks too empty, that’s by design: I like minimalism. No status bar, Niri as WM, and this is my daily driver.
+Oh, if the screen looks too empty, that’s by design: I like minimalism. No (full) status bar, Niri as WM, and this is my daily driver.
 
 ## Screenshots (new UI)
 
