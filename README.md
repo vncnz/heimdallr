@@ -135,8 +135,8 @@ Default values are the following:
 ```json
 {
     "frame_color": null,
-    "show_clock": null,
-    "show_always_bluetooth": true,
+    // "show_clock": null,
+    // "show_always_bluetooth": true,
     "hide_missing_ratatoskr": false
 }
 ```
@@ -168,9 +168,7 @@ Another notification example, critical
 
 ## Wob-like indicator
 
-Inspired by the [wob project](https://github.com/francma/wob), I implemented a generic indicator in Heimdallr. You can write to /tmp/heimdallr_cmds a decimal number between 0 and 1 and that number will be used to show an indicator in the bottom-center of the screen. The indicator slides in over 500 ms, remains visible for two seconds, and then slides out over 500 ms. Values outside the 0–1 range are clamped.
-
-If no colored border is configured, the indicator uses a white background with 0.1 opacity to improve readability.
+Inspired by the [wob project](https://github.com/francma/wob), I implemented a generic indicator in Heimdallr. You can write to /tmp/heimdallr_cmds a decimal number between 0 and 1 and that number will be used to show an indicator in the pill background. The indicator fade in over 500 ms, remains visible for two seconds, and then fades out over 500 ms. Values outside the 0–1 range are clamped.
 
 For example: ```echo "0.35" > /tmp/heimdallr_cmds```
 
