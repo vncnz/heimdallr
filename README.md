@@ -61,8 +61,11 @@ Oh, if the screen looks too empty, that’s by design: I like minimalism. No sta
 Full screen, clock, battery charging:
 ![Charging, fullscreen](./screenshots/fullscreen_recharging.png)
 
-Battery discharging; medium RAM alarm:
-![Running on battery, medium RAM warning](./screenshots/on_battery_and_medium_ram.png)
+Battery discharging; low RAM alarm:
+![Running on battery, low RAM warning](./screenshots/on_battery_and_medium_ram.png)
+
+Battery charging; medium network alarm:
+![Running on battery, medium net warning](./screenshots/charging_medium_net_warning.png)
 
 ## Screenshots (old UI)
 
