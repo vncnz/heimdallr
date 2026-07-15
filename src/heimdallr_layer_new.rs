@@ -102,7 +102,7 @@ impl HeimdallrLayer {
 
     pub fn update_battery_data (&mut self, data: Option<crate::battery::BatteryStats>) {
         // self.battery_integrated = data;
-        if self.pill_container.update_data_battery(data) {
+        if self.pill_container.update_data_battery(data, self.config.show_watts) {
             self.pill_container.recalculate_normal_target();
             self.request_redraw("pill_container animation");
         }

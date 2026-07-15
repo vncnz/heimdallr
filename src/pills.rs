@@ -6,7 +6,7 @@ use std::{collections::HashMap, time::{Duration, Instant}};
 use colored::Colorize;
 
 use crate::{
-    countdown::Countdown, data::{BatteryDevice, UPowerDeviceKind}, dbg_println, data::AlarmIcon, security::MicCameraStatus, utils::{cr_text_layout, ease, get_color_gradient, rounded_rect_gradient, select_icon}
+    countdown::Countdown, data::{AlarmIcon, BatteryDevice, UPowerDeviceKind}, dbg_println, security::MicCameraStatus, utils::{cr_text_layout, ease, get_color_gradient, rounded_rect_gradient, select_icon}
 };
 
 pub static PILL_FONT_SIZE: f64 = 14.0;
@@ -301,7 +301,7 @@ impl PillModuleLaptopBattery {
         }
     }
 
-    pub fn update_data(&mut self, cr: &cairo::Context, battery: Option<crate::battery::BatteryStats>) -> bool {
+    pub fn update_data(&mut self, cr: &cairo::Context, battery: Option<crate::battery::BatteryStats>, show_watts: bool) -> bool {
         self.battery = battery;
 
         let target = if let Some(bat) = &self.battery {
@@ -314,15 +314,26 @@ impl PillModuleLaptopBattery {
                 let minutes = total_mins % 60;
 
                 let eta = match (hours, minutes) {
-                    (0, 0) => "0s".to_string(),
+                    (0, 0) => "now".to_string(),
                     (0, m) => format!("{}m", m),
-                    (h, m) => format!("{}h{}m", h, m),
+                    (1, m) => format!("1h{}m", m),
+                    (h, m) => {
+                        if show_watts { format!("{h}h") }
+                        else { format!("{h}h{m}m") }
+                    },
                 };
 
-                let bat_symb: String = match bat.state {
-                    crate::battery::BatteryState::Charging => format!("󱐋 {}", eta),
-                    crate::battery::BatteryState::Discharging => format!("󰯆 {}", eta),
-                    crate::battery::BatteryState::NotCharging => "󱧥".into(),
+                let flow = match bat.flow {
+                    Some(f) => f.round(),
+                    None => 0.0
+                };
+
+                let bat_symb: String = match (&bat.state, show_watts) {
+                    (crate::battery::BatteryState::Charging, true) => format!("󱐋 {} / {}W", eta, flow),
+                    (crate::battery::BatteryState::Charging, false) => format!("󱐋 {}", eta),
+                    (crate::battery::BatteryState::Discharging, true) => format!("󰯆 {} / {}W", eta, flow),
+                    (crate::battery::BatteryState::Discharging, false) => format!("󰯆 {}", eta),
+                    (crate::battery::BatteryState::NotCharging, _) => "󱧥".into(),
                     _ => {
                         let slice: &[&str] = &[
                             "󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹",
@@ -811,8 +822,8 @@ impl Pill {
         self.pill_countdown.timer.is_active()
     } */
 
-    pub fn update_data_battery(&mut self, battery: Option<crate::battery::BatteryStats>) -> bool {
-        let changed = self.pill_battery.update_data(&self.dummy_context, battery);
+    pub fn update_data_battery(&mut self, battery: Option<crate::battery::BatteryStats>, show_watts: bool) -> bool {
+        let changed = self.pill_battery.update_data(&self.dummy_context, battery, show_watts);
         if changed { self.pill_battery_rect = self.pill_battery.get_current_rect(); }
         return changed
     }

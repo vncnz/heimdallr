@@ -333,7 +333,8 @@ fn main() {
                         let bat = BatteryStats {
                             percentage: 60.0,
                             state: if charging { BatteryState::Charging } else { BatteryState::Discharging },
-                            eta_minutes: Some(if charging { 12.0 } else { 312.0 })
+                            eta_minutes: Some(if charging { 12.0 } else { 312.0 }),
+                            flow: Some(10.34)
                         };
                         app.update_battery_data(Some(bat));
                         app.request_redraw("demo battery");

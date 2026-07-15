@@ -67,6 +67,7 @@ pub struct BatteryStats {
     pub state: BatteryState,
     pub percentage: f64,
     pub eta_minutes: Option<f64>,
+    pub flow: Option<f64>
 }
 
 impl PartialEq for BatteryStats {
@@ -533,6 +534,8 @@ impl SysBatteryReader {
         if state == BatteryState::Charging || state == BatteryState::Discharging {
             let energy = self.read_val("energy_now");
             let power = self.read_val("power_now");
+            let flow = power / 1_000_000.0;
+            // eprintln!("----------------- {power_w} ------------------------");
             let full = self.read_val("energy_full");
 
             let mut eta_minutes = if state == BatteryState::Discharging && power > 0.0 {
@@ -548,9 +551,9 @@ impl SysBatteryReader {
                 self.reset_eta();
             }
 
-            return BatteryStats { state, percentage, eta_minutes };
+            return BatteryStats { state, percentage, eta_minutes, flow: Some(flow) };
         } else {
-            BatteryStats { state, percentage, eta_minutes: None }
+            BatteryStats { state, percentage, eta_minutes: None, flow: None }
         }
     }
 

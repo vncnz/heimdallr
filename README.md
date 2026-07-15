@@ -79,6 +79,9 @@ Battery charging; several alarms:
 Battery charging; several alarms (more):
 ![Charging, several warnings](./screenshots/several_warnings.png)
 
+Battery discharging, with power:
+![Discharging, with power](./screenshots/battery_watts.png)
+
 ## Screenshots (old UI)
 
 Clock1, light blue border; battery charging; high RAM, medium load, and light disk usage alarms:
@@ -111,7 +114,8 @@ You can configure frame color and clock presence with a json file in ```~/.confi
     "frame_color": [red,green,blue,alpha] | "worst-resource" | "random" | null,
     // "show_clock": "clock1" / "clock2" / null, // Deprecated in pill-ui
     // "show_always_bluetooth": true / false, // Deprecated in pill-ui
-    "hide_missing_ratatoskr": true / false
+    "hide_missing_ratatoskr": true / false,
+    "show_watts": true / false
 }
 ```
 
@@ -122,13 +126,15 @@ For example:
     "frame_color": [0.2, 0.6, 1.0, 1.0],
     // "show_clock": "clock1",
     // "show_always_bluetooth": true,
-    "hide_missing_ratatoskr": true
+    "hide_missing_ratatoskr": true,
+    "show_watts": true
 }
 ```
 
 If you set "worst-resource" as frame_color, in absence of resource warnings the frame will have no border.
-If you set false as show_always_bluetooth, you'll see icons for your bluetooth peripherals only if their battery runs low.
+~~If you set false as show_always_bluetooth, you'll see icons for your bluetooth peripherals only if their battery runs low.~~
 If you set false as hide_missing_ratatoskr, heimdallr won't show a warning icon if ratatoskr is disconnected; in fact, ratatoskr is now optional.
+If you set true as show_watts, heimdallr will show battery flow when it is charging or discharging, next to ETA, rounded to integer.
 
 Default values are the following:
 
@@ -137,7 +143,8 @@ Default values are the following:
     "frame_color": null,
     // "show_clock": null,
     // "show_always_bluetooth": true,
-    "hide_missing_ratatoskr": false
+    "hide_missing_ratatoskr": false,
+    "show_watts": false
 }
 ```
 
