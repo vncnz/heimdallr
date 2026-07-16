@@ -15,7 +15,7 @@ use std::thread;
 
 use colored::Colorize;
 
-use crate::{battery::{BatteryState, BatteryStats}, commands::start_command_listener, config::LayerBackend::Legacy, data::{BluetoothStats, IconChange, RatatoskrSocket, UPowerDeviceKind}, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{get_color_gradient, log_to_file, select_icon}};
+use crate::{battery::{BatteryState, BatteryStats}, commands::start_command_listener, data::{BluetoothStats, IconChange, RatatoskrSocket}, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{get_color_gradient, log_to_file, select_icon}};
 
 mod data;
 mod config;
@@ -24,7 +24,7 @@ mod config;
 //mod clock;
 //mod clock1;
 //mod clock2;
-mod heimdallr_layer_new;
+mod heimdallr_layer;
 mod notifications;
 mod commands;
 mod utils;
@@ -36,7 +36,7 @@ mod pills;
 use config::Config;
 // use chrono;
 
-use crate::heimdallr_layer_new::HeimdallrLayer;
+use crate::heimdallr_layer::HeimdallrLayer;
 use crate::notifications::start_notification_listener;
 use crate::battery::start_battery_listener;
 
@@ -137,18 +137,6 @@ fn main() {
 
     let compositor = CompositorState::bind(&globals, &qh).unwrap();
     let layer_shell = LayerShell::bind(&globals, &qh).unwrap();
-    // let shm = Shm::bind(&globals, &qh).unwrap();
-
-    //let resources = Arc::new(Mutex::new(ResourceData::default()));
-    //let receiver = start_resource_watcher("/tmp/ratatoskr.json", resources.clone());
-
-    // let rx = data::start_socket_watcher("/tmp/ratatoskr.sock");
-
-    /* let clock = match config.show_clock {
-        config::ClockCfg::Clock1 => ClockWrapper::Clock1(Clock1::new()),
-        config::ClockCfg::Clock2 => ClockWrapper::Clock2(Clock2::new()),
-        _ => ClockWrapper::NoClock(NoClock::new())
-    }; */
 
     let mut app = HeimdallrLayer::new(
         RegistryState::new(&globals),
@@ -396,20 +384,19 @@ fn main() {
                         eprintln!("--- No remove?");
                     }
                 },
-                "prev_notification" => {
+                /* "prev_notification" => {
                     if app.show_notification(-1) {
                         app.request_redraw("prev_notification");
                     }
-                },
-                "next_notification" => {
+                }, */
+                /* "next_notification" => {
                     if app.show_notification(1) {
                         app.request_redraw("next_notification");
                     }
-                },
+                }, */
                 _ => {
                     println!("cmd to be parsed: {}", cmd);
                     let parts: Vec<&str> = cmd.split(" ").collect();
-                    let mut wob_effect = false;
                     match parts.as_slice() {
                         ["timer", value_str] => {
                             match app.set_countdown(value_str) {
@@ -434,14 +421,14 @@ fn main() {
                         
                         [kind, value_str] => {
                             match value_str.parse::<f64>() {
-                                Ok(value) => wob_effect = app.show_value(value, Some(*kind)),
+                                Ok(value) => { app.show_value(value, Some(*kind)); },
                                 Err(_) => { eprintln!("Invalid number: {}", value_str); }
                             }
                         }
 
                         [value_str] => {
                             match value_str.parse::<f64>() {
-                                Ok(value) => wob_effect = app.show_value(value, None),
+                                Ok(value) => { app.show_value(value, None); },
                                 Err(_) => { eprintln!("Invalid number: {}", value_str); }
                             }
                         }
@@ -450,15 +437,6 @@ fn main() {
                             eprintln!("Unknown command");
                         }
                     };
-                    if wob_effect {
-                        /* app.animator.animate_property(
-                            &app.frame_model,
-                            AnimationKey::WobHeightRatio,
-                            1.0,
-                            500
-                        );
-                        app.request_redraw("external value event"); */
-                    }
                 }
             };
             // app.request_redraw();

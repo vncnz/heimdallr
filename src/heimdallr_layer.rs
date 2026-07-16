@@ -9,37 +9,15 @@ use std::{num::NonZeroU32, time::{Duration, Instant}};
 use smithay_client_toolkit::shell::WaylandSurface;
 
 use std::collections::HashMap;
-use cairo::FontSlant;
 
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{clock::{ClockTrait, ClockWrapper, NoClock}, clock1::Clock1, clock2::Clock2, config::{ClockCfg, Config, FrameColor}, countdown::Countdown, data::BatteryDevice, dbg_println, notifications::Notification, pills::{PillClock, PillCountdown, PillDevices, PillLaptopBattery, PillSecurity, PillTrait, PillWarnings}, security::MicCameraStatus, utils::{Anchor, AnimationKey, Animator, FrameModel, ReservedSpace, cr_text_aligned, draw_smart_border, get_color_gradient, log_to_file, mix_color, rounded_rect_gradient}};
+use crate::{config::{Config, FrameColor}, data::{AlarmIcon, BatteryDevice, IconChange}, dbg_println, notifications::Notification, pills::{Pill, PillModuleTrait}, security::MicCameraStatus, utils::{TweenState, draw_smart_border, log_to_file, mix_color, rounded_rect_gradient}};
 
-// static DRAW_PILL: bool = true;
-// pub static DRAW_OLD_UI: bool = false;
-
-/* Trait that I'll use in the future, maybe
-pub trait HeimdallrLayerTrait {
-    fn new (registry_state: RegistryState, output_state: OutputState, shm: Shm, config: Config);
-    fn update_security_data (&mut self, data: MicCameraStatus);
-    fn update_battery_data (&mut self, data: Option<crate::battery::BatteryStats>);
-    fn update_devices_data (&mut self, data: Vec<BatteryDevice>);
-    fn check_redraw_timeout(&mut self);
-    fn request_redraw(&mut self, _reason: &str);
-    fn maybe_redraw(&mut self, qh: &QueueHandle<Self>);
-    fn update_notification_list (&mut self, new_notif_opt: Option<Notification>);
-    fn add_icon(&mut self, id: &str, symbol: &str, color: (f64, f64, f64, f64), warn: f64, info: Option<String>) -> IconChange;
-    fn remove_icon(&mut self, id: &str) -> bool;
-    fn remove_notification(&mut self) -> bool;
-    fn show_notification(&mut self, new_idx: i32) -> bool;
-    fn show_value(&mut self, value: f64, _kind: Option<&str>) -> bool;
-}
-*/
 static mut AVG_DUR: u128 = 0;
 static mut AVG_CNT: i64 = -5;
 
-// ! To be deleted
 pub struct HeimdallrLayer {
     pub(crate) registry_state: RegistryState,
     pub(crate) output_state: OutputState,
@@ -51,7 +29,7 @@ pub struct HeimdallrLayer {
     pub(crate) first_configure: bool,
     // pub(crate) input_region: Option<wl_region::WlRegion>,
     pub(crate) icons: HashMap<String, AlarmIcon>,
-    pub(crate) battery_integrated: Option<crate::battery::BatteryStats>,
+    // pub(crate) battery_integrated: Option<crate::battery::BatteryStats>,
     pub(crate) needs_redraw: bool,
     pub(crate) last_redraw: Instant,
     pub(crate) redraw_interval: [Duration; 2],
@@ -59,28 +37,17 @@ pub struct HeimdallrLayer {
     pub(crate) current_buffer_idx: usize,
     pub(crate) config: crate::config::Config,
     pub(crate) notifications: Vec<crate::notifications::Notification>,
-    pub(crate) notification_idx: usize,
-    pub(crate) wob_value: f64,
+    pub(crate) wob_value: TweenState,
     pub(crate) wob_expiration: Option<Instant>,
     pub(crate) ratatoskr_connected: bool,
-    pub(crate) animator: Animator,
-    pub(crate) frame_model: FrameModel,
+    // pub(crate) animator: Animator,
+    // pub(crate) frame_model: FrameModel,
     pub(crate) is_waiting_for_frame: bool,
-    pub(crate) clock: crate::clock::ClockWrapper,
-    pub(crate) security: crate::security::MicCameraStatus,
-    pub(crate) last_security_width: f64,
-    pub(crate) last_security_text: String,
+    // pub(crate) security: crate::security::MicCameraStatus,
     pub(crate) batteries: Vec<BatteryDevice>,
-    pub(crate) last_batteries_width: f64,
-    pub(crate) last_batteries_text: String,
     pub(crate) batteries_pristine: bool,
-    pub(crate) timer: Countdown,
-    pub(crate) pill_clock: PillClock,
-    pub(crate) pill_battery: PillLaptopBattery,
-    pub(crate) pill_warnings: PillWarnings,
-    pub(crate) pill_security: PillSecurity,
-    pub(crate) pill_countdown: PillCountdown,
-    pub(crate) pill_devices: PillDevices,
+    // pub(crate) timer: Countdown,
+    pub pill_container: Pill,
     pub(crate) pills_are_animating: bool
 
 }
@@ -92,12 +59,6 @@ impl HeimdallrLayer {
         shm: Shm,
         config: Config
     ) -> Self {
-
-        let clock = match (config.show_clock.clone(), config.backend.is_legacy()) {
-            (ClockCfg::Clock1, true) => ClockWrapper::Clock1(Clock1::new()),
-            (ClockCfg::Clock2, true) => ClockWrapper::Clock2(Clock2::new()),
-            _ => ClockWrapper::NoClock(NoClock::new())
-        };
 
         HeimdallrLayer {
             registry_state,
@@ -111,57 +72,59 @@ impl HeimdallrLayer {
             // input_region: Some(empty_region),
             icons: HashMap::new(),
             ratatoskr_connected: false,
-            battery_integrated: None,
+            // battery_integrated: None,
             needs_redraw: true,
             last_redraw: Instant::now(),
-            redraw_interval: [Duration::from_millis(1_000), Duration::from_millis(60_000)],
+            redraw_interval: [Duration::from_millis(500), Duration::from_millis(60_000)],
             buffers: [None, None],
             current_buffer_idx: 0,
             config,
             notifications: vec![],
-            notification_idx: 0,
+            // notification_idx: 0,
             wob_expiration: None,
-            wob_value: 0.0,
-            animator: Animator::new(),
-            frame_model: FrameModel::new(),
+            wob_value: TweenState::new(0.0),
+            // animator: Animator::new(),
+            // frame_model: FrameModel::new(),
             is_waiting_for_frame: false,
-            clock,
-            security: MicCameraStatus { mic_active: vec!(), camera_active: vec!(), pristine: false },
-            last_security_width: 0.0,
-            last_security_text: "".to_string(),
+            // security: MicCameraStatus { mic_active: vec!(), camera_active: vec!(), pristine: false },
             batteries: vec![],
-            last_batteries_width: 0.0,
-            last_batteries_text: "".to_string(),
             batteries_pristine: false,
-            timer: Countdown::new(),
-            pill_clock: PillClock::new(),
-            pill_battery: PillLaptopBattery::new(),
-            pill_warnings: PillWarnings::new(),
-            pill_security: PillSecurity::new(),
-            pill_countdown: PillCountdown::new(),
-            pill_devices: PillDevices::new(),
+            // timer: Countdown::new(),
+            pill_container: Pill::new(),
             pills_are_animating: false
         }
     }
 
     pub fn update_security_data (&mut self, data: MicCameraStatus) {
-        self.security = data;
+        self.pill_container.update_data_security(&data);
+        // self.security = data; // TODO: Deprecated? Remove it?
     }
 
     pub fn update_battery_data (&mut self, data: Option<crate::battery::BatteryStats>) {
-        self.battery_integrated = data;
+        // self.battery_integrated = data;
+        if self.pill_container.update_data_battery(data, self.config.show_watts) {
+            self.pill_container.recalculate_normal_target();
+            self.request_redraw("pill_container animation");
+        }
     }
 
     pub fn update_devices_data (&mut self, data: Vec<BatteryDevice>) {
         self.batteries = data;
         self.batteries_pristine = true;
+        let _ = self.pill_container.update_data_devices(self.batteries.clone());
+    }
+
+    pub fn set_countdown (&mut self, input: &str) -> Result<u64, &'static str> {
+        self.pill_container.set_countdown(input)
     }
 
     pub fn check_redraw_timeout(&mut self) {
 
-        if self.timer.is_active() && self.last_redraw.elapsed() > Duration::from_secs(1) {
+        // if self.pill_container.is_countdown_active() && self.last_redraw.elapsed() > Duration::from_secs(1) {
+        if self.pill_container.update_data_countdown() {
             self.request_redraw("timer tick");
-        } else if self.last_redraw.elapsed() > self.redraw_interval[1] {
+        // } else if self.last_redraw.elapsed() > self.redraw_interval[1] {
+        } else if self.pill_container.update_data_clock() {
             self.request_redraw("time");
         }
     }
@@ -176,15 +139,22 @@ impl HeimdallrLayer {
         // Now, updateNotificationList is for both adding new, and removing expired, notifications
         self.update_notification_list(None);
 
+        if self.pill_container.needs_redraw || self.pill_container.needs_recalc {
+            self.needs_redraw = true;
+            eprintln!("=============== DIRTY PILL ============");
+        } else {
+            // eprintln!("=============== CLEAN PILL ============");
+        }
+
         // Check if wob-like must be closed
         if let Some(exp) = self.wob_expiration {
             if Instant::now() > exp {
-                self.animator.animate_property(&self.frame_model, AnimationKey::WobHeightRatio, 0.0, 500);
+                self.wob_value.set_target(0.0);
                 self.wob_expiration = None;
             }
         }
 
-        let animating = self.animator.step(&mut self.frame_model) || self.pills_are_animating;
+        let animating = self.wob_value.step() || self.pills_are_animating;
         if !animating { // Now, we skip calling draw only if we are not animating something
 
             if !self.needs_redraw {
@@ -264,20 +234,13 @@ impl HeimdallrLayer {
                     .unwrap()
                 };
 
-                self.update_timer_icon();
+                // self.update_timer_icon();
 
                 let cr = Context::new(&surface).unwrap();
-                self.check_batteries_data(&cr);
-                self.check_security_data(&cr);
 
                 self.draw_myframe(cr.clone());
-                self.clock.draw(cr.clone(), self.height as i32, self.width, self.battery_integrated.clone());
-                if self.notifications.len() > 0 { self.draw_notification(cr.clone()) }
 
-                self.draw_batteries(cr.clone());
-                if self.config.backend.is_legacy() { self.draw_security(cr.clone()); }
-                // self.draw_timer_2(&cr);
-                if self.config.backend.is_pills() { self.draw_test_pill(&cr); }
+                self.draw_test_pill(&cr);
 
                 let layer = self.layer.clone().unwrap();
                 let buffer = self.buffers[buffer_idx].as_ref().unwrap();
@@ -310,197 +273,28 @@ impl HeimdallrLayer {
         }
     }
 
-    fn build_batteries_text (&self) -> String {
-        self.batteries.iter().map(|b| format!("{}: {:.0}%", b.name, b.percentage)).collect::<Vec<_>>().join("  ·  ")
-    }
-
-    fn check_batteries_data(&mut self, cr: &Context) {
-        if self.batteries_pristine {
-            if !self.config.backend.is_legacy() { self.batteries_pristine = false; }
-            let text = self.build_batteries_text();
-            self.last_batteries_text = text;
-            self.animator.animate_property(
-                &self.frame_model,
-                AnimationKey::BatteriesNotchRatio,
-                if self.last_batteries_text.is_empty() { 0.0 } else { 1.0 },
-                200
-            );
-            if self.last_batteries_text.is_empty() {
-                return;
-            }
-            cr.set_font_size(10.0);
-            cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
-            if let Ok(ext) = cr.text_extents(&self.last_batteries_text) {
-                self.last_batteries_width = ext.width() + 6.0;
-            } else {
-                self.last_batteries_width = 0.0;
-            }
-        }
-    }
-    
-    fn build_security_text (&self) -> String {
-        // Used by OLD UI (no pills UI)
-        /* (
-            self.security.mic_active.clone().into_iter().map(|s| format!("MIC {s}")).collect::<Vec<_>>().join("  ·  "), 
-            self.security.camera_active.clone().into_iter().map(|s| format!("CAM {s}")).collect::<Vec<_>>().join("  ·  ")
-        ) */
-       self.security.mic_active.clone().into_iter().map(|s| format!("MIC {s}")).chain(self.security.camera_active.clone().into_iter().map(|s| format!("CAM {s}"))).collect::<Vec<_>>().join("  ·  ")
-    }
-
-    fn check_security_data(&mut self, cr: &Context) {
-        // Used by old UI, not by pills UI
-        if self.security.pristine {
-            if self.config.backend.is_legacy() { self.security.pristine = false; }
-            let text = self.build_security_text();
-            self.last_security_text = text;
-            self.animator.animate_property(
-                &self.frame_model,
-                AnimationKey::SecurityNotchRatio,
-                if self.last_security_text.is_empty() { 0.0 } else { 1.0 },
-                200
-            );
-            if self.last_security_text.is_empty() {
-                return;
-            }
-            cr.set_font_size(10.0);
-            cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
-            if let Ok(ext) = cr.text_extents(&self.last_security_text) {
-                self.last_security_width = ext.width() + 6.0;
-            } else {
-                self.last_security_width = 0.0;
-            }
-        }
-    }
-
-    fn draw_batteries (&mut self, cr: Context) {
-        if self.last_batteries_text.len() > 0 {
-            let color = (1.0, 1.0, 1.0, self.frame_model.batteries_height);
-            
-
-            cr.set_source_rgba(color.0, color.1, color.2, color.3);
-            cr.set_font_size(10.0);
-            cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
-            // let x = 2.0;
-            // let y = self.height as f64 / 2.0;
-            // let (wt, ht) = cr_text_rotated(&cr, &self.last_batteries_text, x, y, 0.5, 0.0, -90.0).unwrap();
-            let x = self.width as f64 - self.clock.get_reserved_width() - 4.0;
-            let y = self.height as f64 - 1.0;
-            cr_text_aligned(cr, self.last_batteries_text.clone(), x, y, 1.0, 1.0);
-        }
-    }
-
-    fn draw_security (&mut self, cr: Context) {
-        let draw_mic = self.security.mic_active.len() > 0;
-        let draw_cam = self.security.camera_active.len() > 0;
-        if draw_mic || draw_cam {
-            let r = 4.0;
-            let mic_color = (1.0, 0.58, 0.0, self.frame_model.security_height);
-            // let cam_color = (0.2, 0.78, 0.35, 1.0);
-            /* let x = 1.0;
-            let y = 1.0;
-            let w = 10.0;
-            let h = 10.0;
-            let steps = if draw_mic && draw_cam { vec![(0.0, mic_color), (1.0, cam_color)] } else if draw_mic { vec![(0.0, mic_color)] } else { vec![(0.0, cam_color)] };
-            rounded_rect_gradient(&cr, x, y, w, h, r, steps, crate::utils::GradientDirection::Horizontal, true, None); */
-
-            cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
-            cr.set_font_size(10.0);
-
-            let steps = vec![(0.0, (mic_color.0, mic_color.1, mic_color.2, mic_color.3))];
-            rounded_rect_gradient(&cr, (self.width as f64 - self.last_security_width) / 2.0, 0.0, self.last_security_width, 12.0, r, steps, crate::utils::GradientDirection::Horizontal, false, None);
-
-            cr.set_source_rgba(0.0, 0.0, 0.0 ,1.0);
-            // cr.move_to(14.0, 9.0);
-            // cr.show_text(&mic).unwrap();
-            cr_text_aligned(cr.clone(), self.last_security_text.clone(), self.width as f64 / 2.0, 2.0, 0.5, 0.0);
-            /* for app in self.security.mic_active.clone().into_iter() {
-                cr.move_to(14.0, 9.0);
-                cr.show_text(&app).unwrap();
-                // let w = cr.text_extents(&text).unwrap().width();
-                // cr_text_aligned(cr.clone(), app.into(), self.width / 2.0, 0.5, 0.0);
-            } */
-        }
-    }
-
     fn draw_test_pill (&mut self, cr: &Context) {
         self.pills_are_animating = false;
-        // I'm experimenting with new UI: some of this shit will be moved out of here, ofc!
 
-        self.pill_clock.update_data(&cr);
-        self.pill_battery.update_data(&cr, self.battery_integrated.clone());
-
-        let icons: Vec<AlarmIcon> = self.icons.values().cloned().filter(|icon| icon.symbol != "󱫡" && icon.symbol != "󱫌").collect();
-        self.pill_warnings.update_data(&cr, icons);
-
-
-        /* Pills without animation */
-        let pill_clock_rect = self.pill_clock.get_desired_rect(); // pill_clock.get_current_rect();
-        let pill_battery_rect = self.pill_battery.get_desired_rect();
-
-
-        /* Update warnings pill animation */
-        if self.pill_warnings.step_animation() {
-            dbg_println!("Pill warning animation");
-            self.pills_are_animating = true;
-            self.request_redraw("pill_warning animation");
-        } else {
-            dbg_println!("Pill warning is NOT animating");
+        if self.pill_container.needs_recalc {
+            dbg_println!("===============   RECALC   ============");
+            self.pill_container.recalculate_normal_target();
         }
-        let pill_warnings_rect = self.pill_warnings.get_current_rect();
-        // eprintln!("pill_warnings_rect current rect {pill_warnings_rect:?}");
 
 
-        /* Update countdown pill (to be unified) */
-        let c = Countdown {
-            state: self.timer.state,
-            total_paused_time: self.timer.total_paused_time,
-            current_pause_start: self.timer.current_pause_start,
-            direction: self.timer.direction.clone()
-        };
-        // self.pill_countdown.update_data(&cr, c);
-
-        if self.pill_countdown.step_animation() {
-            dbg_println!("Pill countdown animation");
+        // UPDATE ANIMATIONS
+        if self.pill_container.step_animation() {
             self.pills_are_animating = true;
-            self.request_redraw("pill_countdown animation");
+            self.request_redraw("pill_container animation");
         } else {
-            // eprintln!("Pill countdown is NOT animating");
+            // eprintln!("Pill container is NOT animating");
         }
-        let pill_countdown_rect = self.pill_countdown.get_current_rect();
 
+        // OLD?
         
-        /* Update security pill */
-        if self.security.pristine {
-            self.pill_security.update_data(&cr, &self.security);
-            self.security.pristine = false;
-        }
-
-        if self.pill_security.step_animation() {
-            dbg_println!("Pill security animation");
-            self.pills_are_animating = true;
-            self.request_redraw("pill_security animation");
-        } else {
-            // eprintln!("Pill security is NOT animating");
-        }
-
-        let pill_security_rect = self.pill_security.get_current_rect();
-
-        if self.batteries_pristine {
-            self.pill_devices.update_data(&cr, self.batteries.clone());
-            self.batteries_pristine = false;
-        }
-
-        if self.pill_devices.step_animation() {
-            dbg_println!("Pill countdown animation");
-            self.pills_are_animating = true;
-            self.request_redraw("pill_devices animation");
-        } else {
-            // eprintln!("Pill countdown is NOT animating");
-        }
-        let pill_devices_rect = self.pill_devices.get_current_rect();
 
         let r = 8.0;
-        let pill_bg_color: (f64, f64, f64, f64) = (0.1, 0.1, 0.15, 0.85);
+        let pill_bg_color: (f64, f64, f64, f64) = self.pill_container.get_bg_color();
         let mut pill_border_color: Option<(f64, f64, f64, f64)> = match self.config.frame_color {
             FrameColor::Rgba(r, g, b, a) => Some((r, g, b, a)),
             FrameColor::WorstResource => self
@@ -511,185 +305,28 @@ impl HeimdallrLayer {
             FrameColor::None /* | FrameColor::Random */ => None
         };
 
-        let rect_width = 
-                pill_clock_rect.0 +
-                if pill_battery_rect.0 > 0.0 { pill_battery_rect.0 } else { 0.0 } +
-                if pill_countdown_rect.0 > 0.0 { pill_countdown_rect.0 } else { 0.0 } + 
-                if pill_security_rect.0 > 0.0 { pill_security_rect.0 } else { 0.0 } +
-                if pill_devices_rect.0 > 0.0 { pill_devices_rect.0 } else { 0.0 } +
-                if pill_warnings_rect.0 > 0.0 { pill_warnings_rect.0 } else { 0.0 };
-        let rect_height = 26.0;
+        let (rect_width, rect_height) = self.pill_container.get_current_rect();
+        let (rect_width_end, _rect_height_end) = self.pill_container.get_desired_rect();
         let rect_left = (self.width as f64 - rect_width) / 2.0;
-        let rect_top = 2.0 + 24.0 * self.frame_model.notif_height_ratio;
-        let mut x = rect_left;
+        let rect_left_end = (self.width as f64 - rect_width_end) / 2.0;
+        let rect_top = 2.0;
 
         let mut pill_bg_steps = vec![(0.0, pill_bg_color)];
 
         // wob-like
-        if self.frame_model.wob_height > 0.0 { // if self.wob_expiration.is_some() {
+        let wob_ratio = self.wob_value.value();
+        if wob_ratio > 0.0 {
             let wob_color_base = (0.6, 0.6, 0.7, pill_bg_color.3);
-            let wob_color = mix_color(pill_bg_color, wob_color_base, self.frame_model.wob_height);
-            pill_border_color = Some(mix_color(pill_border_color.unwrap_or((0.0, 0.0, 0.0, 0.0)), wob_color_base, self.frame_model.wob_height));
-            let mut steps = vec![(0.0, wob_color)]; // TODO remove links to global animation system?
-            steps.push((self.wob_value, pill_bg_color));
+            let wob_color = mix_color(pill_bg_color, wob_color_base, wob_ratio.max(0.5));
+            pill_border_color = Some(mix_color(pill_border_color.unwrap_or((0.0, 0.0, 0.0, 0.0)), wob_color_base, wob_ratio));
+            let mut steps = vec![(0.0, wob_color)];
+            steps.push((wob_ratio, pill_bg_color));
             pill_bg_steps = steps;
         }
 
-        cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
-        cr.set_font_size(16.0);
-
-        /* let steps = vec![
-            (0.0, (color.0, color.1, color.2, color.3)),
-            (self.timer.progress(), (color.0, color.1, color.2, 0.5))
-        ]; */
-        // rounded_rect_gradient(&cr, rect_right - rect_width, rect_top, rect_width, rect_height, r, steps, crate::utils::GradientDirection::Horizontal, false, Some((0.0, 0.0, 0.0, 0.0)));
-
-        /* let frame_color = match self.config.frame_color {
-            FrameColor::Rgba(r, g, b, a) => Some((r, g, b, a)),
-            FrameColor::WorstResource => self
-                .icons
-                .values()
-                .max_by(|a, b| a.warn.partial_cmp(&b.warn).unwrap_or(std::cmp::Ordering::Equal))
-                .map(|icon| icon.color),
-            FrameColor::None /* | FrameColor::Random */ => None
-        }; */
-
         rounded_rect_gradient(&cr, rect_left, rect_top, rect_width, rect_height, r, pill_bg_steps, crate::utils::GradientDirection::Horizontal, false, pill_border_color);
 
-        self.pill_clock.draw(&cr, pill_clock_rect.0, rect_height, x, rect_top);
-        x += pill_clock_rect.0;
-
-        if pill_battery_rect.0 > 0.0 {
-            self.pill_battery.draw(&cr, pill_battery_rect.0, rect_height, x, rect_top);
-            x += pill_battery_rect.0;
-        }
-
-        if pill_countdown_rect.0 > 0.0 {
-            self.pill_countdown.draw(&cr, pill_countdown_rect.0, rect_height, x, rect_top);
-            x += pill_countdown_rect.0;
-        }
-
-        if pill_security_rect.0 > 0.0 {
-            self.pill_security.draw(&cr, pill_security_rect.0, rect_height, x, rect_top);
-            x += pill_security_rect.0;
-        }
-
-        if pill_devices_rect.0 > 0.0 {
-            self.pill_devices.draw(&cr, pill_devices_rect.0, rect_height, x, rect_top);
-            x += pill_devices_rect.0;
-        }
-
-        if pill_warnings_rect.0 > 0.0 {
-            self.pill_warnings.draw(&cr, pill_warnings_rect.0, rect_height, x, rect_top);
-            x += pill_warnings_rect.0;
-        }
-    }
-
-    fn draw_timer (&mut self, cr: &Context) {
-        if !self.timer.is_active() {
-            return;
-        }
-        let r = 5.0;
-        let color = (1.0, 0.58, 0.0, 1.0);
-        let rect_width = 100.0;
-        let rect_height = 12.0;
-        let rect_right = self.width as f64 - self.clock.get_reserved_width() - 16.0;
-        let rect_top = 10.0;
-        // let cam_color = (0.2, 0.78, 0.35, 1.0);
-        /* let x = 1.0;
-        let y = 1.0;
-        let w = 10.0;
-        let h = 10.0;
-        let steps = if draw_mic && draw_cam { vec![(0.0, mic_color), (1.0, cam_color)] } else if draw_mic { vec![(0.0, mic_color)] } else { vec![(0.0, cam_color)] };
-        rounded_rect_gradient(&cr, x, y, w, h, r, steps, crate::utils::GradientDirection::Horizontal, true, None); */
-
-        cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
-        cr.set_font_size(24.0);
-
-        let steps = vec![
-            (0.0, (color.0, color.1, color.2, color.3)),
-            (self.timer.progress(), (color.0, color.1, color.2, 0.5))
-        ];
-        // rounded_rect_gradient(&cr, rect_right - rect_width, rect_top, rect_width, rect_height, r, steps, crate::utils::GradientDirection::Horizontal, false, Some((0.0, 0.0, 0.0, 0.0)));
-
-        let (passed, mut time) = self.timer.format_custom_duration();
-        if passed {
-            time = format!("+{time}");
-        }
-
-        cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
-        cr_text_aligned(cr.clone(), time.clone(), rect_right - 1.0, rect_top + rect_height / 2.0 - 1.0, 1.0, 0.5);
-
-        cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
-        cr_text_aligned(cr.clone(), time.clone(), rect_right + 1.0, rect_top + rect_height / 2.0 + 1.0, 1.0, 0.5);
-
-        let color = if passed { (1.0, 0.0, 0.3, 1.0) } else if self.timer.progress() < 0.9 { (1.0, 1.0, 1.0, 0.75) } else { (color.0, color.1, color.2, 0.75) };
-        cr.set_source_rgba(color.0, color.1, color.2, color.3);
-        cr_text_aligned(cr.clone(), time.clone(), rect_right, rect_top + rect_height / 2.0, 1.0, 0.5);
-
-        eprintln!("Timer {},{} (progress {})", passed, time, self.timer.progress());
-    }
-
-    fn draw_timer_2 (&mut self, cr: &Context) {
-        if !self.timer.is_active() {
-            return;
-        }
-        let r = 5.0;
-        let color = (1.0, 0.58, 0.0, 1.0);
-        let rect_width = 100.0;
-        let rect_height = 12.0;
-        let rect_right = self.width as f64 - self.clock.get_reserved_width() - 16.0;
-        let rect_top = 6.0;
-        // let cam_color = (0.2, 0.78, 0.35, 1.0);
-        /* let x = 1.0;
-        let y = 1.0;
-        let w = 10.0;
-        let h = 10.0;
-        let steps = if draw_mic && draw_cam { vec![(0.0, mic_color), (1.0, cam_color)] } else if draw_mic { vec![(0.0, mic_color)] } else { vec![(0.0, cam_color)] };
-        rounded_rect_gradient(&cr, x, y, w, h, r, steps, crate::utils::GradientDirection::Horizontal, true, None); */
-
-        let (passed, mut time) = self.timer.format_custom_duration();
-        if passed {
-            time = format!("+{time}");
-        }
-
-        let color = if passed { (1.0, 0.0, 0.3, 1.0) } else if self.timer.progress() < 0.9 { (1.0, 1.0, 1.0, 0.75) } else { (color.0, color.1, color.2, 0.75) };
-        // cr.set_source_rgba(color.0, color.1, color.2, color.3);
-
-        cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
-        cr.set_font_size(10.0);
-
-        let steps = vec![
-            (0.0, (color.0, color.1, color.2, color.3)),
-            (self.timer.progress(), (color.0, color.1, color.2, color.3 * 0.5))
-        ];
-        rounded_rect_gradient(&cr, rect_right - rect_width, rect_top, rect_width, rect_height, r, steps, crate::utils::GradientDirection::Horizontal, false, Some((0.0, 0.0, 0.0, 0.0)));
-
-        cr.set_source_rgba(0.0, 0.0, 0.0 ,1.0);
-        // cr.move_to(14.0, 9.0);
-        // cr.show_text(&mic).unwrap();
-        // let (passed, time) = self.timer.format_custom_duration();
-        cr_text_aligned(cr.clone(), time, rect_right - rect_width / 2.0, rect_top + rect_height / 2.0, 0.5, 0.5);
-        /* for app in self.security.mic_active.clone().into_iter() {
-            cr.move_to(14.0, 9.0);
-            cr.show_text(&app).unwrap();
-            // let w = cr.text_extents(&text).unwrap().width();
-            // cr_text_aligned(cr.clone(), app.into(), self.width / 2.0, 0.5, 0.0);
-        } */
-    }
-
-    fn update_timer_icon (&mut self) {
-        // Used by old UI (no pill UI)
-        // 󱫟 for pause
-        // 󱫌 alert
-        if self.timer.is_active() {
-            let status = self.timer.format_custom_duration();
-            let w = if status.0 { 1.0 } else { self.timer.get_warning() };
-            let icon = if status.0 { "󱫌" } else { "󱫡" };
-            self.add_icon("timer", icon, get_color_gradient(w), w, Some(status.1));
-        } else {
-            self.remove_icon("timer");
-        }
+        self.pill_container.draw(&cr, rect_width_end, rect_height, rect_left_end, rect_top);
     }
 
     fn draw_myframe(&mut self, cr: Context) {
@@ -701,13 +338,6 @@ impl HeimdallrLayer {
         cr.paint().unwrap();
         cr.set_operator(cairo::Operator::Over);
 
-        // icons space reserved
-        let mut y_offset = self.height as f64 - 8.0; // parte dal basso
-        let res_w = 24.0;
-        // let res_h = if self.ratatoskr_connected { (self.icons.len() as f64) * 30.0 } else { 30.0 };
-        let res_h = if self.config.backend.is_legacy() { self.frame_model.icons_ratio * 24.0 } else { 0.0 };
-        let wob_h = if self.config.backend.is_legacy() { 24.0 * self.frame_model.wob_height } else { 0.0 };
-
         // Draw rounded rectangle frame
         let thickness = 1.0;
         let radius = 25.0;
@@ -715,33 +345,22 @@ impl HeimdallrLayer {
 
         let w = self.width as f64;
         let h = self.height as f64;
-        let w_hole = w - thickness - self.clock.get_reserved_width() - 2.0;
+        let w_hole = w - thickness - 2.0;
 
-        let top = thickness / 2.0 + /*if self.notifications.len() > 0 { 24.0 } else { 0.0 }*/24.0 * self.frame_model.notif_height_ratio;
+        let top = thickness / 2.0;
+
+        // TODO: In the pill-ui, the hole will be always a rectangle, so we can use a simplified version of rounded_big_hole and remove the ReservedSpace stuff, don't we?
+        // TODO: In the pill-ui we can also have rounded corners as separated surfaces? We lose the ability to have a border but we "lose" a lot of memory footprint too! But what if, in the future, pill will be able to expand vertically and host big component? We'll need potentially the entire screen in the buffer, just like now.
 
         // Outer black border + fill
         // rounded_big_hole(&cr, thickness / 2.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h, wob_h);
 
-        let mut spaces = vec![
+        let spaces = vec![
             // ReservedSpace { anchor: Anchor::BottomRight, width: 100.0, height: 40.0 }
             // ReservedSpace { anchor: Anchor::BottomLeft, width: res_w, height: res_h }
             // ReservedSpace { anchor: Anchor::TopRight, width: 90.0, height: 20.0 }
         ];
-        // if let Some(bat) = &self.battery_integrated {
-        if self.last_batteries_text.len() > 0 {
-            spaces.push(ReservedSpace { anchor: Anchor::BottomRight, width: self.last_batteries_width, height: 14.0 });
-        }
-        if res_h > 0.0 {
-            spaces.push(ReservedSpace { anchor: Anchor::BottomLeft, width: res_w, height: res_h });
-        }
-        if wob_h > 0.0 {
-            spaces.push(ReservedSpace { anchor: Anchor::BottomCenter, width: 200.0, height: wob_h });
-        }
-        if self.frame_model.security_height > 0.0 /* && (self.security.mic_active.len() > 0 || self.security.camera_active.len() > 0) */ {
-            cr.set_font_size(10.0);
-            cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
-            spaces.push(ReservedSpace { anchor: Anchor::TopCenter, width: self.last_security_width + 2.0, height: 14.0 * self.frame_model.security_height });
-        }
+
         draw_smart_border(&cr, thickness / 2.0, top, w_hole, h - thickness/2.0 - top, w / 2.0, h / 2.0, radius, radius2, &&spaces);
 
         cr.set_fill_rule(cairo::FillRule::EvenOdd);
@@ -768,174 +387,9 @@ impl HeimdallrLayer {
             cr.fill().unwrap();
         }
 
-        if self.config.backend.is_legacy() {
-            // wob-like
-            let mut steps = vec![(0.0, (1.0, 1.0, 1.0, self.frame_model.wob_height))];
-            let xc = (self.width as f64) / 2.0;
-            if wob_h > 2.0 {
-                match self.config.frame_color {
-                    FrameColor::None => {
-                        steps.push((self.wob_value, (1.0, 1.0, 1.0, 0.3)));
-                    },
-                    _ => {
-                        steps.push((self.wob_value, (0.0, 0.0, 0.0, 0.0)));
-                    }
-                }
-
-                let wob_half_width = 98.0;
-                let wob_height = wob_h - 4.0;
-                if wob_height > 0.0 {
-                    let left = xc - wob_half_width;
-                    let top = h - thickness - (thickness / 2.0) - wob_h + 3.0;
-                    rounded_rect_gradient(&cr, left, top, wob_half_width * 2.0, wob_height, wob_h.min(radius2-1.0), steps, crate::utils::GradientDirection::Horizontal, false, None);
-                }
-            }
-        }
-
-
-        // Draw battery level if integrated battery is present
-
-        /* if let Some(bat) = &self.battery_integrated {
-            let x = self.width as f64 - 2.0;
-            let y = self.height as f64 - 0.0;
-            cr.set_source_rgba(1.0, 1.0, 1.0 ,1.0);
-            cr.set_font_size(9.0);
-
-            cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
-            let (wt, ht) = cr_text_rotated(&cr, &*format!("{:.0}%", bat.percentage), x, y - 2.0, 1.0, 0.0, 90.0).unwrap();
-
-            cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
-            let _ = cr_text_rotated(&cr, "󰌢", x, y - wt - 2.0, 1.0,0.0, 90.0);
-        } */
-
-        /* let mut x = self.width as f64 - self.clock.get_reserved_width() - 2.0 - 42.0;
-        let mut y = 2.0; // self.height as f64 - 2.0
-        if let Some(bat) = &self.battery_integrated {
-            // spaces.push(ReservedSpace { anchor: Anchor::BottomRight, width: 60.0, height: 20.0 });
-            if bat.state == crate::battery::BatteryState::Charging {
-                cr.set_source_rgba(0.1, 1.0, 0.2, 1.0);
-            } else if bat.state == crate::battery::BatteryState::Discharging {
-                cr.set_source_rgba(1.0, 0.1, 0.2, 1.0);
-            } else {
-                cr.set_source_rgba(1.0, 1.0, 1.0 ,1.0);
-            }
-            cr.set_font_size(10.0);
-
-            cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
-            cr_text_aligned(cr.clone(), "󰌢".to_string(), x, y, 0.0, 0.0);
-
-            cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
-            cr_text_aligned(cr.clone(), format!("{:.0}%", bat.percentage), x + 14.0, y, 0.0, 0.0);
-        }
-
-        y += 14.0;
-        cr.set_source_rgba(1.0, 1.0, 1.0 ,1.0);
-        cr.set_font_size(10.0);
-
-        cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
-        cr_text_aligned(cr.clone(), "󰦋".to_string(), x, y, 0.0, 0.0);
-
-        cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
-        cr_text_aligned(cr.clone(), format!("{:.0}%", 90.0), x + 14.0, y, 0.0, 0.0);
-        */
-
-        // === Draw alarm icons ===
-        
-        if self.config.backend.is_legacy() {
-            let mut switched = true;
-            for icon in self.icons.values() {
-                if switched {
-                    cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
-                    cr.set_font_size(16.0);
-                }
-                cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
-                cr.move_to(4.0, y_offset);
-                cr.select_font_face("Symbols Nerd Font Mono", FontSlant::Normal, cairo::FontWeight::Normal);
-                cr.show_text(&icon.symbol).unwrap();
-                if let Some(info) = &icon.info {
-                    switched = true;
-                    cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
-                    cr.set_font_size(12.0);
-
-                    /* cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
-                    cr.move_to(24.0 - 1.0, y_offset - 1.0);
-                    cr.show_text(&info).unwrap();
-
-                    cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
-                    cr.move_to(24.0, y_offset);
-                    cr.show_text(&info).unwrap(); */
-
-                    cr.move_to(24.0, y_offset);
-                    cr.text_path(&info);
-        
-                    let path = cr.copy_path().expect("Valid path");
-
-                    // border (stroke)
-                    cr.set_source_rgb(0.0, 0.0, 0.0);
-                    cr.set_line_width(2.0);
-                    cr.set_line_join(cairo::LineJoin::Round);
-                    cr.stroke().expect("Stroke failed");
-
-                    // text (fill)
-                    cr.append_path(&path);
-                    cr.set_source_rgba(icon.color.0, icon.color.1, icon.color.2, icon.color.3);
-                    cr.fill().expect("Fill failed");
-
-
-                } else {
-                    switched = false;
-                }
-                y_offset -= 24.0;
-            }
-        }
-
     }
 
-    fn draw_notification(&mut self, cr: Context) {
-        if self.notification_idx >= self.notifications.len() {
-            self.notification_idx = self.notifications.len() - 1;
-        }
-        // icon example: /home/vncnz/.cache/ignis/notifications/images/64
-        cr.set_operator(cairo::Operator::Over);
-
-        // let top = thickness / 2.0 + if self.notifications.len() > 0 { 24.0 } else { 0.0 };
-        let top = 12.0;
-        let notif_to_show = &self.notifications[0];
-
-        cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Bold);
-
-        let mut x = 25.0;
-
-        cr.set_font_size(16.0);
-        if let FrameColor::Rgba(r,g,b,a) = self.config.frame_color {
-            cr.set_source_rgba(r,g,b,if self.notifications.len() > 1 { a } else { a/2.0 } );
-        } else {
-            cr.set_source_rgba(1.0,1.0,1.0,if self.notifications.len() > 1 { 1.0 } else { 0.5 } );
-        }
-        let idx = format!("{}/{}", self.notification_idx+1, self.notifications.len());
-        let (idx_width, _) = cr_text_aligned(cr.clone(), idx, x, top, 0.0, 0.5);
-        x += idx_width + 10.0;
-
-        cr.set_font_size(16.0);
-        if notif_to_show.urgency == 2 {
-            cr.set_source_rgba(1.0, 0.3, 0.3, 1.0);
-        } else {
-            cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
-        }
-        let (twidth, _) = cr_text_aligned(cr.clone(), notif_to_show.app_name.clone(), x, top, 0.0, 0.5);
-        x += twidth + 10.0;
-
-        cr.set_font_size(14.0);
-        cr.set_source_rgba(1.0, 1.0, 1.0, 0.9);
-        let msg = if notif_to_show.body.is_empty() {
-            notif_to_show.summary.clone()
-        } else {
-            format!("{} / {}", notif_to_show.summary, notif_to_show.body)
-        };
-        cr_text_aligned(cr.clone(), msg, x, top, 0.0, 0.5);
-    }
-
-    pub fn update_notification_list (&mut self, new_notif_opt: Option<Notification>) {
+    pub fn update_notification_list (&mut self, new_notif_opt: Option<Notification>) -> bool {
 
         let mut changed: bool = false;
         if let Some(new_notif) = new_notif_opt {
@@ -957,6 +411,13 @@ impl HeimdallrLayer {
             // let id = list.iter().map(|x| x.id).max().unwrap_or();
             
             self.notifications.insert(0, new_notif);
+
+            self.notifications.sort_by_key(|item| {
+                // false comes before true, so Some items (notifications with expiration) go to the front, None (notif. without expiration) to the back.
+                // Within Some, notifications are sorted chronologically (oldest notification first).
+                (item.expired_at.is_none(), item.expired_at)
+            });
+
             changed = true;
         }
 
@@ -967,14 +428,10 @@ impl HeimdallrLayer {
         changed = changed || (a != b);
 
         if changed {
-            self.animator.animate_property(
-                &self.frame_model,
-                AnimationKey::NotificationHeight,
-                if self.notifications.len() > 0 { 1.0 } else { 0.0 },
-                200
-            );
+            self.pill_container.update_data_notifications(&self.notifications);
             self.request_redraw("notifications updated");
         }
+        changed
 
     }
 }
@@ -1000,14 +457,16 @@ impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like
             },
         );
         if already_present {
+            if self.pill_container.update_data_warnings(&self.icons) {
+                // self.pill_container.recalculate_normal_target();
+                // self.request_redraw("pill_container animation");
+            }
             IconChange::Changed
         } else {
-            self.animator.animate_property(
-                &self.frame_model,
-                AnimationKey::IconsHeight,
-                self.icons.len() as f64,
-                200
-            );
+            if self.pill_container.update_data_warnings(&self.icons) {
+                // self.pill_container.recalculate_normal_target();
+                // self.request_redraw("pill_container animation");
+            }
             IconChange::Added
         }
     }
@@ -1015,55 +474,41 @@ impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like
     pub fn remove_icon(&mut self, id: &str) -> bool {
         let removed = self.icons.remove(id).is_some();
         if removed {
-            self.animator.animate_property(
-                &self.frame_model,
-                AnimationKey::IconsHeight,
-                self.icons.len() as f64,
-                200
-            );
+            if self.pill_container.update_data_warnings(&self.icons) {
+                // self.pill_container.recalculate_normal_target();
+                // self.request_redraw("pill_container animation");
+            }
         }
         removed
     }
 
     pub fn remove_notification(&mut self) -> bool {
-        if self.notifications.len() > self.notification_idx {
-            self.notifications.remove(self.notification_idx);
-            if self.notification_idx > self.notifications.len() { self.notification_idx = 0 }
-            return true
+        if self.notifications.len() > 0 {
+            self.notifications.remove(0);
+            self.pill_container.update_data_notifications(&self.notifications);
+            true
+        } else {
+            false
         }
-        return false
     }
     
+    /* #[deprecated]
     pub fn show_notification(&mut self, new_idx: i32) -> bool {
-        if new_idx >= 0 && new_idx < self.notifications.len() as i32 {
-           self.notification_idx = new_idx as usize;
-           return true
-        }
+        eprintln!("{} ({new_idx})", "Removed functionality".yellow());
         false
-    }
+    } */
 
     pub fn show_value(&mut self, value: f64, _kind: Option<&str>) -> bool {
-        let changed = self.wob_expiration.is_none() || self.wob_value != value;
+        let target = value.clamp(0.0, 1.0);
+        let changed = self.wob_expiration.is_none() || (self.wob_value.target() - target).abs() > f64::EPSILON;
         self.wob_expiration = Some(Instant::now() + Duration::from_millis(2000));
-        self.wob_value = value.clamp(0.0, 1.0);
+        self.wob_value.set_target(target);
+        if changed {
+            self.request_redraw("wob value changed");
+        }
         changed
     }
 }
-
-/* fn wob_rect (cr: &Context, xc: f64, yb: f64, r2: f64, wob_h: f64, wob_value: f64) {
-    if wob_h > 0.0 {
-        cr.new_sub_path();
-
-        let r2_safe = if wob_h > r2 { r2 } else { wob_h/2.0 };
-        let wob_half_width = 100.0;
-        cr.arc(xc + r2_safe + (wob_half_width * 2.0 * (wob_value - 0.5)), yb - r2_safe, r2_safe, 90f64.to_radians(), 180f64.to_radians());
-        cr.arc_negative(xc - r2_safe + (wob_half_width * 2.0 * (wob_value - 0.5)), yb + r2_safe - wob_h, r2_safe, 0f64.to_radians(), 270f64.to_radians());
-        cr.arc_negative(xc + r2_safe - wob_half_width, yb + r2_safe - wob_h, r2_safe, 270f64.to_radians(), 180f64.to_radians());
-        cr.arc(xc - r2_safe - wob_half_width, yb - r2_safe, r2_safe, 0f64.to_radians(), 90f64.to_radians());
-
-        cr.close_path();
-    }
-} */
 
 impl CompositorHandler for HeimdallrLayer {
     fn scale_factor_changed(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wayland_client::protocol::wl_surface::WlSurface, _: i32) {}

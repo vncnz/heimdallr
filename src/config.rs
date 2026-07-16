@@ -10,19 +10,19 @@ pub enum FrameColor {
     WorstResource,
 }
 
-#[derive(Debug, Clone)]
+/* #[derive(Debug, Clone)]
 pub enum ClockCfg {
     None,
     Clock1,
     Clock2,
-}
+} */
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+/* #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LayerBackend {
     Pills,
     Legacy,
-}
-impl LayerBackend {
+} */
+/* impl LayerBackend {
 
     fn from_json(value: Option<serde_json::Value>) -> Self {
         match value {
@@ -49,14 +49,14 @@ impl LayerBackend {
             }
         }
     }
-}
+} */
 
 #[derive(Debug, Clone)]
 pub struct Config {
     pub frame_color: FrameColor,
-    pub show_clock: ClockCfg,
+    // pub show_clock: ClockCfg,
     // pub backend: LayerBackend,
-    pub show_always_bluetooth: bool,
+    // pub show_always_bluetooth: bool,
     pub hide_missing_ratatoskr: bool,
     // pub border_width: u32,
     pub show_watts: bool
@@ -65,9 +65,9 @@ pub struct Config {
 #[derive(Debug, Deserialize)]
 struct RawConfig {
     frame_color: Option<serde_json::Value>,
-    show_clock: Option<serde_json::Value>,
+    // show_clock: Option<serde_json::Value>,
     // backend: Option<serde_json::Value>,
-    show_always_bluetooth: Option<bool>,
+    // show_always_bluetooth: Option<bool>,
     hide_missing_ratatoskr: Option<bool>,
     // border_width: Option<u32>,
     show_watts: Option<bool>,
@@ -117,7 +117,7 @@ impl FrameColor {
     }
 }
 
-impl ClockCfg {
+/* impl ClockCfg {
     fn from_json(value: Option<serde_json::Value>) -> Self {
         match value {
             Some(serde_json::Value::Null) => ClockCfg::None,
@@ -138,7 +138,7 @@ impl ClockCfg {
             }
         }
     }
-}
+} */
 
 impl Config {
     pub fn load_from_file(path: &str) -> Self {
@@ -153,9 +153,9 @@ impl Config {
             eprintln!("Config JSON non valido, uso valori di default");
             RawConfig {
                 frame_color: None,
-                show_clock: None,
+                // show_clock: None,
                 // backend: None,
-                show_always_bluetooth: None,
+                // show_always_bluetooth: None,
                 hide_missing_ratatoskr: None,
                 show_watts: None
                 // border_width: None,
@@ -164,9 +164,9 @@ impl Config {
 
         Config {
             frame_color: FrameColor::from_json(raw.frame_color),
-            show_clock: ClockCfg::from_json(raw.show_clock),
+            // show_clock: ClockCfg::from_json(raw.show_clock),
             // backend: LayerBackend::from_json(raw.backend),
-            show_always_bluetooth: raw.show_always_bluetooth.unwrap_or(true),
+            // show_always_bluetooth: raw.show_always_bluetooth.unwrap_or(true),
             hide_missing_ratatoskr: raw.hide_missing_ratatoskr.unwrap_or(false),
             show_watts: raw.show_watts.unwrap_or(false)
             // border_width: raw.border_width.unwrap_or(2),

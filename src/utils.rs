@@ -109,21 +109,21 @@ pub fn log_to_file(msg: String) {
 
 
 
-/* ANIMATION SYSTEM */
-
-
-
 use std::time::{Duration, Instant};
 
 use cairo::Context;
 
+/* ANIMATION SYSTEM */
+
+/*
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AnimationKey {
-    NotificationHeight,
-    IconsHeight,
+    // NotificationHeight,
+    // IconsHeight,
     WobHeightRatio,
-    SecurityNotchRatio,
-    BatteriesNotchRatio
+    // SecurityNotchRatio,
+    // BatteriesNotchRatio
 }
 
 pub struct Animation {
@@ -133,6 +133,8 @@ pub struct Animation {
     pub start_time: Instant,
     pub duration: Duration,
 }
+
+    */
 
 pub enum Easing {
     #[allow(unused)]
@@ -176,6 +178,8 @@ pub fn ease(e: Easing, t: f64) -> f64 {
         }
     }
 }
+
+/*
 
 pub struct Animator {
     animations: Vec<Animation>,
@@ -236,46 +240,46 @@ impl Animator {
 }
 
 pub struct FrameModel {
-    pub(crate) notif_height_ratio: f64,
-    pub(crate) icons_ratio: f64,
+    // pub(crate) notif_height_ratio: f64,
+    // pub(crate) icons_ratio: f64,
     pub(crate) wob_height: f64,
-    pub(crate) security_height: f64,
-    pub(crate) batteries_height: f64
+    // pub(crate) security_height: f64,
+    // pub(crate) batteries_height: f64
 }
 
 impl FrameModel {
     pub fn new () -> Self {
         FrameModel {
-            notif_height_ratio: 0.0,
-            icons_ratio: 0.0,
+            // notif_height_ratio: 0.0,
+            // icons_ratio: 0.0,
             wob_height: 0.0,
-            security_height: 0.0,
-            batteries_height: 0.0
+            // security_height: 0.0,
+            // batteries_height: 0.0
         }
     }
 
     pub fn set(&mut self, id: AnimationKey, val: f64) {
         match id {
-            AnimationKey::NotificationHeight => self.notif_height_ratio = val, // TODO: Deprecated
-            AnimationKey::IconsHeight => self.icons_ratio = val,
+            // AnimationKey::NotificationHeight => self.notif_height_ratio = val, // TODO: Deprecated
+            // AnimationKey::IconsHeight => self.icons_ratio = val,
             AnimationKey::WobHeightRatio => self.wob_height = val,
-            AnimationKey::SecurityNotchRatio => self.security_height = val,
-            AnimationKey::BatteriesNotchRatio => self.batteries_height = val
+            // AnimationKey::SecurityNotchRatio => self.security_height = val,
+            // AnimationKey::BatteriesNotchRatio => self.batteries_height = val
         }
     }
 
     pub fn get(&self, id: AnimationKey) -> f64 {
         match id {
-            AnimationKey::NotificationHeight => self.notif_height_ratio, // TODO: Deprecated
-            AnimationKey::IconsHeight => self.icons_ratio,
+            // AnimationKey::NotificationHeight => self.notif_height_ratio, // TODO: Deprecated
+            // AnimationKey::IconsHeight => self.icons_ratio,
             AnimationKey::WobHeightRatio => self.wob_height,
-            AnimationKey::SecurityNotchRatio => self.security_height,
-            AnimationKey::BatteriesNotchRatio => self.batteries_height
+            // AnimationKey::SecurityNotchRatio => self.security_height,
+            // AnimationKey::BatteriesNotchRatio => self.batteries_height
         }
     }
-}
+} */
 
-pub fn cr_text_aligned (cr: Context, text: String, x: f64, y: f64, dx: f64, dy: f64) -> (f64, f64) {
+/* pub fn cr_text_aligned (cr: Context, text: String, x: f64, y: f64, dx: f64, dy: f64) -> (f64, f64) {
     // if v != 0.0 || h != 0.0 {
         let mut x1 = x;
         let mut y1 = y;
@@ -287,11 +291,11 @@ pub fn cr_text_aligned (cr: Context, text: String, x: f64, y: f64, dx: f64, dy: 
     // }
     cr.show_text(&text).ok();
     (extents.width(), extents.height())
-}
+} */
 
 use cairo::Error;
 
-pub fn cr_text_rotated(cr: &Context, text: &str, x: f64, y: f64, dx: f64, dy: f64, angle: f64) -> Result<(f64, f64), Error> {
+/* pub fn cr_text_rotated(cr: &Context, text: &str, x: f64, y: f64, dx: f64, dy: f64, angle: f64) -> Result<(f64, f64), Error> {
     let extents = cr.text_extents(text)?;
 
     cr.save()?;
@@ -321,9 +325,9 @@ pub fn cr_text_rotated(cr: &Context, text: &str, x: f64, y: f64, dx: f64, dy: f6
 
     // Restituiamo le dimensioni del testo "dritto", coerentemente con il primo metodo
     Ok((extents.width(), extents.height()))
-}
+} */
 
-pub fn cr_text_rotated_mixed(cr: &Context, text: &str, x: f64, y: f64, dx: f64, dy: f64, angle: f64, font_size: f64) -> Result<(f64, f64), Error> {
+/* pub fn cr_text_rotated_mixed(cr: &Context, text: &str, x: f64, y: f64, dx: f64, dy: f64, angle: f64, font_size: f64) -> Result<(f64, f64), Error> {
 
     cr.save()?;
 
@@ -356,7 +360,7 @@ pub fn cr_text_rotated_mixed(cr: &Context, text: &str, x: f64, y: f64, dx: f64, 
 
     // Restituiamo le dimensioni del testo "dritto", coerentemente con il primo metodo
     Ok((w, h))
-}
+} */
 
 /* pub fn cr_text_layout(cr: &Context, text: &str, font_size: f64) -> Result<(pango::Layout, (f64, f64)), Error> {
 
@@ -635,6 +639,7 @@ pub fn draw_smart_border(
 
 
 pub enum GradientDirection {
+    #[allow(unused)]
     Vertical,
     Horizontal
 }
@@ -743,3 +748,68 @@ pub fn rounded_rect_gradient(
         prev_y = current_y;
     }
 } */
+
+pub struct TweenState {
+    current: f64,
+    target: f64,
+    animation_from: f64,
+    animation_start: Option<Instant>,
+    animation_duration: Duration,
+}
+
+impl TweenState {
+    pub fn new(v: f64) -> Self {
+        TweenState {
+            current: v,
+            target: v,
+            animation_from: v,
+            animation_start: None,
+            animation_duration: Duration::from_millis(500),
+        }
+    }
+
+    pub fn step(&mut self) -> bool {
+        if let Some(start) = self.animation_start {
+            let elapsed = Instant::now().saturating_duration_since(start);
+            let total = self.animation_duration;
+            let ratio = (elapsed.as_secs_f64() / total.as_secs_f64()).min(1.0);
+            // let eased = 1.0 - (1.0 - ratio).powi(3);
+            let eased = ease(crate::utils::Easing::Spring, ratio);
+
+            self.current = self.animation_from + (self.target - self.animation_from) * eased;
+
+            let still_animating = ratio < 1.0;
+            if !still_animating {
+                self.current = self.target;
+                self.animation_start = None;
+            }
+
+            still_animating
+        } else {
+            false
+        }
+    }
+
+    pub fn set_target(&mut self, new_target: f64) -> bool {
+        if self.target != new_target {
+            self.animation_from = self.current;
+            self.target = new_target;
+            self.animation_start = Some(Instant::now());
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn value(&self) -> f64 {
+        self.current
+    }
+
+    pub fn target(&self) -> f64 {
+        self.target
+    }
+
+    pub fn is_animating(&self) -> bool {
+        self.animation_start.is_some()
+    }
+}
