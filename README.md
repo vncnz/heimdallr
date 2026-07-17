@@ -117,7 +117,7 @@ Clock1, light blue border; light memory pressure and light disk usage alarms, wi
 
 You can configure frame color and clock presence with a json file in ```~/.config/heimdallr/config.json```:
 
-```json
+```js
 {
     "frame_color": [red,green,blue,alpha] | "worst-resource" | "random" | null,
     // "show_clock": "clock1" / "clock2" / null, // Deprecated in pill-ui
@@ -129,7 +129,7 @@ You can configure frame color and clock presence with a json file in ```~/.confi
 
 For example:
 
-```json
+```js
 {
     "frame_color": [0.2, 0.6, 1.0, 1.0],
     // "show_clock": "clock1",
