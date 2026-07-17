@@ -176,9 +176,11 @@ You can browse and remove notifications with following commands:
 You don't need to create /tmp/heimdallr_cmds file, it is created automatically by Heimdallr and it is a named pipe (aka a fifo special file): you write in it your command and it's all.
 
 Notification example:
+
 ![Notification example](./screenshots/notif.png)
 
 Another notification example, critical
+
 ![Critical notification example](./screenshots/notif_critical.png)
 
 ## Wob-like indicator
