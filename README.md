@@ -206,19 +206,19 @@ For example: ```echo "0.35" > /tmp/heimdallr_cmds```
 
 ## Security warning feature
 
-Heimdallr is also a lightweight, hardware-aware security monitor for Linux that ensures your microphone and camera are never active without your knowledge.
-
-Unlike standard desktop indicators that rely solely on software notifications, Heimdallr operates on a zero-trust model, as close as possible to the kernel and the hardware. It cross-references high-level PipeWire events with the absolute truth of the Linux kernel (/proc filesystem).
+Heimdallr includes a lightweight, hardware-aware privacy monitor for microphones and cameras. Rather than relying solely on desktop notifications, it independently verifies when capture devices are actually in use by correlating PipeWire sessions with kernel-reported device activity.
 
 ### Why
 
 While many laptops have a hardware-wired LED for the camera, most microphones have no physical indicator. Furthermore, sophisticated software can sometimes bypass firmware-controlled LEDs. Heimdallr acts as your digital "status light" for these peripherals.
 
-Most software indicators only show what the sound server (PipeWire/PulseAudio) reports. Heimdallr detects "stealth" processes that access your hardware directly via ALSA or V4L2, bypassing standard security layers.
+Most software indicators only show what the sound server (PipeWire/PulseAudio) reports. Heimdallr can detect applications that access capture devices directly through ALSA or V4L2, even when they bypass PipeWire.
+
+Instead of trusting a single software layer, Heimdallr independently verifies device activity from multiple sources.
 
 ### How
 
-By monitoring the physical RUNNING state of your audio cards in /proc/asound and checking accesses to your mic and camera devices in /dev, Heimdallr eliminates false positives from "suspended" apps while catching actual recording in real-time.
+Heimdallr monitors the runtime state of audio devices through /proc/asound together with accesses to microphone and camera device nodes under /dev, correlating this low-level information with PipeWire sessions.
 
 ## Timer
 
