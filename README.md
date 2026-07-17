@@ -1,6 +1,6 @@
 # heimdallr - ᚺᛖᛁᛗᛞᚨᛚᚱ
 
-Heimdallr is a minimal Wayland overlay that shows system state only when it matters.
+Heimdallr is an adaptive Wayland HUD that surfaces relevant information and lightweight controls without relying on permanent widgets.
 A minimal morphing pill, no noise — just timely information floating on your screen.
 
 ## About the name
