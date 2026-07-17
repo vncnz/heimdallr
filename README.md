@@ -146,7 +146,7 @@ If you set true as show_watts, heimdallr will show battery flow when it is charg
 
 Default values are the following:
 
-```json
+```js
 {
     "frame_color": null,
     // "show_clock": null,
