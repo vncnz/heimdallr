@@ -59,6 +59,7 @@ Oh, if the screen looks too empty, that’s by design: I like minimalism. No (fu
 ## Screenshots (new UI)
 
 Full screen, clock, battery charging:
+
 ![Charging, fullscreen](./screenshots/fullscreen_recharging.png)
 
 Usual state (just the clock):
@@ -66,21 +67,27 @@ Usual state (just the clock):
 ![Clock](./screenshots/clean_status.png)
 
 Battery discharging; low RAM alarm:
+
 ![Running on battery, low RAM warning](./screenshots/on_battery_and_medium_ram.png)
 
 Battery charging; medium network alarm:
+
 ![Running on battery, medium net warning](./screenshots/charging_medium_net_warning.png)
 
 Battery discharging; very high RAM alarm:
+
 ![Charging, very high RAM warning](./screenshots/very_high_ram.png)
 
 Battery charging; several alarms:
+
 ![Charging, several warnings](./screenshots/medium_load_low_disk_medium_temp.png)
 
 Battery charging; several alarms (more):
+
 ![Charging, several warnings](./screenshots/several_warnings.png)
 
 Battery discharging, with power:
+
 ![Discharging, with power](./screenshots/battery_watts.png)
 
 ## Screenshots (old UI)
