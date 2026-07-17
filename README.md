@@ -62,6 +62,7 @@ Full screen, clock, battery charging:
 ![Charging, fullscreen](./screenshots/fullscreen_recharging.png)
 
 Usual state (just the clock):
+
 ![Clock](./screenshots/clean_status.png)
 
 Battery discharging; low RAM alarm:
