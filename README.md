@@ -56,7 +56,7 @@ The impact on average load is around 0.01, so really small. I measured the impac
 
 Oh, if the screen looks too empty, that’s by design: I like minimalism. No (full) status bar, Niri as WM, and this is my daily driver.
 
-## Screenshots (new UI)
+## Screenshots
 
 Full screen, clock, battery charging:
 
@@ -89,29 +89,6 @@ Battery charging; several alarms (more):
 Battery discharging, with power:
 
 ![Discharging, with power](./screenshots/battery_watts.png)
-
-## Screenshots (old UI)
-
-Clock1, light blue border; battery charging; high RAM, medium load, and light disk usage alarms:
-![With border, several icons, charging](./screenshots/with_border_and_icons.png)
-
-Clock1, light blue border; battery discharging; light disk usage alarm:
-![With border, disk icon, skull](./screenshots/with_border_and_skull.png)
-
-Clock2, light blue border; light high volume alarm, with different wallpaper:
-![With window](./screenshots/clock2_with_border_and_volume.png)
-
-Clock1, no battery charging/discharging; no resource alarms:
-![Without border](./screenshots/no_icons.png)
-
-Clock1, no border; battery charging; light disk usage alarm:
-![Without border](./screenshots/without_border.png)
-
-Clock1, no border; battery charging; medium load and light disk usage alarms, with different wallpaper:
-![Another wallpaper](./screenshots/another_wallpaper.png)
-
-Clock1, light blue border; light memory pressure and light disk usage alarms, with different wallpaper and an open window:
-![With window](./screenshots/with_window.png)
 
 ## Configuration
 
@@ -295,6 +272,7 @@ Used icon is based on device type and, for several types, bluetooth or wired con
 - ~~(UX) Put temporary notification always before important ones (because the latter doesn't expire!)~~ Done!
 - ~~Reduce quantity of damaged surface (wl_surface.damage_buffer only for changed areas)~~ it's not worth it
 - Make external batteries information optional
+- Implement a queue logic for notifications
 
 ### New functionalities
 
