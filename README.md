@@ -296,3 +296,4 @@ Used icon is based on device type and, for several types, bluetooth or wired con
 
 - ~~Sometimes heimdallr terminates itself after system suspension/resume~~ Fixed!
 - ~~Sometimes, closing an urgent notifications doesn't restore normal frame width~~ Fixed!
+- Changing volume disabling mute, the added icon is out of bounds because the width doesn't change
