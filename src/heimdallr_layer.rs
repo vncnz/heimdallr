@@ -136,8 +136,15 @@ impl HeimdallrLayer {
 
     pub fn maybe_redraw(&mut self, qh: &QueueHandle<Self>) {
 
-        // Now, updateNotificationList is for both adding new, and removing expired, notifications
+        // Update/prune notification history, then tick pill notification state
         self.update_notification_list(None);
+        let (notif_changed, notif_needs_recalc) = self.pill_container.tick_notifications();
+        if notif_changed {
+            self.request_redraw("notification tick");
+        }
+        if notif_needs_recalc {
+            self.pill_container.recalculate_normal_target();
+        }
 
         if self.pill_container.needs_redraw || self.pill_container.needs_recalc {
             self.needs_redraw = true;
@@ -390,9 +397,9 @@ impl HeimdallrLayer {
     }
 
     pub fn update_notification_list (&mut self, new_notif_opt: Option<Notification>) -> bool {
-
         let mut changed: bool = false;
         if let Some(new_notif) = new_notif_opt {
+            // Preserve replace/unmount handling in history
             let mut custom_replace = None;
             if new_notif.unmounted {
                 let to_be_replaced = self.notifications.iter().find(|x| x.unmounting);
@@ -408,29 +415,24 @@ impl HeimdallrLayer {
                 self.notifications.retain(|n| n.id != new_notif.replaces_id);
             }
 
-            // let id = list.iter().map(|x| x.id).max().unwrap_or();
-            
-            self.notifications.insert(0, new_notif);
+            // keep a history (most recent first)
+            self.notifications.insert(0, new_notif.clone());
 
-            self.notifications.sort_by_key(|item| {
-                // false comes before true, so Some items (notifications with expiration) go to the front, None (notif. without expiration) to the back.
-                // Within Some, notifications are sorted chronologically (oldest notification first).
-                (item.expired_at.is_none(), item.expired_at)
-            });
-
-            changed = true;
+            // forward to pill which handles display rules/timing
+            let (visible_changed, needs_recalc) = self.pill_container.push_notification(new_notif);
+            changed = visible_changed || needs_recalc;
         }
 
+        // prune expired history entries
         let a = self.notifications.len();
         self.notifications.retain(|n| n.expired_at.is_none() || (n.expired_at.unwrap() > Instant::now()));
         let b = self.notifications.len();
-
         changed = changed || (a != b);
 
         if changed {
-            self.pill_container.update_data_notifications(&self.notifications);
             self.request_redraw("notifications updated");
         }
+
         changed
 
     }

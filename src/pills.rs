@@ -600,7 +600,12 @@ pub struct PillNotificationFull {
     appname_base: PillModuleBase,
     body_base: PillModuleBase,
     animation: AnimationState,
-    // last_notification: Option<crate::notifications::Notification>
+    // display-only notification manager
+    queue: Vec<crate::notifications::Notification>,
+    stack: Vec<crate::notifications::Notification>,
+    current: Option<crate::notifications::Notification>,
+    current_expire: Option<Instant>,
+    display_timeout: Duration,
 }
 
 impl PillModuleTrait for PillNotificationFull {
@@ -630,7 +635,11 @@ impl PillNotificationFull {
             appname_base: PillModuleBase::new(),
             body_base: PillModuleBase::new(),
             animation: AnimationState::new(),
-            // last_notification: None
+            queue: Vec::new(),
+            stack: Vec::new(),
+            current: None,
+            current_expire: None,
+            display_timeout: Duration::from_secs(3),
         }
     }
 
@@ -681,6 +690,118 @@ impl PillNotificationFull {
         };
 
         self.animation.set_target(target)
+    }
+
+    // Push a new notification into the display manager. Returns (visible_changed, needs_recalc)
+    pub fn push_notification(&mut self, cr: &cairo::Context, notif: crate::notifications::Notification) -> (bool, bool) {
+        let mut changed_visible = false;
+        let mut needs_recalc = false;
+
+        let curr_urg = self.current.as_ref().map(|n| n.urgency);
+
+        match (curr_urg, notif.urgency) {
+            (None, 0..=1) => {
+                // idle, normal -> show
+                let _ = self.update_data(cr, Some(notif.clone()));
+                self.current = Some(notif);
+                self.current_expire = Some(Instant::now() + self.display_timeout);
+                changed_visible = true;
+                needs_recalc = true;
+            }
+            (None, 2) => {
+                // idle, critical -> show without timeout
+                let _ = self.update_data(cr, Some(notif.clone()));
+                self.current = Some(notif);
+                self.current_expire = None;
+                changed_visible = true;
+                needs_recalc = true;
+            }
+            (Some(curr), new) if curr <= 1 && new <= 1 => {
+                // showing normal + normal -> replace and reset timer
+                let _ = self.update_data(cr, Some(notif.clone()));
+                self.current = Some(notif);
+                self.current_expire = Some(Instant::now() + self.display_timeout);
+                changed_visible = true;
+                needs_recalc = true;
+            }
+            (Some(curr), new) if curr <= 1 && new == 2 => {
+                // showing normal + critical -> replace and no timeout
+                let _ = self.update_data(cr, Some(notif.clone()));
+                self.current = Some(notif);
+                self.current_expire = None;
+                changed_visible = true;
+                needs_recalc = true;
+            }
+            (Some(curr), new) if curr == 2 && new == 2 => {
+                // showing critical + critical -> push on stack
+                self.stack.push(notif);
+            }
+            (Some(curr), new) if curr == 2 && new <= 1 => {
+                // showing critical + normal -> ignore new notif
+            }
+            _ => {
+                // fallback: queue it
+                self.queue.insert(0, notif);
+            }
+        }
+
+        (changed_visible, needs_recalc)
+    }
+
+    // Tick expiration/rotation. Returns (visible_changed, needs_recalc)
+    pub fn tick(&mut self, cr: &cairo::Context) -> (bool, bool) {
+        let mut changed = false;
+        let mut needs_recalc = false;
+
+        if let Some(exp) = self.current_expire {
+            if Instant::now() > exp {
+                // current expired
+                changed = true;
+                if let Some(next) = self.queue.pop() {
+                    let _ = self.update_data(cr, Some(next.clone()));
+                    self.current = Some(next);
+                    self.current_expire = Some(Instant::now() + self.display_timeout);
+                    needs_recalc = true;
+                } else if let Some(next) = self.stack.pop() {
+                    let _ = self.update_data(cr, Some(next.clone()));
+                    self.current = Some(next);
+                    self.current_expire = None; // criticals from stack keep no timeout
+                    needs_recalc = true;
+                } else {
+                    // nothing to show
+                    let _ = self.update_data(cr, None);
+                    self.current = None;
+                    self.current_expire = None;
+                    needs_recalc = true;
+                }
+            }
+        }
+
+        (changed, needs_recalc)
+    }
+
+    pub fn dismiss_current(&mut self, cr: &cairo::Context) -> bool {
+        if self.current.is_some() {
+            if let Some(next) = self.queue.pop() {
+                let _ = self.update_data(cr, Some(next.clone()));
+                self.current = Some(next);
+                self.current_expire = Some(Instant::now() + self.display_timeout);
+            } else if let Some(next) = self.stack.pop() {
+                let _ = self.update_data(cr, Some(next.clone()));
+                self.current = Some(next);
+                self.current_expire = None;
+            } else {
+                let _ = self.update_data(cr, None);
+                self.current = None;
+                self.current_expire = None;
+            }
+            return true;
+        }
+        false
+    }
+
+    pub fn current_notification(&self) -> Option<&crate::notifications::Notification> {
+        self.current.as_ref()
     }
 
 }
@@ -871,6 +992,58 @@ impl Pill {
             self.needs_redraw = true;
         }
         return changed
+    }
+    
+    // Notification management wrappers
+    pub fn push_notification(&mut self, notif: crate::notifications::Notification) -> (bool, bool) {
+        let prev = self.pill_notification_full.current_notification().cloned();
+        let res = self.pill_notification_full.push_notification(&self.dummy_context, notif);
+        let now = self.pill_notification_full.current_notification().cloned();
+        if prev != now {
+            if let Some(n) = now {
+                self.mode = PillMode::Notification(n.urgency);
+                self.animation.set_target(self.pill_notification_full.get_desired_rect());
+            } else {
+                self.mode = PillMode::Normal;
+                self.needs_recalc = true;
+            }
+            self.needs_redraw = true;
+        }
+        res
+    }
+
+    pub fn tick_notifications(&mut self) -> (bool, bool) {
+        let prev = self.pill_notification_full.current_notification().cloned();
+        let res = self.pill_notification_full.tick(&self.dummy_context);
+        let now = self.pill_notification_full.current_notification().cloned();
+        if prev != now {
+            if let Some(n) = now {
+                self.mode = PillMode::Notification(n.urgency);
+                self.animation.set_target(self.pill_notification_full.get_desired_rect());
+            } else {
+                self.mode = PillMode::Normal;
+                self.needs_recalc = true;
+            }
+            self.needs_redraw = true;
+        }
+        res
+    }
+
+    pub fn dismiss_current_notification(&mut self) -> bool {
+        let prev = self.pill_notification_full.current_notification().cloned();
+        let res = self.pill_notification_full.dismiss_current(&self.dummy_context);
+        let now = self.pill_notification_full.current_notification().cloned();
+        if prev != now {
+            if let Some(n) = now {
+                self.mode = PillMode::Notification(n.urgency);
+                self.animation.set_target(self.pill_notification_full.get_desired_rect());
+            } else {
+                self.mode = PillMode::Normal;
+                self.needs_recalc = true;
+            }
+            self.needs_redraw = true;
+        }
+        res
     }
     
     pub fn update_data_notifications(&mut self, notifications: &Vec<crate::notifications::Notification>) -> bool {
