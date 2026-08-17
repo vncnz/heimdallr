@@ -485,9 +485,18 @@ impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like
     }
 
     pub fn remove_notification(&mut self) -> bool {
+        // First attempt to dismiss the currently displayed notification in the pill
+        if self.pill_container.dismiss_current_notification() {
+            self.request_redraw("notification dismissed");
+            return true;
+        }
+
+        // Fallback: remove from history if any
+        // TODO: To be removed?
         if self.notifications.len() > 0 {
             self.notifications.remove(0);
-            self.pill_container.update_data_notifications(&self.notifications);
+            let _ = self.pill_container.update_data_notifications(&self.notifications);
+            self.request_redraw("notification removed from history");
             true
         } else {
             false
