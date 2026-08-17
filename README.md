@@ -273,7 +273,7 @@ Used icon is based on device type and, for several types, bluetooth or wired con
 - ~~Reduce quantity of damaged surface (wl_surface.damage_buffer only for changed areas)~~ it's not worth it
 - Make external batteries information optional
 - Implement a queue logic for notifications
-- Add pause/unpause to timeout
+- ~~Add pause/unpause to timeout~~ Done!
 
 ### New functionalities
 
