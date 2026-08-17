@@ -275,6 +275,16 @@ Used icon is based on device type and, for several types, bluetooth or wired con
 - Implement a queue logic for notifications
 - ~~Add pause/unpause to timeout~~ Done!
 
+New notification logic (to be implemented):
+
+new notif urgency|pill current state|action
+-----------------|------------------|-------
+normal|idle|show notif
+normal|showing normal|replace notif and reset timer
+critical|showing normal|replace notif, no timeout
+critical|showing critical|put in notif stack
+normal|showing critical|ignore new notif
+
 ### New functionalities
 
 - ~~Add a visual indicator for Ratatoskr disconnection~~ Done!
