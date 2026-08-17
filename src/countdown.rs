@@ -31,15 +31,46 @@ impl Countdown {
 
     /// Parses a timespan string like "10m30s" or "45s" and fills the timing property
     pub fn fill_from_timespan(&mut self, input: &str) -> Result<u64, &'static str> {
-        self.direction = CountdownDirection::Down;
-
         if input.trim().is_empty() || input.trim() == "0" || input.trim() == "off" {
             self.state = None; // Clear the timer if input is empty
+            // self.direction = CountdownDirection::Up; // Remove warning
             return Ok(0);
+        }
+
+        if input.trim() == "p" {
+            // Toggle pause/resume when timer is active
+            if self.state.is_some() {
+                if self.current_pause_start.is_none() {
+                    // start pause
+                    self.current_pause_start = Some(Instant::now());
+                    return Ok(0);
+                } else {
+                    return Err("Active timer already paused");
+                }
+            }
+            return Err("No active timer to pause");
+        }
+
+        if input.trim() == "r" {
+            // Resume when timer is active
+            if self.state.is_some() {
+                if self.current_pause_start.is_some() {
+                    if let Some(pause_start) = self.current_pause_start.take() {
+                        self.total_paused_time += pause_start.elapsed();
+                        return Ok(0);
+                    } else {
+                        return Err("Active timer already running");
+                    }
+                }
+            }
+            return Err("No active timer to resume");
         }
 
         if input.trim() == "up" {
             self.state = Some((Instant::now(), Duration::ZERO)); // Start a timer counting up from zero
+            // reset any paused state so new timer runs immediately
+            self.total_paused_time = Duration::ZERO;
+            self.current_pause_start = None;
             self.direction = CountdownDirection::Up;
             return Ok(0);
         }
@@ -75,6 +106,11 @@ impl Countdown {
 
         // Fill the property with both the anchor instant and the duration
         self.state = Some((now, duration));
+        // set countdown direction for numeric durations
+        self.direction = CountdownDirection::Down;
+        // reset pause tracking when starting a fresh countdown so it runs immediately
+        self.total_paused_time = Duration::ZERO;
+        self.current_pause_start = None;
 
         Ok(total_seconds)
     }
@@ -95,20 +131,19 @@ impl Countdown {
         } */
         let Some((start, original_duration)) = self.state else { return 0.0; };
 
-        // 1. Calculate active pause time if currently paused
-        let active_pause = self.current_pause_start
-            .map(|t| t.elapsed())
-            .unwrap_or(Duration::ZERO);
-        
-        // 2. Adjust the total duration forward
-        let adjusted_duration = original_duration + self.total_paused_time + active_pause;
-        let elapsed = start.elapsed();
+        // total paused time including active pause
+        let active_pause = self.current_pause_start.map(|t| t.elapsed()).unwrap_or(Duration::ZERO);
+        let total_paused = self.total_paused_time + active_pause;
 
-        if elapsed >= adjusted_duration {
-            1.0
-        } else {
-            elapsed.as_secs_f64() / adjusted_duration.as_secs_f64()
+        // effective elapsed time excluding paused durations
+        let elapsed_effective = start.elapsed().saturating_sub(total_paused);
+
+        if original_duration.is_zero() {
+            return 0.0;
         }
+
+        let ratio = elapsed_effective.as_secs_f64() / original_duration.as_secs_f64();
+        if ratio >= 1.0 { 1.0 } else { ratio }
     }
 
     pub fn get_warning (&self) -> f64 {
@@ -124,12 +159,15 @@ impl Countdown {
         let Some((start, total_duration)) = self.state else {
             return (true, Duration::ZERO);
         };
+        // account for paused time
+        let active_pause = self.current_pause_start.map(|t| t.elapsed()).unwrap_or(Duration::ZERO);
+        let total_paused = self.total_paused_time + active_pause;
+        let elapsed_effective = start.elapsed().saturating_sub(total_paused);
 
-        let dur = start.elapsed();
-        if dur >= total_duration {
-            (self.direction == CountdownDirection::Down, dur - total_duration)
+        if elapsed_effective >= total_duration {
+            (self.direction == CountdownDirection::Down, elapsed_effective - total_duration)
         } else {
-            (false, total_duration - dur) 
+            (false, total_duration.saturating_sub(elapsed_effective))
         }
     }
 
@@ -149,13 +187,15 @@ impl Countdown {
         }
     }
 
-    /* pub fn pause(&mut self) {
-        if self.current_pause_start.is_none() && self.state.is_some() {
+    /* /// Start pausing the countdown. Has no effect if already paused or inactive.
+    pub fn pause(&mut self) {
+        if self.state.is_some() && self.current_pause_start.is_none() {
             self.current_pause_start = Some(Instant::now());
         }
-    } */
+    }
 
-    /* pub fn resume(&mut self) {
+    /// Resume a paused countdown, adding the paused duration to the accumulator.
+    pub fn resume(&mut self) {
         if let Some(pause_start) = self.current_pause_start.take() {
             self.total_paused_time += pause_start.elapsed();
         }
