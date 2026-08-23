@@ -6,7 +6,7 @@ use std::{collections::HashMap, time::{Duration, Instant}};
 use colored::Colorize;
 
 use crate::{
-    countdown::Countdown, data::{AlarmIcon, BatteryDevice, UPowerDeviceKind}, dbg_println, security::MicCameraStatus, utils::{cr_text_layout, ease, get_color_gradient, rounded_rect_gradient, select_icon}
+    config::{self, Config}, countdown::Countdown, data::{AlarmIcon, BatteryDevice, UPowerDeviceKind}, dbg_println, security::MicCameraStatus, utils::{cr_text_layout, ease, get_color_gradient, rounded_rect_gradient, select_icon}
 };
 
 pub static PILL_FONT_SIZE: f64 = 14.0;
@@ -320,7 +320,7 @@ impl PillModuleLaptopBattery {
                     (h, m) => {
                         if show_watts { format!("{h}h") }
                         else { format!("{h}h{m}m") }
-                    },
+                    }
                 };
 
                 let flow = match bat.flow {
@@ -497,6 +497,7 @@ pub struct PillModuleDevices {
     batteries: Vec<BatteryDevice>,
     bases: Vec<PillModuleBase>,
     animation: AnimationState,
+    min_perc: f64
 }
 
 impl PillModuleTrait for PillModuleDevices {
@@ -525,11 +526,12 @@ impl PillModuleTrait for PillModuleDevices {
 }
 
 impl PillModuleDevices {
-    pub fn new() -> Self {
+    pub fn new(min_perc: f64) -> Self {
         PillModuleDevices {
             batteries: Vec::new(),
             bases: Vec::new(),
             animation: AnimationState::new(),
+            min_perc: min_perc
         }
     }
 
@@ -555,13 +557,17 @@ impl PillModuleDevices {
                 (_, true) => "󰂱",
                 (_, false) => "󰾰"
             };
-            let text = format!("{icon} {:.0}%", b.percentage);
+            let text: String = if b.percentage < self.min_perc {
+                format!("{icon} {:.0}%", b.percentage).to_string()
+            } else {
+                icon.to_string()
+            };
             let (layout, sizes) = cr_text_layout(&cr, &text, PILL_FONT_SIZE, None).unwrap();
             let color = get_color_gradient(b.warn);
             let mut base = PillModuleBase::new();
             if w > 0.0 { w += 4.0; }
             w += sizes.0; // layout.width() as f64;
-            base.set_layout(layout, sizes, text, color);
+            base.set_layout(layout, sizes, text.to_owned(), color);
             self.bases.push(base);
 
             /* let sizes = (self.batteries.len() as f64 * (PILL_FONT_SIZE + 2.0), 20.0);
@@ -896,7 +902,7 @@ impl PillModuleTrait for Pill {
 }
 
 impl Pill {
-    pub fn new() -> Self {
+    pub fn new(config: &Config) -> Self {
         let dummy_surface = ImageSurface::create(Format::ARgb32, 1, 1).unwrap();
         let dummy_context = Context::new(&dummy_surface).unwrap();
         Pill {
@@ -914,7 +920,7 @@ impl Pill {
             pill_warnings: PillModuleWarnings::new(),
             pill_security: PillModuleSecurity::new(),
             pill_countdown: PillModuleCountdown::new(),
-            pill_devices: PillModuleDevices::new(),
+            pill_devices: PillModuleDevices::new(config.show_devices_battery_max_level),
             pill_notification_full: PillNotificationFull::new(),    
             pill_clock_rect: (0.0, 0.0),
             pill_battery_rect: (0.0, 0.0),

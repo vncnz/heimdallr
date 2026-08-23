@@ -59,6 +59,7 @@ impl HeimdallrLayer {
         shm: Shm,
         config: Config
     ) -> Self {
+        let pill = Pill::new(&config);
 
         HeimdallrLayer {
             registry_state,
@@ -90,7 +91,7 @@ impl HeimdallrLayer {
             batteries: vec![],
             batteries_pristine: false,
             // timer: Countdown::new(),
-            pill_container: Pill::new(),
+            pill_container: pill,
             pills_are_animating: false
         }
     }

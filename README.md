@@ -100,7 +100,8 @@ You can configure frame color and clock presence with a json file in ```~/.confi
     // "show_clock": "clock1" / "clock2" / null, // Deprecated in pill-ui
     // "show_always_bluetooth": true / false, // Deprecated in pill-ui
     "hide_missing_ratatoskr": true / false,
-    "show_watts": true / false
+    "show_watts": true / false,
+    "show_devices_battery_max_level": number
 }
 ```
 
@@ -112,7 +113,8 @@ For example:
     // "show_clock": "clock1",
     // "show_always_bluetooth": true,
     "hide_missing_ratatoskr": true,
-    "show_watts": true
+    "show_watts": true,
+    "show_devices_battery_max_level": 60
 }
 ```
 
@@ -128,6 +130,7 @@ Default values are the following:
     "frame_color": null,
     // "show_clock": null,
     // "show_always_bluetooth": true,
+    "show_devices_battery_max_level": 80,
     "hide_missing_ratatoskr": false,
     "show_watts": false
 }
