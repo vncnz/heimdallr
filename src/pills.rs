@@ -175,6 +175,7 @@ impl PillModuleBase {
                 x + rect_width / 2.0 - sizes.0 / 2.0,
                 y + rect_height / 2.0 - sizes.1 / 2.0,
             );
+            pangocairo::functions::show_layout(cr, layout);
             /* cr.save().unwrap();
             if self.vertical {
                 let xc = x + rect_width / 2.0;
