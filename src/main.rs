@@ -15,7 +15,14 @@ use std::thread;
 
 use colored::Colorize;
 
-use crate::{battery::{BatteryState, BatteryStats}, commands::start_command_listener, data::{BluetoothStats, IconChange, RatatoskrSocket}, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{get_color_gradient, log_to_file, select_icon}};
+use crate::{
+    battery::{BatteryState, BatteryStats}, 
+    commands::start_command_listener, 
+    data::{BluetoothStats, IconChange, RatatoskrSocket, BatteryDevice, UPowerDeviceKind},
+    notifications::Notification,
+    security::{MicCameraStatus, start_security_monitor},
+    utils::{get_color_gradient, log_to_file, select_icon}
+};
 
 mod data;
 mod config;
@@ -225,7 +232,8 @@ fn main() {
     if false {
         thread::spawn(move || {
             let actions = vec![
-                ("warning-ram", "0.9", Duration::from_secs(1)),
+                ("devices", "0.0", Duration::from_secs(2))
+                // ("warning-ram", "0.9", Duration::from_secs(1)),
                 //("warning-load", "0.6", Duration::from_secs(1)),
                 //("warning-disk", "0.31", Duration::from_secs(1))
                 /*
@@ -344,6 +352,22 @@ fn main() {
                     if let Ok(w) = w.parse::<f64>() {
                         if w > 0.3 { app.add_icon("demodisk", "󰋊", get_color_gradient(w), w, None); }
                         else { app.remove_icon("demodisk"); }
+                    }
+                },
+                ("devices", w) => {
+                    if let Ok(value) = w.parse::<f64>() {
+                        app.update_devices_data(vec![
+                            BatteryDevice {
+                                address: "bluetooth_demo_headphones".into(),
+                                percentage: 100.0 - (100.0 * value),
+                                name: "Demo headphones".into(),
+                                warn: value,
+                                kind: UPowerDeviceKind::Headphones,
+                                is_bluetooth: true
+                            }
+                        ]);
+                    } else {
+                        eprintln!("Invalid warn devices value: {}", w);
                     }
                 },
                 // "󰞃"
