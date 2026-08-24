@@ -6,7 +6,12 @@ use std::{collections::HashMap, time::{Duration, Instant}};
 use colored::Colorize;
 
 use crate::{
-    config::{self, Config}, countdown::Countdown, data::{AlarmIcon, BatteryDevice, UPowerDeviceKind}, dbg_println, security::MicCameraStatus, utils::{cr_text_layout, ease, get_color_gradient, rounded_rect_gradient, select_icon}
+    config::{self, Config},
+    countdown::Countdown,
+    data::{AlarmIcon, BatteryDevice, UPowerDeviceKind},
+    dbg_println,
+    security::MicCameraStatus,
+    utils::{cr_text_layout, ease, get_color_gradient, rounded_rect_gradient, select_icon}
 };
 
 pub static PILL_FONT_SIZE: f64 = 14.0;
@@ -113,6 +118,7 @@ struct PillModuleBase {
     cached_sizes: Option<(f64, f64)>,
     cached_text: Option<String>,
     cached_color: Option<(f64, f64, f64, f64)>,
+    // vertical: bool
 }
 
 impl PillModuleBase {
@@ -122,6 +128,7 @@ impl PillModuleBase {
             cached_sizes: None,
             cached_text: None,
             cached_color: None,
+            // vertical: false
         }
     }
 
@@ -131,8 +138,13 @@ impl PillModuleBase {
             cached_sizes: Some(size),
             cached_text: None,
             cached_color: None,
+            // vertical: false
         }
     }
+
+    /* fn set_vertical(&mut self, v: bool) {
+        self.vertical = v;
+    } */
 
     fn set_layout(
         &mut self,
@@ -142,7 +154,7 @@ impl PillModuleBase {
         color: (f64, f64, f64, f64),
     ) {
         self.cached_layout = Some(layout);
-        self.cached_sizes = Some(sizes);
+        self.cached_sizes = Some(sizes); // if self.vertical { Some((sizes.1, sizes.0)) } else { Some(sizes) };
         self.cached_text = Some(text);
         self.cached_color = Some(color);
     }
@@ -163,7 +175,21 @@ impl PillModuleBase {
                 x + rect_width / 2.0 - sizes.0 / 2.0,
                 y + rect_height / 2.0 - sizes.1 / 2.0,
             );
+            /* cr.save().unwrap();
+            if self.vertical {
+                let xc = x + rect_width / 2.0;
+                let yc = y + rect_height / 2.0;
+                cr.translate(xc, yc);
+                cr.rotate(std::f64::consts::FRAC_PI_2);
+                cr.move_to(- sizes.0 / 2.0, -sizes.1 / 2.0);
+            } else {
+                let xc = x + rect_width / 2.0 - sizes.0 / 2.0;
+                let yc = y + rect_height / 2.0 - sizes.1 / 2.0;
+                cr.move_to(xc, yc);
+            }
             pangocairo::functions::show_layout(cr, layout);
+            cr.restore().unwrap(); */
+
             // dbg_println!("Pill drawn in rect {sizes:?}");
         } else {
             // dbg_println!("Pill drawn in rect (0.0, 0.0)");
@@ -497,7 +523,7 @@ pub struct PillModuleDevices {
     batteries: Vec<BatteryDevice>,
     bases: Vec<PillModuleBase>,
     animation: AnimationState,
-    min_perc: f64
+    max_percentage: f64
 }
 
 impl PillModuleTrait for PillModuleDevices {
@@ -526,12 +552,12 @@ impl PillModuleTrait for PillModuleDevices {
 }
 
 impl PillModuleDevices {
-    pub fn new(min_perc: f64) -> Self {
+    pub fn new(max_percentage: f64) -> Self {
         PillModuleDevices {
             batteries: Vec::new(),
             bases: Vec::new(),
             animation: AnimationState::new(),
-            min_perc: min_perc
+            max_percentage: max_percentage
         }
     }
 
@@ -542,37 +568,49 @@ impl PillModuleDevices {
         let mut w = 0.0;
         self.bases = Vec::new();
         for b in &self.batteries {
-            let icon = match (&b.kind, b.is_bluetooth) {
-                (UPowerDeviceKind::Mouse, true) => "󰦋",
-                (UPowerDeviceKind::Mouse, false) => "󰍽",
-                (UPowerDeviceKind::Phone, true) => "󰏳",
-                (UPowerDeviceKind::Phone, false) => "󰏲",
-                (UPowerDeviceKind::Tablet, _) => "",
-                (UPowerDeviceKind::RemoteControl, _) => "󰻅",
-                (UPowerDeviceKind::Speakers, _) => "󰦢",
-                (UPowerDeviceKind::Headphones, true) => "󰥰",
-                (UPowerDeviceKind::Headset, true) => "󰥰",
-                (UPowerDeviceKind::GamingInput, _) => "󱤙",
-                (UPowerDeviceKind::Keyboard, _) => "󰌌",
-                (_, true) => "󰂱",
-                (_, false) => "󰾰"
-            };
-            let text: String = if b.percentage < self.min_perc {
-                format!("{icon} {:.0}%", b.percentage).to_string()
-            } else {
-                icon.to_string()
-            };
-            let (layout, sizes) = cr_text_layout(&cr, &text, PILL_FONT_SIZE, None).unwrap();
-            let color = get_color_gradient(b.warn);
-            let mut base = PillModuleBase::new();
-            if w > 0.0 { w += 4.0; }
-            w += sizes.0; // layout.width() as f64;
-            base.set_layout(layout, sizes, text.to_owned(), color);
-            self.bases.push(base);
+            if b.percentage <= self.max_percentage {
+                let icon = match (&b.kind, b.is_bluetooth) {
+                    (UPowerDeviceKind::Mouse, true) => "󰦋",
+                    (UPowerDeviceKind::Mouse, false) => "󰍽",
+                    (UPowerDeviceKind::Phone, true) => "󰏳",
+                    (UPowerDeviceKind::Phone, false) => "󰏲",
+                    (UPowerDeviceKind::Tablet, _) => "",
+                    (UPowerDeviceKind::RemoteControl, _) => "󰻅",
+                    (UPowerDeviceKind::Speakers, _) => "󰦢",
+                    (UPowerDeviceKind::Headphones, true) => "󰥰",
+                    (UPowerDeviceKind::Headset, true) => "󰥰",
+                    (UPowerDeviceKind::GamingInput, _) => "󱤙",
+                    (UPowerDeviceKind::Keyboard, _) => "󰌌",
+                    (_, true) => "󰂱",
+                    (_, false) => "󰾰"
+                };
+                let text: String = icon.to_string();
+                let (layout, sizes) = cr_text_layout(&cr, &text, PILL_FONT_SIZE, None).unwrap();
+                let color = get_color_gradient(b.warn);
+                let mut base = PillModuleBase::new();
+                if w > 0.0 { w += 4.0; }
+                w += sizes.0; // layout.width() as f64;
+                base.set_layout(layout, sizes, text.to_owned(), color);
+                self.bases.push(base);
 
-            /* let sizes = (self.batteries.len() as f64 * (PILL_FONT_SIZE + 2.0), 20.0);
-            dbg_println!("{} target:{sizes:?}", "PillBatteries update_data".blue());
-            self.animation.set_target(sizes); */
+                // Percentage
+                /* if b.percentage < self.max_percentage {
+                    let text: String = format!("{:.0}%", b.percentage).to_string();
+                    let (layout, mut sizes) = cr_text_layout(&cr, &text, PILL_FONT_SIZE / 1.9, None).unwrap();
+                    sizes = (sizes.0, 10.0);
+                    let color = get_color_gradient(b.warn);
+                    let mut base = PillModuleBase::new();
+                    base.set_vertical(true);
+                    if w > 0.0 { w += 4.0; }
+                    w += sizes.1; // FIXME: Improve using the assigned value or keep this explicit x/y swap?
+                    base.set_layout(layout, sizes, text.to_owned(), color);
+                    self.bases.push(base);
+                } */
+
+                /* let sizes = (self.batteries.len() as f64 * (PILL_FONT_SIZE + 2.0), 20.0);
+                dbg_println!("{} target:{sizes:?}", "PillBatteries update_data".blue());
+                self.animation.set_target(sizes); */
+            }
         }
         
         let changed = w != self.animation.target_size.0;

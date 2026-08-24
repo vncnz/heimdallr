@@ -405,6 +405,45 @@ pub fn cr_text_layout(cr: &Context, text: &str, font_size: f64, max_width: Optio
     Ok((layout, (w, h)))
 }
 
+/* use pango::{FontDescription, Gravity, WrapMode, SCALE};
+
+pub fn cr_text_layout_rot(
+    cr: &Context,
+    text: &str,
+    font_size: f64,
+    max_width: Option<f64>,
+    vertical: bool,
+) -> Result<(pango::Layout, (f64, f64)), Error> {
+    let layout = pangocairo::functions::create_layout(cr);
+
+    let mut font_desc = FontDescription::new();
+    font_desc.set_family("");
+    font_desc.set_absolute_size(font_size * SCALE as f64);
+
+    if vertical {
+        let context = layout.context();
+        context.set_base_gravity(Gravity::East);
+        context.set_gravity_hint(pango::GravityHint::Natural);
+        font_desc.set_gravity(Gravity::East);
+        layout.context_changed();
+    }
+
+    layout.set_font_description(Some(&font_desc));
+    layout.set_text(text);
+
+    if let Some(width) = max_width {
+        layout.set_width((width * SCALE as f64) as i32);
+        layout.set_wrap(WrapMode::Word);
+    }
+
+    let (_ink_rect, logical_rect) = layout.extents();
+
+    let w = logical_rect.width() as f64 / SCALE as f64;
+    let h = logical_rect.height() as f64 / SCALE as f64;
+
+    Ok((layout, (w, h)))
+} */
+
 /* Replace by more general method draw_smart_border
 pub fn rounded_big_hole (cr: &Context, x: f64, y: f64, w: f64, h: f64, r: f64, r2: f64, reserved_w: f64, reserved_h: f64, wob_h: f64) {
     cr.new_sub_path();
