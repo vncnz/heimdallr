@@ -118,10 +118,13 @@ For example:
 }
 ```
 
-If you set "worst-resource" as frame_color, in absence of resource warnings the frame will have no border.
-~~If you set false as show_always_bluetooth, you'll see icons for your bluetooth peripherals only if their battery runs low.~~
-If you set false as hide_missing_ratatoskr, heimdallr won't show a warning icon if ratatoskr is disconnected; in fact, ratatoskr is now optional.
-If you set true as show_watts, heimdallr will show battery flow when it is charging or discharging, next to ETA, rounded to integer.
+- `frame_color`: Accepts RGBA color values or `"worst-resource"`. When set to `"worst-resource"`, the frame border dynamically reflects system status warnings and stays hidden when everything is running normally.
+
+- `hide_missing_ratatoskr`: Set to `true` to hide the warning icon when Ratatoskr is disconnected (making Ratatoskr optional).
+
+- `show_watts`: Set to `true` to show the power flow (in Watts, rounded to the nearest integer) alongside the battery ETA during charging and discharging.
+
+- `show_devices_battery_max_level`: Threshold for displaying connected external devices (such as Bluetooth mice, headsets, or wired phones). A device icon appears only if its battery level is at or below this percentage. Set to `100` or higher to keep all devices visible continuously.
 
 Default values are the following:
 
