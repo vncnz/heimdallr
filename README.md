@@ -145,18 +145,28 @@ Now, Heimdallr listen to notifications. When there is a notification, the pill c
 Only one notification can be shown at any given moment, on several lines if needed, with the following format:
 
 > **[app_name]**
-> 
+>
 > [body if not empty, summary otherwise]
 
 Normal notifications gets a timeout of 3 seconds, critical notifications lasts until eternity and beyond.
 
-You can browse and remove notifications with following commands:
+You can ~~browse and~~ remove notifications with following command~~s~~:
 
 - echo hide_notification > /tmp/heimdallr_cmds
-- echo prev_notification > /tmp/heimdallr_cmds // Deprecated in pill UI
-- echo next_notification > /tmp/heimdallr_cmds // Deprecated in pill UI
+- ~~echo prev_notification > /tmp/heimdallr_cmds~~ // Deprecated in pill UI
+- ~~echo next_notification > /tmp/heimdallr_cmds~~ // Deprecated in pill UI
 
 You don't need to create /tmp/heimdallr_cmds file, it is created automatically by Heimdallr and it is a named pipe (aka a fifo special file): you write in it your command and it's all.
+
+Notifications are queued with the following logic:
+
+new notification urgency|pill current state|action
+-----------------|------------------|-------
+normal|idle|show the new notification
+normal|showing normal notification|replace the current notification and reset timer
+critical|showing normal notification|replace the current notification, no timeout
+critical|showing critical notification|put the new notification in the queue
+normal|showing critical notification|ignore new notification
 
 Notification example:
 
@@ -277,19 +287,10 @@ Used icon is based on device type and, for several types, bluetooth or wired con
 - ~~(code) Evaluate a modular system in which each component keeps a cache and private info~~ Done with new pill UI
 - ~~(UX) Put temporary notification always before important ones (because the latter doesn't expire!)~~ Done!
 - ~~Reduce quantity of damaged surface (wl_surface.damage_buffer only for changed areas)~~ it's not worth it
-- Make external batteries information optional
-- Implement a queue logic for notifications
+- ~~Make external batteries information optional~~ Done!
+- ~~Implement a queue logic for notifications~~ Done!
 - ~~Add pause/unpause to timeout~~ Done!
 
-New notification logic (to be implemented):
-
-new notif urgency|pill current state|action
------------------|------------------|-------
-normal|idle|show notif
-normal|showing normal|replace notif and reset timer
-critical|showing normal|replace notif, no timeout
-critical|showing critical|put in notif stack
-normal|showing critical|ignore new notif
 
 ### New functionalities
 
