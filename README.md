@@ -97,6 +97,7 @@ You can configure frame color and clock presence with a json file in ```~/.confi
 ```js
 {
     "frame_color": [red,green,blue,alpha] | "worst-resource" | "random" | null,
+    "pill_border_color": [red,green,blue,alpha] | "worst-resource" | "random" | null,
     // "show_clock": "clock1" / "clock2" / null, // Deprecated in pill-ui
     // "show_always_bluetooth": true / false, // Deprecated in pill-ui
     "hide_missing_ratatoskr": true / false,
@@ -110,6 +111,7 @@ For example:
 ```js
 {
     "frame_color": [0.2, 0.6, 1.0, 1.0],
+    "pill_border_color": null,
     // "show_clock": "clock1",
     // "show_always_bluetooth": true,
     "hide_missing_ratatoskr": true,
@@ -119,6 +121,8 @@ For example:
 ```
 
 - `frame_color`: Accepts RGBA color values or `"worst-resource"`. When set to `"worst-resource"`, the frame border dynamically reflects system status warnings and stays hidden when everything is running normally.
+
+- `pill_border_color`: Accepts RGBA color values or `"worst-resource"`. When set to `"worst-resource"`, the pill border dynamically reflects system status warnings and stays hidden when everything is running normally.
 
 - `hide_missing_ratatoskr`: Set to `true` to hide the warning icon when Ratatoskr is disconnected (making Ratatoskr optional).
 
@@ -131,6 +135,7 @@ Default values are the following:
 ```js
 {
     "frame_color": null,
+    "pill_border_color": null,
     // "show_clock": null,
     // "show_always_bluetooth": true,
     "show_devices_battery_max_level": 80,

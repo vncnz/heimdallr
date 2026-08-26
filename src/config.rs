@@ -54,6 +54,7 @@ pub enum LayerBackend {
 #[derive(Debug, Clone)]
 pub struct Config {
     pub frame_color: FrameColor,
+    pub pill_border_color: FrameColor,
     // pub show_clock: ClockCfg,
     // pub backend: LayerBackend,
     // pub show_always_bluetooth: bool,
@@ -66,6 +67,7 @@ pub struct Config {
 #[derive(Debug, Deserialize)]
 struct RawConfig {
     frame_color: Option<serde_json::Value>,
+    pill_border_color: Option<serde_json::Value>,
     // show_clock: Option<serde_json::Value>,
     // backend: Option<serde_json::Value>,
     // show_always_bluetooth: Option<bool>,
@@ -106,13 +108,13 @@ impl FrameColor {
                 if vals.len() == 4 {
                     FrameColor::Rgba(vals[0], vals[1], vals[2], vals[3])
                 } else {
-                    eprintln!("Invalid frame_color array, using None");
+                    eprintln!("Invalid color array, using None");
                     FrameColor::None
                 }
             }
 
             _ => {
-                eprintln!("Invalid frame_color in JSON configuration {:?}", value);
+                eprintln!("Invalid color in JSON configuration {:?}", value);
                 FrameColor::None
             }
         }
@@ -155,6 +157,7 @@ impl Config {
             eprintln!("Config JSON non valido, uso valori di default");
             RawConfig {
                 frame_color: None,
+                pill_border_color: None,
                 show_devices_battery_max_level: Some(80.0),
                 // show_clock: None,
                 // backend: None,
@@ -167,6 +170,7 @@ impl Config {
 
         Config {
             frame_color: FrameColor::from_json(raw.frame_color),
+            pill_border_color: FrameColor::from_json(raw.pill_border_color),
             // show_clock: ClockCfg::from_json(raw.show_clock),
             // backend: LayerBackend::from_json(raw.backend),
             // show_always_bluetooth: raw.show_always_bluetooth.unwrap_or(true),
