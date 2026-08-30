@@ -6,7 +6,7 @@ use std::{collections::HashMap, time::{Duration, Instant}};
 use colored::Colorize;
 
 use crate::{
-    config::{self, Config},
+    config::{Config},
     countdown::Countdown,
     data::{AlarmIcon, BatteryDevice, UPowerDeviceKind},
     dbg_println,
@@ -741,6 +741,35 @@ impl PillNotificationFull {
     pub fn push_notification(&mut self, cr: &cairo::Context, notif: crate::notifications::Notification) -> (bool, bool) {
         let mut changed_visible = false;
         let mut needs_recalc = false;
+
+        if notif.replaces_id > 0 {
+
+            // Replace the currently displayed notification immediately, if need to
+            if self.current.as_ref().is_some_and(|n| n.id == notif.replaces_id) {
+                let _ = self.update_data(cr, Some(notif.clone()));
+                self.current_expire = if notif.urgency == 2 {
+                    None
+                } else {
+                    Some(Instant::now() + self.display_timeout)
+                };
+                self.current = Some(notif);
+                return (true, true);
+            }
+
+            // Replace a queued notification instead of adding a duplicate, if need to
+            if let Some(index) = self.queue.iter().position(|n| n.id == notif.replaces_id) {
+                self.queue.remove(index);
+                self.queue.insert(0, notif);
+                return (false, false);
+            }
+
+            // Replace a critical notification stored in the stack, if need to
+            if let Some(index) = self.stack.iter().position(|n| n.id == notif.replaces_id) {
+                self.stack.remove(index);
+                self.stack.push(notif);
+                return (false, false);
+            }
+        }
 
         let curr_urg = self.current.as_ref().map(|n| n.urgency);
 

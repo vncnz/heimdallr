@@ -848,7 +848,7 @@ impl TweenState {
         self.target
     }
 
-    pub fn is_animating(&self) -> bool {
+    /* pub fn is_animating(&self) -> bool {
         self.animation_start.is_some()
-    }
+    } */
 }
