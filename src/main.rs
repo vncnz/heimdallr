@@ -34,6 +34,7 @@ mod config;
 mod heimdallr_layer;
 mod notifications;
 mod commands;
+mod niri;
 mod utils;
 mod battery;
 mod security;
@@ -46,6 +47,7 @@ use config::Config;
 use crate::heimdallr_layer::HeimdallrLayer;
 use crate::notifications::start_notification_listener;
 use crate::battery::start_battery_listener;
+use crate::niri::start_niri_listener;
 
 use clap::{crate_name, crate_version, Parser};
 
@@ -226,6 +228,16 @@ fn main() {
         });
     });
 
+    let (tx_niri, rx_niri): (Sender<Option<u32>>, Receiver<Option<u32>>) = mpsc::channel();
+    thread::spawn(|| {
+        if let Err(e) = start_niri_listener(tx_niri) {
+            log_to_file(format!("Niri listener error: {:?}", e));
+            dbg_println!("{}", format!("Niri listener error: {:?}", e).red().to_string());
+        } else {
+            dbg_println!("{}", "Niri listener OK".green().to_string());
+        }
+    });
+
     let (demo_tx, demo_rx) = mpsc::channel::<(String, String)>();
 
 
@@ -396,6 +408,23 @@ fn main() {
             println!("{}", format!("{:?}", status).red());
             app.update_security_data(status);
             app.request_redraw("security updated"); // TODO: in the new system, pill will know if it needs redraw, without forcing here
+        }
+
+        // Poll niri events for window attention
+        if let Ok(maybe_id) = rx_niri.try_recv() {
+            match maybe_id {
+                Some(window_id) => {
+                    // For now, we update the layer with a generic attention icon keyed by window id
+                    app.add_icon(&format!("win-{}", window_id), "󰙯", (1.0, 0.6, 0.0, 1.0), 1.0, None);
+                    app.request_redraw("niri attention");
+                }
+                None => {
+                    // Clear all window attention icons (keys start with "win-")
+                    let keys: Vec<String> = app.icons.keys().filter(|k| k.starts_with("win-")).cloned().collect();
+                    for k in keys { app.remove_icon(&k); }
+                    app.request_redraw("niri clear attention");
+                }
+            }
         }
 
         if let Ok(cmd) = rx_cmds.try_recv() {
