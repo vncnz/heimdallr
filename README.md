@@ -295,10 +295,13 @@ Used icon is based on device type and, for several types, bluetooth or wired con
 - ~~Make external batteries information optional~~ Done!
 - ~~Implement a queue logic for notifications~~ Done!
 - ~~Add pause/unpause to timeout~~ Done!
-- Improve notification management on disk removal. The calculation of replace_id is correct but there is no dedicated logic atm and the second notification is ignored. Morover, it can be nice to hide both notifications and put a temporary dedicated icon in the warnings block.
-    [09:56:44.373] app_name:nemo summary:Unmounting External256 body:Disconnecting from filesystem. timeout:-1 hints:{"desktop-entry": Str(Str(Borrowed("org.Nemo"))), "image-path": Str(Str(Borrowed("media-removable"))), "urgency": U8(2)} replaces_id:0
-    [09:56:45.839] app_name:nemo summary:External256 unmounted body:Filesystem has been disconnected. timeout:-1 hints:{"desktop-entry": Str(Str(Borrowed("org.Nemo"))), "urgency": U8(1), "image-path": Str(Str(Borrowed("media-removable")))} replaces_id:6
+- ~~Improve notification management on disk removal. The calculation of replace_id is correct but there is no dedicated logic atm and the second notification is ignored.~~
 
+    ~~[09:56:44.373] app_name:nemo summary:Unmounting External256 body:Disconnecting from filesystem. timeout:-1 hints:{"desktop-entry": Str(Str(Borrowed("org.Nemo"))), "image-path": Str(Str(Borrowed("media-removable"))), "urgency": U8(2)} replaces_id:0~~
+
+    ~~[09:56:45.839] app_name:nemo summary:External256 unmounted body:Filesystem has been disconnected. timeout:-1 hints:{"desktop-entry": Str(Str(Borrowed("org.Nemo"))), "urgency": U8(1), "image-path": Str(Str(Borrowed("media-removable")))} replaces_id:6~~
+
+    Done!
 
 ### New functionalities
 
@@ -309,6 +312,11 @@ Used icon is based on device type and, for several types, bluetooth or wired con
 - ~~Wob-like functionality~~ Done!
 - ~~Monitor and indicate mic/camera accesses~~ Done!
 - ~~Countdown~~ Done!
+- Listen to Niri events (WindowUrgencyChanged / FocusChanged) and add an indicator for windows in urgency state, something like `↓ WS 2` / `→ Firefox`
+
+### New functionalities - ideas
+
+- Add a temporary dedicated icon in the warnings block while system is disconnecting a disk
 - Add output configuration both on config file and as parameter
 - Show a resources resume for some time after receiving a dedicated command (something like [AVG 0.9 1.27 1.41] [MEM 73% / SWP 14%] [DSK 49%] and so on)?
 - Force a red frame border when battery is low, regardless of the settings?
