@@ -16,12 +16,7 @@ use std::thread;
 use colored::Colorize;
 
 use crate::{
-    battery::{BatteryState, BatteryStats}, 
-    commands::start_command_listener, 
-    data::{BluetoothStats, IconChange, RatatoskrSocket, BatteryDevice, UPowerDeviceKind},
-    notifications::Notification,
-    security::{MicCameraStatus, start_security_monitor},
-    utils::{get_color_gradient, log_to_file, select_icon}
+    battery::{BatteryState, BatteryStats}, commands::start_command_listener, data::{BatteryDevice, BluetoothStats, IconChange, RatatoskrSocket, UPowerDeviceKind}, niri::WindowInfo, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{get_color_gradient, log_to_file, select_icon}
 };
 
 mod data;
@@ -228,7 +223,7 @@ fn main() {
         });
     });
 
-    let (tx_niri, rx_niri): (Sender<Option<u32>>, Receiver<Option<u32>>) = mpsc::channel();
+    let (tx_niri, rx_niri): (Sender<Vec<WindowInfo>>, Receiver<Vec<WindowInfo>>) = mpsc::channel();
     thread::spawn(|| {
         if let Err(e) = start_niri_listener(tx_niri) {
             log_to_file(format!("Niri listener error: {:?}", e));
@@ -411,8 +406,13 @@ fn main() {
         }
 
         // Poll niri events for window attention
-        if let Ok(maybe_id) = rx_niri.try_recv() {
-            match maybe_id {
+        if let Ok(urgent_windows) = rx_niri.try_recv() {
+            if urgent_windows.len() > 0 {
+                log_to_file(format!("Urgent windows: {:?}", urgent_windows));
+                
+            }
+
+            /* match urgent_windows {
                 Some(window_id) => {
                     // For now, we update the layer with a generic attention icon keyed by window id
                     app.add_icon(&format!("win-{}", window_id), "󰙯", (1.0, 0.6, 0.0, 1.0), 1.0, None);
@@ -424,7 +424,7 @@ fn main() {
                     for k in keys { app.remove_icon(&k); }
                     app.request_redraw("niri clear attention");
                 }
-            }
+            } */
         }
 
         if let Ok(cmd) = rx_cmds.try_recv() {
