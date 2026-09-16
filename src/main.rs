@@ -407,10 +407,11 @@ fn main() {
 
         // Poll niri events for window attention
         if let Ok(urgent_windows) = rx_niri.try_recv() {
-            if urgent_windows.len() > 0 {
+            // if urgent_windows.len() > 0 {
                 log_to_file(format!("Urgent windows: {:?}", urgent_windows));
-                
-            }
+                println!("{}", format!("{} urgent windows: {:?}", urgent_windows.len(), urgent_windows).bright_yellow());
+                app.update_niri_data(urgent_windows);
+            // }
 
             /* match urgent_windows {
                 Some(window_id) => {
@@ -557,7 +558,7 @@ fn main() {
                             app.update_devices_data(b.devices);
                             app.request_redraw("bt-batteries");
                         } else {
-                            dbg_println!("{}", format!("Bluetooth battery status unchanged").yellow());
+                            // dbg_println!("{}", format!("Bluetooth battery status unchanged").yellow());
                         }
                         // PartialMsg { resource: "bt-batteries", warning: 0.0, icon: "", data: Some(Object {"devices": Array [Object {"kind": String("Mouse"), "name": String("MX Anywhere 2S"), "percentage": Number(90.0), "warn": Number(0.0)}], "icon": String(""), "warn": Number(0.0)}) }
                     }

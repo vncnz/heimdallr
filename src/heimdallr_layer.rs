@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{config::{Config, FrameColor}, data::{AlarmIcon, BatteryDevice, IconChange}, dbg_println, notifications::Notification, pills::{Pill, PillModuleTrait}, security::MicCameraStatus, utils::{TweenState, draw_smart_border, log_to_file, mix_color, rounded_rect_gradient}};
+use crate::{config::{Config, FrameColor}, data::{AlarmIcon, BatteryDevice, IconChange}, dbg_println, niri::WindowInfo, notifications::Notification, pills::{Pill, PillModuleTrait}, security::MicCameraStatus, utils::{TweenState, draw_smart_border, log_to_file, mix_color, rounded_rect_gradient}};
 
 static mut AVG_DUR: u128 = 0;
 static mut AVG_CNT: i64 = -5;
@@ -99,6 +99,13 @@ impl HeimdallrLayer {
     pub fn update_security_data (&mut self, data: MicCameraStatus) {
         self.pill_container.update_data_security(&data);
         // self.security = data; // TODO: Deprecated? Remove it?
+    }
+
+    pub fn update_niri_data (&mut self, data: Vec<WindowInfo>) {
+        if self.pill_container.update_data_niri(data) {
+            // self.pill_container.recalculate_normal_target();
+            // self.request_redraw("pill_container animation (niri)");
+        }
     }
 
     pub fn update_battery_data (&mut self, data: Option<crate::battery::BatteryStats>) {

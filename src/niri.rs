@@ -14,7 +14,7 @@ pub struct WindowInfo {
     pos: i32,
     urgent: bool,
     title: String,
-    appid: String
+    pub appid: String
 }
 
 /// Start a listener for niri events.
