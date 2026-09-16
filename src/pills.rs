@@ -1221,46 +1221,14 @@ impl Pill {
 
     fn draw_normal(&mut self, cr: &Context, _rect_width: f64, rect_height: f64, x: f64, y: f64) {
         self.sync_child_rects_for_draw();
-        // self.recalculate_normal_target();
-        /* if self.first_draw {
-            self.recalculate_normal_target();
-            self.first_draw = false;
-        } */
 
         let mut x = x;
-        self.pill_clock.draw(&cr, self.pill_clock_rect.0, rect_height, x, y);
-        x += self.pill_clock_rect.0;
-
-        if self.pill_battery_rect.0 > 0.0 {
-            self.pill_battery.draw(&cr, self.pill_battery_rect.0, rect_height, x, y);
-            x += self.pill_battery_rect.0;
+        for (rect, module) in self.normal_rects_mut() {
+            if rect.0 > 0.0 {
+                module.draw(cr, rect.0, rect_height, x, y);
+                x += rect.0;
+            }
         }
-
-        if self.pill_countdown_rect.0 > 0.0 {
-            self.pill_countdown.draw(&cr, self.pill_countdown_rect.0, rect_height, x, y);
-            x += self.pill_countdown_rect.0;
-        }
-
-        if self.pill_security_rect.0 > 0.0 {
-            self.pill_security.draw(&cr, self.pill_security_rect.0, rect_height, x, y);
-            x += self.pill_security_rect.0;
-        }
-
-        if self.pill_devices_rect.0 > 0.0 {
-            self.pill_devices.draw(&cr, self.pill_devices_rect.0, rect_height, x, y);
-            x += self.pill_devices_rect.0;
-        }
-
-        if self.pill_warnings_rect.0 > 0.0 {
-            self.pill_warnings.draw(&cr, self.pill_warnings_rect.0, rect_height, x, y);
-            x += self.pill_warnings_rect.0;
-        }
-
-        if self.pill_niri_rect.0 > 0.0 {
-            self.pill_niri.draw(&cr, self.pill_niri_rect.0, rect_height, x, y);
-            // x += self.pill_niri_rect.0;
-        }
-        // dbg_println!("PillContainer drawn in x {x:?}");
     }
 
     fn normal_modules_mut(&mut self) -> [&mut dyn PillModuleTrait; 7] {
@@ -1279,11 +1247,11 @@ impl Pill {
         [
             (&mut self.pill_clock_rect, &mut self.pill_clock),
             (&mut self.pill_battery_rect, &mut self.pill_battery),
-            (&mut self.pill_warnings_rect, &mut self.pill_warnings),
-            (&mut self.pill_security_rect, &mut self.pill_security),
-            (&mut self.pill_niri_rect, &mut self.pill_niri),
             (&mut self.pill_countdown_rect, &mut self.pill_countdown),
+            (&mut self.pill_security_rect, &mut self.pill_security),
             (&mut self.pill_devices_rect, &mut self.pill_devices),
+            (&mut self.pill_warnings_rect, &mut self.pill_warnings),
+            (&mut self.pill_niri_rect, &mut self.pill_niri),
         ]
     }
 

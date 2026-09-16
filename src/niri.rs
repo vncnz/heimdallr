@@ -1,8 +1,7 @@
 use std::process::{Command, Stdio};
 use std::io::{BufRead, BufReader};
-use std::sync::mpsc::Sender;
+use std::sync::{mpsc::Sender, Mutex, OnceLock};
 use std::thread;
-use regex::Regex;
 use std::collections::HashMap;
 use serde_json::Value;
 
@@ -10,11 +9,60 @@ use crate::utils::log_to_file;
 
 #[derive(Debug, Clone)]
 pub struct WindowInfo {
+    pub id: u32,
     workspace: i32,
     pos: i32,
     urgent: bool,
     title: String,
     pub appid: String
+}
+
+static NIRI_URGENT_WINDOWS: OnceLock<Mutex<Vec<WindowInfo>>> = OnceLock::new();
+
+fn urgent_windows_store() -> &'static Mutex<Vec<WindowInfo>> {
+    NIRI_URGENT_WINDOWS.get_or_init(|| Mutex::new(Vec::new()))
+}
+
+pub fn set_urgent_windows(windows: Vec<WindowInfo>) {
+    let mut store = urgent_windows_store().lock().unwrap();
+    *store = windows;
+}
+
+pub fn get_urgent_windows() -> Vec<WindowInfo> {
+    urgent_windows_store().lock().unwrap().clone()
+}
+
+pub fn focus_next_urgent_window() -> Result<(), String> {
+    let mut urgent = get_urgent_windows();
+    if urgent.is_empty() {
+        return Err("No urgent windows".to_string());
+    }
+
+    urgent.sort_by(|a, b| {
+        a.workspace
+            .cmp(&b.workspace)
+            .then(a.pos.cmp(&b.pos))
+            .then(a.id.cmp(&b.id))
+    });
+
+    let target = urgent.first().ok_or_else(|| "No urgent windows".to_string())?;
+    let status = Command::new("niri")
+        .args(["msg", "action", "focus-window", "--id", &target.id.to_string()])
+        .status()
+        .map_err(|err| format!("Failed to execute niri focus command: {err}"))?;
+
+    if !status.success() {
+        return Err(format!("niri focus-window {} exited with status {:?}", target.id, status.code()));
+    }
+
+    Ok(())
+}
+
+pub fn handle_niri_command(cmd: &str) -> Result<(), String> {
+    match cmd {
+        "focus_next_urgent_window" => focus_next_urgent_window(),
+        _ => Err(format!("Unknown Niri command: {cmd}")),
+    }
 }
 
 /// Start a listener for niri events.
@@ -72,7 +120,7 @@ pub fn start_niri_listener(tx: Sender<Vec<WindowInfo>>) -> Result<(), Box<dyn st
                                 let is_urgent = win.get("is_urgent").and_then(|b| b.as_bool()).unwrap_or(false);
                                 let title = win.get("title").and_then(|t| t.as_str()).unwrap_or("").to_string();
                                 let appid = win.get("app_id").and_then(|t| t.as_str()).unwrap_or("").to_string();
-                                last_pos.insert(id, WindowInfo { workspace, pos: pos0, urgent: is_urgent, title, appid });
+                                last_pos.insert(id, WindowInfo { id, workspace, pos: pos0, urgent: is_urgent, title, appid });
                                 log_to_file(format!("niri: window {} opened/changed ws={} pos={} urgent={}", id, workspace, pos0, is_urgent));
                                 continue;
                             }
@@ -98,10 +146,12 @@ pub fn start_niri_listener(tx: Sender<Vec<WindowInfo>>) -> Result<(), Box<dyn st
                                 info.urgent = urgent;
                                 log_to_file(format!("niri: updated urgency for window {} -> {}", id, urgent));
                             } else {
-                                last_pos.insert(id, WindowInfo { workspace: 0, pos: 0, urgent, title: "".into(), appid: "".into() });
+                                last_pos.insert(id, WindowInfo { id, workspace: 0, pos: 0, urgent, title: "".into(), appid: "".into() });
                                 log_to_file(format!("niri: inserted urgency for unknown window {} -> {}", id, urgent));
                             }
-                            let _ = tx.send(last_pos.values().filter(|el|el.urgent).cloned().collect());
+                            let urgent_windows: Vec<WindowInfo> = last_pos.values().filter(|el| el.urgent).cloned().collect();
+                            set_urgent_windows(urgent_windows.clone());
+                            let _ = tx.send(urgent_windows);
                             continue;
                         }
                     }

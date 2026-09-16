@@ -16,7 +16,7 @@ use std::thread;
 use colored::Colorize;
 
 use crate::{
-    battery::{BatteryState, BatteryStats}, commands::start_command_listener, data::{BatteryDevice, BluetoothStats, IconChange, RatatoskrSocket, UPowerDeviceKind}, niri::WindowInfo, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{get_color_gradient, log_to_file, select_icon}
+    battery::{BatteryState, BatteryStats}, commands::start_command_listener, data::{BatteryDevice, BluetoothStats, IconChange, RatatoskrSocket, UPowerDeviceKind}, niri::{handle_niri_command, set_urgent_windows, WindowInfo}, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{get_color_gradient, log_to_file, select_icon}
 };
 
 mod data;
@@ -407,26 +407,25 @@ fn main() {
 
         // Poll niri events for window attention
         if let Ok(urgent_windows) = rx_niri.try_recv() {
-            // if urgent_windows.len() > 0 {
-                log_to_file(format!("Urgent windows: {:?}", urgent_windows));
-                println!("{}", format!("{} urgent windows: {:?}", urgent_windows.len(), urgent_windows).bright_yellow());
-                app.update_niri_data(urgent_windows);
-            // }
-
-            /* match urgent_windows {
-                Some(window_id) => {
-                    // For now, we update the layer with a generic attention icon keyed by window id
-                    app.add_icon(&format!("win-{}", window_id), "󰙯", (1.0, 0.6, 0.0, 1.0), 1.0, None);
-                    app.request_redraw("niri attention");
-                }
-                None => {
-                    // Clear all window attention icons (keys start with "win-")
-                    let keys: Vec<String> = app.icons.keys().filter(|k| k.starts_with("win-")).cloned().collect();
-                    for k in keys { app.remove_icon(&k); }
-                    app.request_redraw("niri clear attention");
-                }
-            } */
+            set_urgent_windows(urgent_windows.clone());
+            log_to_file(format!("Urgent windows: {:?}", urgent_windows));
+            println!("{}", format!("{} urgent windows: {:?}", urgent_windows.len(), urgent_windows).bright_yellow());
+            app.update_niri_data(urgent_windows);
         }
+
+        /* match urgent_windows {
+            Some(window_id) => {
+                // For now, we update the layer with a generic attention icon keyed by window id
+                app.add_icon(&format!("win-{}", window_id), "󰙯", (1.0, 0.6, 0.0, 1.0), 1.0, None);
+                app.request_redraw("niri attention");
+            }
+            None => {
+                // Clear all window attention icons (keys start with "win-")
+                let keys: Vec<String> = app.icons.keys().filter(|k| k.starts_with("win-")).cloned().collect();
+                for k in keys { app.remove_icon(&k); }
+                app.request_redraw("niri clear attention");
+            }
+        } */
 
         if let Ok(cmd) = rx_cmds.try_recv() {
             match &*cmd {
@@ -436,6 +435,16 @@ fn main() {
                         app.request_redraw("hide_notification");
                     } else {
                         eprintln!("--- No remove?");
+                    }
+                },
+                "focus_next_urgent_window" => {
+                    match handle_niri_command("focus_next_urgent_window") {
+                        Ok(()) => {
+                            println!("Focused next urgent Niri window");
+                        },
+                        Err(err) => {
+                            eprintln!("{}", err.red());
+                        }
                     }
                 },
                 /* "prev_notification" => {
