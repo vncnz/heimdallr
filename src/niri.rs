@@ -13,7 +13,8 @@ pub struct WindowInfo {
     workspace: i32,
     pos: i32,
     urgent: bool,
-    title: String
+    title: String,
+    appid: String
 }
 
 /// Start a listener for niri events.
@@ -70,7 +71,8 @@ pub fn start_niri_listener(tx: Sender<Vec<WindowInfo>>) -> Result<(), Box<dyn st
                                 }
                                 let is_urgent = win.get("is_urgent").and_then(|b| b.as_bool()).unwrap_or(false);
                                 let title = win.get("title").and_then(|t| t.as_str()).unwrap_or("").to_string();
-                                last_pos.insert(id, WindowInfo { workspace, pos: pos0, urgent: is_urgent, title });
+                                let appid = win.get("app_id").and_then(|t| t.as_str()).unwrap_or("").to_string();
+                                last_pos.insert(id, WindowInfo { workspace, pos: pos0, urgent: is_urgent, title, appid });
                                 log_to_file(format!("niri: window {} opened/changed ws={} pos={} urgent={}", id, workspace, pos0, is_urgent));
                                 continue;
                             }
@@ -96,7 +98,7 @@ pub fn start_niri_listener(tx: Sender<Vec<WindowInfo>>) -> Result<(), Box<dyn st
                                 info.urgent = urgent;
                                 log_to_file(format!("niri: updated urgency for window {} -> {}", id, urgent));
                             } else {
-                                last_pos.insert(id, WindowInfo { workspace: 0, pos: 0, urgent, title: "".into() });
+                                last_pos.insert(id, WindowInfo { workspace: 0, pos: 0, urgent, title: "".into(), appid: "".into() });
                                 log_to_file(format!("niri: inserted urgency for unknown window {} -> {}", id, urgent));
                             }
                             let _ = tx.send(last_pos.values().filter(|el|el.urgent).cloned().collect());
