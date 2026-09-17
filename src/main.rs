@@ -2,13 +2,11 @@ use signal_hook::{consts::{SIGHUP, SIGINT, SIGPIPE, SIGTERM}, iterator::Signals,
 
 use serde::Deserialize;
 use smithay_client_toolkit::{
-    compositor::CompositorState, output::OutputState, registry::RegistryState, shell::wlr_layer::{Anchor, KeyboardInteractivity, Layer, LayerShell}, shm::Shm
+    compositor::CompositorState, output::OutputState, registry::RegistryState, shell::wlr_layer::LayerShell, shm::Shm
 };
-use wayland_client::{Connection, EventQueue, globals::{GlobalList, registry_queue_init}, protocol::{wl_compositor, wl_output::WlOutput, wl_region}};
+use wayland_client::{Connection, EventQueue, globals::{GlobalList, registry_queue_init}, protocol::{wl_compositor, wl_output::WlOutput}};
 
 use std::{sync::mpsc::{self, Receiver, Sender}, time::{Duration}};
-
-use smithay_client_toolkit::shell::WaylandSurface;
 
 use std::panic;
 use std::thread;
@@ -167,22 +165,10 @@ fn main() {
     // let chosen_output = outputs.next();
     let chosen_output = choose_output(&app);
 
-    let surface = compositor.create_surface(&qh);
-    let layer = layer_shell.create_layer_surface(&qh, surface, Layer::Overlay, Some("heimdallr"), chosen_output.as_ref());
-    layer.set_anchor(Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT);
-    layer.set_keyboard_interactivity(KeyboardInteractivity::None);
-
     let raw_compositor: wl_compositor::WlCompositor =
     globals.bind::<wl_compositor::WlCompositor, _, _>(&qh, 1..=4, ())
     .expect("failed to bind wl_compositor for region creation");
-
-    let empty_region: wl_region::WlRegion = raw_compositor.create_region(&qh, ());
-    layer.wl_surface().set_input_region(Some(&empty_region));
-
-    layer.set_size(0, 0); // full screen
-    layer.commit();
-
-    app.layer = Some(layer);
+    app.install_surfaces(&compositor, &layer_shell, &qh, chosen_output.as_ref(), &raw_compositor);
     
     // app.add_icon("avg", "󰬢", (1.0, 0.2, 0.2, 1.0)); // example
     let (tx, rx_cmds): (Sender<String>, Receiver<String>) = mpsc::channel();

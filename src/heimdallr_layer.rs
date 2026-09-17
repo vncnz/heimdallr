@@ -1,10 +1,10 @@
 use smithay_client_toolkit::{
-    compositor::CompositorHandler, delegate_compositor, delegate_layer, delegate_output, delegate_registry, delegate_shm, output::{OutputHandler, OutputState}, registry::{ProvidesRegistryState, RegistryState}, registry_handlers, shell::wlr_layer::{LayerShellHandler, LayerSurface, LayerSurfaceConfigure}, shm::{Shm, ShmHandler, slot::{Buffer, SlotPool}}
+    compositor::{CompositorHandler, CompositorState}, delegate_compositor, delegate_layer, delegate_output, delegate_registry, delegate_shm, output::{OutputHandler, OutputState}, registry::{ProvidesRegistryState, RegistryState}, registry_handlers, shell::wlr_layer::{Anchor, KeyboardInteractivity, Layer, LayerShell, LayerShellHandler, LayerSurface, LayerSurfaceConfigure}, shm::{Shm, ShmHandler, slot::{Buffer, SlotPool}}
 };
-use wayland_client::{Connection, QueueHandle, protocol::{wl_compositor, wl_region, wl_shm}};
+use wayland_client::{Connection, QueueHandle, protocol::{wl_compositor, wl_output::WlOutput, wl_region, wl_shm}};
 use cairo::{Context, Format, ImageSurface};
 
-use std::{num::NonZeroU32, time::{Duration, Instant}};
+use std::time::{Duration, Instant};
 
 use smithay_client_toolkit::shell::WaylandSurface;
 
@@ -13,28 +13,77 @@ use std::collections::HashMap;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{config::{Config, FrameColor}, data::{AlarmIcon, BatteryDevice, IconChange}, dbg_println, niri::WindowInfo, notifications::Notification, pills::{Pill, PillModuleTrait}, security::MicCameraStatus, utils::{TweenState, draw_smart_border, log_to_file, mix_color, rounded_rect_gradient}};
+use crate::{config::{Config, FrameColor}, data::{AlarmIcon, BatteryDevice, IconChange}, dbg_println, niri::WindowInfo, notifications::Notification, pills::{Pill, PillModuleTrait}, security::MicCameraStatus, utils::{TweenState, log_to_file, mix_color, rounded_rect_gradient}};
 
-static mut AVG_DUR: u128 = 0;
-static mut AVG_CNT: i64 = -5;
+const CORNER_SIZE: u32 = 32;
+const PILL_SURFACE_WIDTH: u32 = 1200;
+const PILL_SURFACE_HEIGHT: u32 = 128;
+
+#[derive(Clone, Copy)]
+enum Corner {
+    TopLeft,
+    TopRight,
+    BottomRight,
+    BottomLeft,
+}
+
+struct RenderSurface {
+    layer: LayerSurface,
+    pool: Option<SlotPool>,
+    width: u32,
+    height: u32,
+    buffers: [Option<Buffer>; 2],
+    current_buffer_idx: usize,
+    configured: bool,
+    waiting_for_frame: bool,
+    corner: Option<Corner>,
+}
+
+impl RenderSurface {
+    fn new(layer: LayerSurface, width: u32, height: u32, corner: Option<Corner>) -> Self {
+        Self {
+            layer,
+            pool: None,
+            width,
+            height,
+            buffers: [None, None],
+            current_buffer_idx: 0,
+            configured: false,
+            waiting_for_frame: false,
+            corner,
+        }
+    }
+
+    fn matches(&self, layer: &LayerSurface) -> bool {
+        self.layer.wl_surface() == layer.wl_surface()
+    }
+
+    fn matches_surface(&self, surface: &wayland_client::protocol::wl_surface::WlSurface) -> bool {
+        self.layer.wl_surface() == surface
+    }
+
+    fn configure(&mut self, width: u32, height: u32, shm: &Shm) {
+        self.width = if width == 0 { self.width } else { width };
+        self.height = if height == 0 { self.height } else { height };
+        self.pool = Some(SlotPool::new((self.width * self.height * 4) as usize, shm).expect("pool creation failed"));
+        self.buffers = [None, None];
+        self.current_buffer_idx = 0;
+        self.configured = true;
+    }
+}
 
 pub struct HeimdallrLayer {
     pub(crate) registry_state: RegistryState,
     pub(crate) output_state: OutputState,
     pub(crate) shm: Shm,
-    pub(crate) pool: Option<SlotPool>,
-    pub(crate) layer: Option<LayerSurface>,
-    pub(crate) width: u32,
-    pub(crate) height: u32,
-    pub(crate) first_configure: bool,
+    pill_surface: Option<RenderSurface>,
+    corner_surfaces: Vec<RenderSurface>,
     // pub(crate) input_region: Option<wl_region::WlRegion>,
     pub(crate) icons: HashMap<String, AlarmIcon>,
     // pub(crate) battery_integrated: Option<crate::battery::BatteryStats>,
     pub(crate) needs_redraw: bool,
     pub(crate) last_redraw: Instant,
     pub(crate) redraw_interval: [Duration; 2],
-    pub(crate) buffers: [Option<Buffer>; 2],
-    pub(crate) current_buffer_idx: usize,
     pub(crate) config: crate::config::Config,
     pub(crate) notifications: Vec<crate::notifications::Notification>,
     pub(crate) wob_value: TweenState,
@@ -42,7 +91,6 @@ pub struct HeimdallrLayer {
     pub(crate) ratatoskr_connected: bool,
     // pub(crate) animator: Animator,
     // pub(crate) frame_model: FrameModel,
-    pub(crate) is_waiting_for_frame: bool,
     // pub(crate) security: crate::security::MicCameraStatus,
     pub(crate) batteries: Vec<BatteryDevice>,
     pub(crate) batteries_pristine: bool,
@@ -65,11 +113,8 @@ impl HeimdallrLayer {
             registry_state,
             output_state,
             shm,
-            pool: None,
-            layer: None,
-            width: 1,
-            height: 1,
-            first_configure: true,
+            pill_surface: None,
+            corner_surfaces: Vec::new(),
             // input_region: Some(empty_region),
             icons: HashMap::new(),
             ratatoskr_connected: false,
@@ -77,8 +122,6 @@ impl HeimdallrLayer {
             needs_redraw: true,
             last_redraw: Instant::now(),
             redraw_interval: [Duration::from_millis(500), Duration::from_millis(60_000)],
-            buffers: [None, None],
-            current_buffer_idx: 0,
             config,
             notifications: vec![],
             // notification_idx: 0,
@@ -86,7 +129,6 @@ impl HeimdallrLayer {
             wob_value: TweenState::new(0.0),
             // animator: Animator::new(),
             // frame_model: FrameModel::new(),
-            is_waiting_for_frame: false,
             // security: MicCameraStatus { mic_active: vec!(), camera_active: vec!(), pristine: false },
             batteries: vec![],
             batteries_pristine: false,
@@ -226,69 +268,44 @@ impl HeimdallrLayer {
     }
 
     fn draw(&mut self, qh: &QueueHandle<Self>) {
-        if self.is_waiting_for_frame {
+        let Some(mut surface) = self.pill_surface.take() else { return; };
+        if !surface.configured || surface.waiting_for_frame {
+            self.pill_surface = Some(surface);
             return;
         }
-        if self.layer.is_some() && self.pool.is_some() {
-            self.needs_redraw = false;
-            let _start = std::time::Instant::now();
 
-            let pool = self.pool.as_mut().unwrap();
-            let buffer_idx_opt = Self::acquire_buffer(&mut self.buffers, self.width, self.height, self.current_buffer_idx, pool);
-            if let Some(buffer_idx) = buffer_idx_opt {
-                let buffer = self.buffers[buffer_idx].as_ref().unwrap();
-                let canvas = buffer.canvas(pool).expect("canvas should be available immediately");
-                let surface = unsafe {
-                    ImageSurface::create_for_data_unsafe(
-                        canvas.as_mut_ptr(),
-                        Format::ARgb32,
-                        self.width as i32,
-                        self.height as i32,
-                        buffer.stride(),
-                    )
-                    .unwrap()
-                };
+        let Some(pool) = surface.pool.as_mut() else {
+            self.pill_surface = Some(surface);
+            return;
+        };
+        let buffer_idx = Self::acquire_buffer(&mut surface.buffers, surface.width, surface.height, surface.current_buffer_idx, pool);
+        let Some(buffer_idx) = buffer_idx else {
+            self.pill_surface = Some(surface);
+            return;
+        };
+        let buffer = surface.buffers[buffer_idx].as_ref().unwrap();
+        let canvas = buffer.canvas(pool).expect("canvas should be available immediately");
+        let image = unsafe {
+            ImageSurface::create_for_data_unsafe(canvas.as_mut_ptr(), Format::ARgb32, surface.width as i32, surface.height as i32, buffer.stride()).unwrap()
+        };
+        let cr = Context::new(&image).unwrap();
+        cr.set_operator(cairo::Operator::Clear);
+        cr.paint().unwrap();
+        cr.set_operator(cairo::Operator::Over);
+        self.draw_test_pill(&cr, surface.width);
 
-                // self.update_timer_icon();
-
-                let cr = Context::new(&surface).unwrap();
-
-                self.draw_myframe(cr.clone());
-
-                self.draw_test_pill(&cr);
-
-                let layer = self.layer.clone().unwrap();
-                let buffer = self.buffers[buffer_idx].as_ref().unwrap();
-                buffer.attach_to(layer.wl_surface()).unwrap();
-                layer.wl_surface().damage_buffer(0, 0, self.width as i32, self.height as i32);
-                // layer.wl_surface().damage_buffer(0, 0, self.width as i32, 50);
-                // layer.wl_surface().damage_buffer(0, 0, 50, self.height as i32);
-                self.is_waiting_for_frame = true;
-                layer.wl_surface().frame(qh, layer.wl_surface().clone());
-                layer.commit();
-
-                drop(surface);
-                // self.current_buffer_idx = 1 - buffer_idx;
-                self.current_buffer_idx = (buffer_idx + 1) % self.buffers.len();
-                self.last_redraw = Instant::now();
-
-                #[cfg(debug_assertions)] {
-                    let end = std::time::Instant::now();
-                    let dur = (end - _start).as_nanos();
-                    unsafe {
-                        AVG_CNT += 1;
-                        if AVG_CNT > -1 {
-                            AVG_DUR += dur;
-                            eprintln!("Draw ended ({:.2}ms avg {:.2}ms)", (dur as f64) / 1_000_000.0, ((AVG_DUR as f64)/(AVG_CNT as f64)) / 1_000_000.0); }
-                        }
-                }
-            } else {
-                dbg_println!("No available buffer to use");
-            }
-        }
+        buffer.attach_to(surface.layer.wl_surface()).unwrap();
+        surface.layer.wl_surface().damage_buffer(0, 0, surface.width as i32, surface.height as i32);
+        surface.waiting_for_frame = true;
+        surface.layer.wl_surface().frame(qh, surface.layer.wl_surface().clone());
+        surface.layer.commit();
+        drop(image);
+        surface.current_buffer_idx = (buffer_idx + 1) % surface.buffers.len();
+        self.last_redraw = Instant::now();
+        self.pill_surface = Some(surface);
     }
 
-    fn draw_test_pill (&mut self, cr: &Context) {
+    fn draw_test_pill (&mut self, cr: &Context, surface_width: u32) {
         self.pills_are_animating = false;
 
         if self.pill_container.needs_recalc {
@@ -322,8 +339,8 @@ impl HeimdallrLayer {
 
         let (rect_width, rect_height) = self.pill_container.get_current_rect();
         let (rect_width_end, _rect_height_end) = self.pill_container.get_desired_rect();
-        let rect_left = (self.width as f64 - rect_width) / 2.0;
-        let rect_left_end = (self.width as f64 - rect_width_end) / 2.0;
+        let rect_left = (surface_width as f64 - rect_width) / 2.0;
+        let rect_left_end = (surface_width as f64 - rect_width_end) / 2.0;
         let rect_top = 2.0;
 
         let mut pill_bg_steps = vec![(0.0, pill_bg_color)];
@@ -344,64 +361,81 @@ impl HeimdallrLayer {
         self.pill_container.draw(&cr, rect_width_end, rect_height, rect_left_end, rect_top);
     }
 
-    fn draw_myframe(&mut self, cr: Context) {
-        // cr.set_operator(cairo::Operator::Source);
-
-        // Clear with full transparency
-        // cr.set_source_rgba(0.0, 0.0, 0.0, 0.0);
+    fn draw_corner(cr: &Context, corner: Corner) {
+        let size = CORNER_SIZE as f64;
         cr.set_operator(cairo::Operator::Clear);
         cr.paint().unwrap();
         cr.set_operator(cairo::Operator::Over);
-
-        // Draw rounded rectangle frame
-        let thickness = 1.0;
-        let radius = 25.0;
-        let radius2 = 4.0;
-
-        let w = self.width as f64;
-        let h = self.height as f64;
-        let w_hole = w - thickness - 2.0;
-
-        let top = thickness / 2.0;
-
-        // TODO: In the pill-ui, the hole will be always a rectangle, so we can use a simplified version of rounded_big_hole and remove the ReservedSpace stuff, don't we?
-        // TODO: In the pill-ui we can also have rounded corners as separated surfaces? We lose the ability to have a border but we "lose" a lot of memory footprint too! But what if, in the future, pill will be able to expand vertically and host big component? We'll need potentially the entire screen in the buffer, just like now.
-
-        // Outer black border + fill
-        // rounded_big_hole(&cr, thickness / 2.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h, wob_h);
-
-        let spaces = vec![
-            // ReservedSpace { anchor: Anchor::BottomRight, width: 100.0, height: 40.0 }
-            // ReservedSpace { anchor: Anchor::BottomLeft, width: res_w, height: res_h }
-            // ReservedSpace { anchor: Anchor::TopRight, width: 90.0, height: 20.0 }
-        ];
-
-        draw_smart_border(&cr, thickness / 2.0, top, w_hole, h - thickness/2.0 - top, w / 2.0, h / 2.0, radius, radius2, &&spaces);
-
-        cr.set_fill_rule(cairo::FillRule::EvenOdd);
-        cr.rectangle(-1.0, -1.0, w + 2.0, h + 2.0);
-
         cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
-        
+        cr.rectangle(0.0, 0.0, size, size);
+        cr.fill().unwrap();
 
-        if let Some((r, g, b, a)) = match self.config.frame_color {
-            FrameColor::Rgba(r, g, b, a) => Some((r, g, b, a)),
-            FrameColor::WorstResource => self
-                .icons
-                .values()
-                .max_by(|a, b| a.warn.partial_cmp(&b.warn).unwrap_or(std::cmp::Ordering::Equal))
-                .map(|icon| icon.color),
-            FrameColor::None /* | FrameColor::Random */ => None,
-        } {
-            cr.fill_preserve().unwrap();
-            cr.set_line_width(1.0);
-            cr.set_source_rgba(r, g, b, a);
-            // rounded_big_hole(&cr, thickness / 2.0 + 1.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h, wob_h);
-            cr.stroke().unwrap();
-        } else {
-            cr.fill().unwrap();
-        }
+        let (x, y, start, end) = match corner {
+            Corner::TopLeft => (size, size, std::f64::consts::PI, 1.5 * std::f64::consts::PI),
+            Corner::TopRight => (0.0, size, 1.5 * std::f64::consts::PI, 2.0 * std::f64::consts::PI),
+            Corner::BottomRight => (0.0, 0.0, 0.0, 0.5 * std::f64::consts::PI),
+            Corner::BottomLeft => (size, 0.0, 0.5 * std::f64::consts::PI, std::f64::consts::PI),
+        };
+        cr.set_operator(cairo::Operator::Clear);
+        cr.arc(x, y, size, start, end);
+        cr.line_to(x, y);
+        cr.close_path();
+        cr.fill().unwrap();
+        cr.set_operator(cairo::Operator::Over);
+    }
 
+    fn draw_static_surface(surface: &mut RenderSurface) {
+        let Some(pool) = surface.pool.as_mut() else { return; };
+        let buffer_idx = Self::acquire_buffer(&mut surface.buffers, surface.width, surface.height, surface.current_buffer_idx, pool);
+        let Some(buffer_idx) = buffer_idx else { return; };
+        let buffer = surface.buffers[buffer_idx].as_ref().unwrap();
+        let canvas = buffer.canvas(pool).expect("corner canvas should be available");
+        let image = unsafe {
+            ImageSurface::create_for_data_unsafe(canvas.as_mut_ptr(), Format::ARgb32, surface.width as i32, surface.height as i32, buffer.stride()).unwrap()
+        };
+        let cr = Context::new(&image).unwrap();
+        Self::draw_corner(&cr, surface.corner.unwrap());
+        buffer.attach_to(surface.layer.wl_surface()).unwrap();
+        surface.layer.wl_surface().damage_buffer(0, 0, surface.width as i32, surface.height as i32);
+        surface.layer.commit();
+        drop(image);
+        surface.current_buffer_idx = (buffer_idx + 1) % surface.buffers.len();
+    }
+
+    pub fn install_surfaces(
+        &mut self,
+        compositor: &CompositorState,
+        layer_shell: &LayerShell,
+        qh: &QueueHandle<Self>,
+        output: Option<&WlOutput>,
+        raw_compositor: &wl_compositor::WlCompositor,
+    ) {
+        let empty_region = raw_compositor.create_region(qh, ());
+        let corners = [
+            (Corner::TopLeft, Anchor::TOP | Anchor::LEFT),
+            (Corner::TopRight, Anchor::TOP | Anchor::RIGHT),
+            (Corner::BottomRight, Anchor::BOTTOM | Anchor::RIGHT),
+            (Corner::BottomLeft, Anchor::BOTTOM | Anchor::LEFT),
+        ];
+        self.corner_surfaces = corners.into_iter().map(|(corner, anchor)| {
+            let surface = compositor.create_surface(qh);
+            let layer = layer_shell.create_layer_surface(qh, surface, Layer::Overlay, Some("heimdallr-corner"), output);
+            layer.set_anchor(anchor);
+            layer.set_size(CORNER_SIZE, CORNER_SIZE);
+            layer.set_keyboard_interactivity(KeyboardInteractivity::None);
+            layer.wl_surface().set_input_region(Some(&empty_region));
+            layer.commit();
+            RenderSurface::new(layer, CORNER_SIZE, CORNER_SIZE, Some(corner))
+        }).collect();
+
+        let surface = compositor.create_surface(qh);
+        let layer = layer_shell.create_layer_surface(qh, surface, Layer::Overlay, Some("heimdallr-pill"), output);
+        layer.set_anchor(Anchor::TOP);
+        layer.set_size(PILL_SURFACE_WIDTH, PILL_SURFACE_HEIGHT);
+        layer.set_keyboard_interactivity(KeyboardInteractivity::None);
+        layer.wl_surface().set_input_region(Some(&empty_region));
+        layer.commit();
+        self.pill_surface = Some(RenderSurface::new(layer, PILL_SURFACE_WIDTH, PILL_SURFACE_HEIGHT, None));
     }
 
     pub fn update_notification_list (&mut self, new_notif_opt: Option<Notification>) -> bool {
@@ -532,10 +566,14 @@ impl HeimdallrLayer { // This is for icon/notifications/stuff management, I like
 impl CompositorHandler for HeimdallrLayer {
     fn scale_factor_changed(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wayland_client::protocol::wl_surface::WlSurface, _: i32) {}
     fn transform_changed(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wayland_client::protocol::wl_surface::WlSurface, _: wayland_client::protocol::wl_output::Transform) {}
-    fn frame(&mut self, _: &Connection, qh: &QueueHandle<Self>, _: &wayland_client::protocol::wl_surface::WlSurface, _: u32) {
+    fn frame(&mut self, _: &Connection, qh: &QueueHandle<Self>, surface: &wayland_client::protocol::wl_surface::WlSurface, _: u32) {
         dbg_println!("SCTK Frame callback received");
-        self.is_waiting_for_frame = false;
-        self.maybe_redraw(qh);
+        if let Some(pill) = self.pill_surface.as_mut() {
+            if pill.matches_surface(surface) {
+                pill.waiting_for_frame = false;
+                self.maybe_redraw(qh);
+            }
+        }
     }
     fn surface_enter(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wayland_client::protocol::wl_surface::WlSurface, _: &wayland_client::protocol::wl_output::WlOutput) {}
     fn surface_leave(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wayland_client::protocol::wl_surface::WlSurface, _: &wayland_client::protocol::wl_output::WlOutput) {}
@@ -555,16 +593,23 @@ impl LayerShellHandler for HeimdallrLayer {
         std::process::exit(0);
     }
 
-    fn configure(&mut self, _: &Connection, qh: &QueueHandle<Self>, _: &LayerSurface, configure: LayerSurfaceConfigure, _: u32) {
+    fn configure(&mut self, _: &Connection, qh: &QueueHandle<Self>, layer: &LayerSurface, configure: LayerSurfaceConfigure, _: u32) {
         eprintln!("LayerShell surface configured by compositor {:?}", configure.new_size);
-        self.width = NonZeroU32::new(configure.new_size.0).map_or(1920, NonZeroU32::get);
-        self.height = NonZeroU32::new(configure.new_size.1).map_or(1080, NonZeroU32::get);
-        self.pool = Some(SlotPool::new((self.width * self.height * 4) as usize, &self.shm).expect("pool creation failed"));
-        self.buffers = [None, None];
-        self.current_buffer_idx = 0;
-        if self.first_configure {
-            self.first_configure = false;
-            self.draw(qh);
+
+        if let Some(pill) = self.pill_surface.as_mut() {
+            if pill.matches(layer) {
+                pill.configure(configure.new_size.0, configure.new_size.1, &self.shm);
+                self.draw(qh);
+                return;
+            }
+        }
+
+        for corner in &mut self.corner_surfaces {
+            if corner.matches(layer) {
+                corner.configure(configure.new_size.0, configure.new_size.1, &self.shm);
+                Self::draw_static_surface(corner);
+                return;
+            }
         }
     }
 }
