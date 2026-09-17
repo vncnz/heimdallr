@@ -312,7 +312,7 @@ Used icon is based on device type and, for several types, bluetooth or wired con
 - ~~Wob-like functionality~~ Done!
 - ~~Monitor and indicate mic/camera accesses~~ Done!
 - ~~Countdown~~ Done!
-- Listen to Niri events (WindowUrgencyChanged / FocusChanged) and add an indicator for windows in urgency state, something like `↓ WS 2` / `→ Firefox`
+- Listen to Niri events (WindowUrgencyChanged / FocusChanged) and add an indicator for windows in urgency state, something like `󰺁 Firefox`, with a dedicated command to focus the urgent window
 
 ### New functionalities - ideas
 
