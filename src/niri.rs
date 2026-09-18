@@ -175,6 +175,32 @@ pub fn start_niri_listener(
 
                 // Try JSON parsing first (niri --json emits objects like {"WindowOpenedOrChanged":{...}})
                 if let Ok(v) = serde_json::from_str::<Value>(&line) {
+
+                    if let Some(ev) = v.get("WindowsChanged") {
+                        // {"WindowsChanged":{"windows":[{"id":12,"title":"appunti_730.txt  — KWrite","app_id":"org.kde.kwrite","pid":111615,"workspace_id":6,"is_focused":false,"is_floating":false,"is_urgent":false,"layout":{"pos_in_scrolling_layout":[1,1],"tile_size":[926.0,1056.0],"window_size":[926,1056],"tile_pos_in_workspace_view":null,"window_offset_in_tile":[0.0,0.0]},"focus_timestamp":{"secs":24216,"nanos":900972865}},{"id":71,"title":"~","app_id":"kitty","pid":685679,"workspace_id":7,"is_focused":false,"is_floating":false,"is_urgent":false,"layout":{"pos_in_scrolling_layout":[2,1],"tile_size":[926.0,1056.0],"window_size":[926,1056],"tile_pos_in_workspace_view":null,"window_offset_in_tile":[0.0,0.0]},"focus_timestamp":{"secs":24159,"nanos":355524003}},{"id":3,"title":"Heimdallr e Niri: Indicatori Spaziali - Google Gemini — Mozilla Firefox","app_id":"firefox","pid":3900,"workspace_id":11,"is_focused":false,"is_floating":false,"is_urgent":false,"layout":{"pos_in_scrolling_layout":[1,1],"tile_size":[1860.0,1056.0],"window_size":[1860,1056],"tile_pos_in_workspace_view":null,"window_offset_in_tile":[0.0,0.0]},"focus_timestamp":{"secs":24246,"nanos":515981211}},{"id":77,"title":"niri msg -j event-stream ","app_id":"kitty","pid":817145,"workspace_id":10,"is_focused":true,"is_floating":false,"is_urgent":false,"layout":{"pos_in_scrolling_layout":[1,1],"tile_size":[926.0,1056.0],"window_size":[926,1056],"tile_pos_in_workspace_view":null,"window_offset_in_tile":[0.0,0.0]},"focus_timestamp":{"secs":24286,"nanos":149846814}},{"id":68,"title":"niri.rs - heimdallr - Visual Studio Code","app_id":"code","pid":679281,"workspace_id":7,"is_focused":false,"is_floating":false,"is_urgent":false,"layout":{"pos_in_scrolling_layout":[1,1],"tile_size":[1860.0,1056.0],"window_size":[1860,1056],"tile_pos_in_workspace_view":null,"window_offset_in_tile":[0.0,0.0]},"focus_timestamp":{"secs":24253,"nanos":950671671}}]}}
+                        if let Some(windows) = ev.get("windows").and_then(Value::as_array) {
+                            for win in windows {
+                                if let Some(id_v) = win.get("id").and_then(|x| x.as_u64()) {
+                                    let id = id_v as u32;
+                                    let workspace = win.get("workspace_id").and_then(|x| x.as_i64()).map(|n| n as i32).unwrap_or(0);
+                                    let mut pos0: i32 = 0;
+                                    if let Some(layout) = win.get("layout") {
+                                        if let Some(pos_arr) = layout.get("pos_in_scrolling_layout").and_then(|p| p.as_array()) {
+                                            if let Some(first) = pos_arr.get(0) {
+                                                if let Some(n) = first.as_i64() { pos0 = n as i32; }
+                                            }
+                                        }
+                                    }
+                                    let is_urgent = win.get("is_urgent").and_then(|b| b.as_bool()).unwrap_or(false);
+                                    let title = win.get("title").and_then(|t| t.as_str()).unwrap_or("").to_string();
+                                    let appid = win.get("app_id").and_then(|t| t.as_str()).unwrap_or("").to_string();
+                                    last_pos.insert(id, WindowInfo { id, workspace, pos: pos0, urgent: is_urgent, title, appid });
+                                }
+                            }
+                            emit_workspace_snapshot(&tx_workspaces, &mut workspace_state, &last_pos);
+                        }
+                    }
+
                     // ! TODO: Once, listen to WindowsChanged too
                     if let Some(ev) = v.get("WorkspacesChanged") {
                         if let Some(workspaces) = ev.get("workspaces").and_then(Value::as_array) {
