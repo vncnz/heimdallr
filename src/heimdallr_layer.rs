@@ -361,9 +361,17 @@ impl HeimdallrLayer {
 
         // dbg_println!("\n==== DRAW WORKSPACES 2 ====\n");
 
+        self.workspaces.sort_by_key(|ws| ws.output.clone());
+
+        let mut last_output: Option<String> = None;
         for ws in &self.workspaces {
-            let circle_x = 12.0;
-            let circle_y = y;
+            if let Some(last) = &last_output {
+                if last != &ws.output {
+                    y += item_h/2.0;
+                }
+            }
+            // let circle_x = 12.0;
+            // let circle_y = y;
             let (r,g,b,a) = if ws.is_urgent { (1.0, 0.2, 0.2, 1.0) } else if ws.is_focused { (0.9, 0.4, 0.3, 1.0) } else { (0.6, 0.6, 0.6, 1.0) };
             /* cr.set_source_rgba(r,g,b,a);
             cr.arc(circle_x, circle_y, 6.0, 0.0, std::f64::consts::PI * 2.0);
@@ -386,6 +394,7 @@ impl HeimdallrLayer {
             rounded_rect_gradient(&cr, rect_left, rect_top, rect_width, rect_height, radius, pill_bg_steps, crate::utils::GradientDirection::Horizontal, false, pill_border_color);
 
             y += item_h;
+            last_output = Some(ws.output.clone());
             // dbg_println!("{}", format!("\n==== DRAW WORKSPACES 2.{} ====\n", ws.idx));
         }
 
