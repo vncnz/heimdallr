@@ -376,9 +376,9 @@ impl HeimdallrLayer {
             cr.move_to(tx, y + 5.0);
             cr.show_text(&name).ok(); */
 
-            let rect_left = 20.0;
             let rect_top = y;
-            let rect_width = 30.0 + 5.0 * ws.window_count as f64;
+            let rect_width = 30.0 + 5.0 * (ws.window_count as f64).min(3.0);
+            let rect_left = (WORKSPACE_SURFACE_WIDTH as f64) - 5.0 - rect_width;
             let rect_height = 4.0;
             let pill_bg_steps = vec![(0.0, (r, g, b, 0.7))];
             let pill_border_color = None; // Some((r,g,b,1.0)); // if ws.is_focused { Some((1.0, 0.4, 0.3, 1.0)) } else { None };

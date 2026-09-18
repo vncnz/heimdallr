@@ -175,6 +175,7 @@ pub fn start_niri_listener(
 
                 // Try JSON parsing first (niri --json emits objects like {"WindowOpenedOrChanged":{...}})
                 if let Ok(v) = serde_json::from_str::<Value>(&line) {
+                    // ! TODO: Once, listen to WindowsChanged too
                     if let Some(ev) = v.get("WorkspacesChanged") {
                         if let Some(workspaces) = ev.get("workspaces").and_then(Value::as_array) {
                             workspace_state.clear();
