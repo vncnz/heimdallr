@@ -201,7 +201,6 @@ pub fn start_niri_listener(
                         }
                     }
 
-                    // ! TODO: Once, listen to WindowsChanged too
                     if let Some(ev) = v.get("WorkspacesChanged") {
                         if let Some(workspaces) = ev.get("workspaces").and_then(Value::as_array) {
                             workspace_state.clear();
@@ -219,9 +218,17 @@ pub fn start_niri_listener(
                         let id = ev.get("id").and_then(Value::as_i64).map(|n| n as i32);
                         let focused = ev.get("focused").and_then(Value::as_bool).unwrap_or(false);
                         if let Some(id) = id {
+
+                            let output = if let Some(workspace) = workspace_state.get(&id) {
+                                workspace.output.clone()
+                            } else {
+                                "".into()
+                            };
+
                             for ws in workspace_state.values_mut() {
                                 if ws.id != id {
-                                    ws.is_focused = false;
+                                    if output == ws.output { ws.is_active = false; }
+                                    if focused { ws.is_focused = false; }
                                 }
                             }
 

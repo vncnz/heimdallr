@@ -372,7 +372,11 @@ impl HeimdallrLayer {
             }
             // let circle_x = 12.0;
             // let circle_y = y;
-            let (r,g,b,a) = if ws.is_urgent { (1.0, 0.2, 0.2, 1.0) } else if ws.is_focused { (0.9, 0.4, 0.3, 1.0) } else { (0.6, 0.6, 0.6, 1.0) };
+            let /*(r,g,b,a)*/ color = 
+                if ws.is_urgent { (1.0, 0.2, 0.2, 0.7) } else 
+                if ws.is_focused { (0.9, 0.4, 0.3, 0.7) } else 
+                if ws.is_active { (0.8, 0.6, 0.4, 0.7) } else 
+                { (0.6, 0.6, 0.6, 0.7) };
             /* cr.set_source_rgba(r,g,b,a);
             cr.arc(circle_x, circle_y, 6.0, 0.0, std::f64::consts::PI * 2.0);
             cr.fill().unwrap(); */
@@ -388,7 +392,7 @@ impl HeimdallrLayer {
             let rect_width = 30.0 + 5.0 * (ws.window_count as f64).min(3.0);
             let rect_left = (WORKSPACE_SURFACE_WIDTH as f64) - 5.0 - rect_width;
             let rect_height = 4.0;
-            let pill_bg_steps = vec![(0.0, (r, g, b, 0.7))];
+            let pill_bg_steps = vec![(0.0, color)];
             let pill_border_color = None; // Some((r,g,b,1.0)); // if ws.is_focused { Some((1.0, 0.4, 0.3, 1.0)) } else { None };
             let radius = 2.0;
             rounded_rect_gradient(&cr, rect_left, rect_top, rect_width, rect_height, radius, pill_bg_steps, crate::utils::GradientDirection::Horizontal, false, pill_border_color);
