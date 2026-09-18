@@ -2,7 +2,7 @@ use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState}, delegate_compositor, delegate_layer, delegate_output, delegate_registry, delegate_shm, output::{OutputHandler, OutputState}, registry::{ProvidesRegistryState, RegistryState}, registry_handlers, shell::wlr_layer::{Anchor, KeyboardInteractivity, Layer, LayerShell, LayerShellHandler, LayerSurface, LayerSurfaceConfigure}, shm::{Shm, ShmHandler, slot::{Buffer, SlotPool}}
 };
 use wayland_client::{Connection, QueueHandle, protocol::{wl_compositor, wl_output::WlOutput, wl_region, wl_shm}};
-use cairo::{Context, Format, ImageSurface};
+use cairo::{Context, Format, ImageSurface, FontSlant};
 
 use std::time::{Duration, Instant};
 
@@ -13,11 +13,13 @@ use std::collections::HashMap;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{config::{Config, FrameColor}, data::{AlarmIcon, BatteryDevice, IconChange}, dbg_println, niri::WindowInfo, notifications::Notification, pills::{Pill, PillModuleTrait}, security::MicCameraStatus, utils::{TweenState, log_to_file, mix_color, rounded_rect_gradient}};
+use crate::{config::{Config, FrameColor}, data::{AlarmIcon, BatteryDevice, IconChange}, dbg_println, niri::{WindowInfo, WorkspaceInfo}, notifications::Notification, pills::{Pill, PillModuleTrait}, security::MicCameraStatus, utils::{TweenState, log_to_file, mix_color, rounded_rect_gradient}};
 
 const CORNER_SIZE: u32 = 32;
 const PILL_SURFACE_WIDTH: u32 = 1200;
 const PILL_SURFACE_HEIGHT: u32 = 128;
+const WORKSPACE_SURFACE_WIDTH: u32 = 60;
+const WORKSPACE_SURFACE_HEIGHT: u32 = 200;
 
 #[derive(Clone, Copy)]
 enum Corner {
@@ -77,6 +79,7 @@ pub struct HeimdallrLayer {
     pub(crate) output_state: OutputState,
     pub(crate) shm: Shm,
     pill_surface: Option<RenderSurface>,
+    workspace_surface: Option<RenderSurface>,
     corner_surfaces: Vec<RenderSurface>,
     // pub(crate) input_region: Option<wl_region::WlRegion>,
     pub(crate) icons: HashMap<String, AlarmIcon>,
@@ -96,8 +99,11 @@ pub struct HeimdallrLayer {
     pub(crate) batteries_pristine: bool,
     // pub(crate) timer: Countdown,
     pub pill_container: Pill,
-    pub(crate) pills_are_animating: bool
+    pub(crate) pills_are_animating: bool,
 
+    pub(crate) workspaces: Vec<WorkspaceInfo>,
+
+    
 }
 
 impl HeimdallrLayer {
@@ -134,7 +140,9 @@ impl HeimdallrLayer {
             batteries_pristine: false,
             // timer: Countdown::new(),
             pill_container: pill,
-            pills_are_animating: false
+            pills_are_animating: false,
+            workspaces: vec![],
+            workspace_surface: None,
         }
     }
 
@@ -148,6 +156,11 @@ impl HeimdallrLayer {
             // self.pill_container.recalculate_normal_target();
             // self.request_redraw("pill_container animation (niri)");
         }
+    }
+
+    pub fn update_workspaces(&mut self, data: Vec<WorkspaceInfo>) {
+        self.workspaces = data;
+        self.request_redraw("workspaces updated");
     }
 
     pub fn update_battery_data (&mut self, data: Option<crate::battery::BatteryStats>) {
@@ -227,6 +240,7 @@ impl HeimdallrLayer {
 
         // qui fai il rendering vero e proprio:
         self.draw(qh);
+        self.draw_workspaces(qh);
     }
 
     fn acquire_buffer(buffers: &mut [Option<Buffer>; 2], width: u32, height: u32, current_buffer_idx: usize, pool: &mut SlotPool) -> Option<usize> {
@@ -303,6 +317,87 @@ impl HeimdallrLayer {
         surface.current_buffer_idx = (buffer_idx + 1) % surface.buffers.len();
         self.last_redraw = Instant::now();
         self.pill_surface = Some(surface);
+    }
+
+    fn draw_workspaces(&mut self, qh: &QueueHandle<Self>) {
+        // dbg_println!("\n==== DRAW WORKSPACES 1 ====\n");
+        let Some(mut surface) = self.workspace_surface.take() else { return; };
+        // dbg_println!("\n==== DRAW WORKSPACES 1.0 ==== {} {}\n", surface.configured, surface.waiting_for_frame);
+        if !surface.configured || surface.waiting_for_frame {
+            self.workspace_surface = Some(surface);
+            return;
+        }
+
+        // dbg_println!("\n==== DRAW WORKSPACES 1.1 ====\n");
+
+        let Some(pool) = surface.pool.as_mut() else {
+            self.workspace_surface = Some(surface);
+            return;
+        };
+        // dbg_println!("\n==== DRAW WORKSPACES 1.2 ====\n");
+        let buffer_idx = Self::acquire_buffer(&mut surface.buffers, surface.width, surface.height, surface.current_buffer_idx, pool);
+        let Some(buffer_idx) = buffer_idx else {
+            self.workspace_surface = Some(surface);
+            return;
+        };
+        // dbg_println!("\n==== DRAW WORKSPACES 1.3 ====\n");
+        let buffer = surface.buffers[buffer_idx].as_ref().unwrap();
+        let canvas = buffer.canvas(pool).expect("workspace canvas should be available");
+        let image = unsafe {
+            ImageSurface::create_for_data_unsafe(canvas.as_mut_ptr(), Format::ARgb32, surface.width as i32, surface.height as i32, buffer.stride()).unwrap()
+        };
+        let cr = Context::new(&image).unwrap();
+        cr.set_operator(cairo::Operator::Clear);
+        cr.paint().unwrap();
+        cr.set_operator(cairo::Operator::Over);
+
+        cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
+        cr.set_font_size(14.0);
+
+        let item_h: f64 = 14.0;
+        let count = self.workspaces.len().max(1);
+        let total_h = item_h * (count as f64);
+        let mut y = ((surface.height as f64) - total_h) / 2.0 + item_h/2.0;
+
+        // dbg_println!("\n==== DRAW WORKSPACES 2 ====\n");
+
+        for ws in &self.workspaces {
+            let circle_x = 12.0;
+            let circle_y = y;
+            let (r,g,b,a) = if ws.is_urgent { (1.0, 0.2, 0.2, 1.0) } else if ws.is_focused { (0.9, 0.4, 0.3, 1.0) } else { (0.6, 0.6, 0.6, 1.0) };
+            /* cr.set_source_rgba(r,g,b,a);
+            cr.arc(circle_x, circle_y, 6.0, 0.0, std::f64::consts::PI * 2.0);
+            cr.fill().unwrap(); */
+
+            /* let name = ws.name.clone().unwrap_or_else(|| format!("{}", ws.idx));
+            cr.set_source_rgba(1.0,1.0,1.0,1.0);
+            let tx = 30.0;
+            // Align text vertically roughly centered
+            cr.move_to(tx, y + 5.0);
+            cr.show_text(&name).ok(); */
+
+            let rect_left = 20.0;
+            let rect_top = y;
+            let rect_width = 30.0 + 5.0 * ws.window_count as f64;
+            let rect_height = 4.0;
+            let pill_bg_steps = vec![(0.0, (r, g, b, 0.7))];
+            let pill_border_color = None; // Some((r,g,b,1.0)); // if ws.is_focused { Some((1.0, 0.4, 0.3, 1.0)) } else { None };
+            let radius = 2.0;
+            rounded_rect_gradient(&cr, rect_left, rect_top, rect_width, rect_height, radius, pill_bg_steps, crate::utils::GradientDirection::Horizontal, false, pill_border_color);
+
+            y += item_h;
+            // dbg_println!("{}", format!("\n==== DRAW WORKSPACES 2.{} ====\n", ws.idx));
+        }
+
+        buffer.attach_to(surface.layer.wl_surface()).unwrap();
+        surface.layer.wl_surface().damage_buffer(0, 0, surface.width as i32, surface.height as i32);
+        surface.waiting_for_frame = true;
+        surface.layer.wl_surface().frame(qh, surface.layer.wl_surface().clone());
+        surface.layer.commit();
+        drop(image);
+        surface.current_buffer_idx = (buffer_idx + 1) % surface.buffers.len();
+        self.last_redraw = Instant::now();
+        self.workspace_surface = Some(surface);
     }
 
     fn draw_test_pill (&mut self, cr: &Context, surface_width: u32) {
@@ -436,6 +531,16 @@ impl HeimdallrLayer {
         layer.wl_surface().set_input_region(Some(&empty_region));
         layer.commit();
         self.pill_surface = Some(RenderSurface::new(layer, PILL_SURFACE_WIDTH, PILL_SURFACE_HEIGHT, None));
+
+        // Workspace indicator surface (right margin, centered vertically)
+        let surface = compositor.create_surface(qh);
+        let layer = layer_shell.create_layer_surface(qh, surface, Layer::Overlay, Some("heimdallr-workspaces"), output);
+        layer.set_anchor(Anchor::RIGHT);
+        layer.set_size(WORKSPACE_SURFACE_WIDTH, WORKSPACE_SURFACE_HEIGHT);
+        layer.set_keyboard_interactivity(KeyboardInteractivity::None);
+        layer.wl_surface().set_input_region(Some(&empty_region));
+        layer.commit();
+        self.workspace_surface = Some(RenderSurface::new(layer, WORKSPACE_SURFACE_WIDTH, WORKSPACE_SURFACE_HEIGHT, None));
     }
 
     pub fn update_notification_list (&mut self, new_notif_opt: Option<Notification>) -> bool {
@@ -572,6 +677,15 @@ impl CompositorHandler for HeimdallrLayer {
             if pill.matches_surface(surface) {
                 pill.waiting_for_frame = false;
                 self.maybe_redraw(qh);
+                return;
+            }
+        }
+
+        if let Some(ws) = self.workspace_surface.as_mut() {
+            if ws.matches_surface(surface) {
+                ws.waiting_for_frame = false;
+                self.maybe_redraw(qh);
+                return;
             }
         }
     }
@@ -600,6 +714,15 @@ impl LayerShellHandler for HeimdallrLayer {
             if pill.matches(layer) {
                 pill.configure(configure.new_size.0, configure.new_size.1, &self.shm);
                 self.draw(qh);
+                self.draw_workspaces(qh);
+                return;
+            }
+        }
+
+        if let Some(ws) = self.workspace_surface.as_mut() {
+            if ws.matches(layer) {
+                ws.configure(configure.new_size.0, configure.new_size.1, &self.shm);
+                self.draw_workspaces(qh);
                 return;
             }
         }

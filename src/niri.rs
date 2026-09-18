@@ -86,15 +86,20 @@ fn parse_workspace_value(value: &Value, last_pos: &HashMap<u32, WindowInfo>) -> 
     }
 }
 
-fn emit_workspace_snapshot(
-    tx_workspaces: &Sender<Vec<WorkspaceInfo>>,
-    workspace_state: &HashMap<i32, WorkspaceInfo>,
-    last_pos: &HashMap<u32, WindowInfo>,
-) {
-    let mut workspaces: Vec<WorkspaceInfo> = workspace_state.values().cloned().collect();
-    for workspace in &mut workspaces {
+fn refresh_workspace_counts(workspace_state: &mut HashMap<i32, WorkspaceInfo>, last_pos: &HashMap<u32, WindowInfo>) {
+    for workspace in workspace_state.values_mut() {
         workspace.window_count = workspace_count(last_pos, workspace.id);
     }
+}
+
+fn emit_workspace_snapshot(
+    tx_workspaces: &Sender<Vec<WorkspaceInfo>>,
+    workspace_state: &mut HashMap<i32, WorkspaceInfo>,
+    last_pos: &HashMap<u32, WindowInfo>,
+) {
+    refresh_workspace_counts(workspace_state, last_pos);
+
+    let mut workspaces: Vec<WorkspaceInfo> = workspace_state.values().cloned().collect();
     workspaces.sort_by(|a, b| a.idx.cmp(&b.idx).then(a.id.cmp(&b.id)));
     set_workspaces(workspaces.clone());
     let _ = tx_workspaces.send(workspaces);
@@ -177,7 +182,7 @@ pub fn start_niri_listener(
                                 let workspace = parse_workspace_value(workspace_value, &last_pos);
                                 workspace_state.insert(workspace.id, workspace);
                             }
-                            emit_workspace_snapshot(&tx_workspaces, &workspace_state, &last_pos);
+                            emit_workspace_snapshot(&tx_workspaces, &mut workspace_state, &last_pos);
                             log_to_file(format!("niri: workspaces changed -> {:?}", workspace_state.values().collect::<Vec<_>>()));
                             continue;
                         }
@@ -187,6 +192,12 @@ pub fn start_niri_listener(
                         let id = ev.get("id").and_then(Value::as_i64).map(|n| n as i32);
                         let focused = ev.get("focused").and_then(Value::as_bool).unwrap_or(false);
                         if let Some(id) = id {
+                            for ws in workspace_state.values_mut() {
+                                if ws.id != id {
+                                    ws.is_focused = false;
+                                }
+                            }
+
                             match workspace_state.get_mut(&id) {
                                 Some(ws) => {
                                     ws.is_focused = focused;
@@ -207,7 +218,7 @@ pub fn start_niri_listener(
                                     workspace_state.insert(id, workspace);
                                 }
                             }
-                            emit_workspace_snapshot(&tx_workspaces, &workspace_state, &last_pos);
+                            emit_workspace_snapshot(&tx_workspaces, &mut workspace_state, &last_pos);
                             log_to_file(format!("niri: workspace {} activated focused={}", id, focused));
                             continue;
                         }
@@ -231,7 +242,7 @@ pub fn start_niri_listener(
                                 let title = win.get("title").and_then(|t| t.as_str()).unwrap_or("").to_string();
                                 let appid = win.get("app_id").and_then(|t| t.as_str()).unwrap_or("").to_string();
                                 last_pos.insert(id, WindowInfo { id, workspace, pos: pos0, urgent: is_urgent, title, appid });
-                                emit_workspace_snapshot(&tx_workspaces, &workspace_state, &last_pos);
+                                emit_workspace_snapshot(&tx_workspaces, &mut workspace_state, &last_pos);
                                 log_to_file(format!("niri: window {} opened/changed ws={} pos={} urgent={}", id, workspace, pos0, is_urgent));
                                 continue;
                             }
@@ -243,7 +254,7 @@ pub fn start_niri_listener(
                         if let Some(id_v) = ev.get("id").and_then(|x| x.as_u64()) {
                             let id = id_v as u32;
                             last_pos.remove(&id);
-                            emit_workspace_snapshot(&tx_workspaces, &workspace_state, &last_pos);
+                            emit_workspace_snapshot(&tx_workspaces, &mut workspace_state, &last_pos);
                             log_to_file(format!("niri: window {} closed, removed from map", id));
                             continue;
                         }
@@ -264,7 +275,7 @@ pub fn start_niri_listener(
                             let urgent_windows: Vec<WindowInfo> = last_pos.values().filter(|el| el.urgent).cloned().collect();
                             set_urgent_windows(urgent_windows.clone());
                             let _ = tx.send(urgent_windows);
-                            emit_workspace_snapshot(&tx_workspaces, &workspace_state, &last_pos);
+                            emit_workspace_snapshot(&tx_workspaces, &mut workspace_state, &last_pos);
                             continue;
                         }
                     }

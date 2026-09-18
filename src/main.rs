@@ -404,6 +404,7 @@ fn main() {
             set_workspaces(workspaces.clone());
             log_to_file(format!("Niri workspaces: {:?}", workspaces));
             println!("{}", format!("{} workspaces: {:?}", workspaces.len(), workspaces).bright_cyan());
+            app.update_workspaces(workspaces);
         }
 
         /* match urgent_windows {
