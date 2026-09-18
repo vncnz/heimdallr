@@ -14,7 +14,7 @@ use std::thread;
 use colored::Colorize;
 
 use crate::{
-    battery::{BatteryState, BatteryStats}, commands::start_command_listener, data::{BatteryDevice, BluetoothStats, IconChange, RatatoskrSocket, UPowerDeviceKind}, niri::{handle_niri_command, set_urgent_windows, WindowInfo}, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{get_color_gradient, log_to_file, select_icon}
+    battery::{BatteryState, BatteryStats}, commands::start_command_listener, data::{BatteryDevice, BluetoothStats, IconChange, RatatoskrSocket, UPowerDeviceKind}, niri::{handle_niri_command, set_urgent_windows, set_workspaces, WindowInfo, WorkspaceInfo}, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{get_color_gradient, log_to_file, select_icon}
 };
 
 mod data;
@@ -210,8 +210,9 @@ fn main() {
     });
 
     let (tx_niri, rx_niri): (Sender<Vec<WindowInfo>>, Receiver<Vec<WindowInfo>>) = mpsc::channel();
+    let (tx_niri_workspaces, rx_niri_workspaces): (Sender<Vec<WorkspaceInfo>>, Receiver<Vec<WorkspaceInfo>>) = mpsc::channel();
     thread::spawn(|| {
-        if let Err(e) = start_niri_listener(tx_niri) {
+        if let Err(e) = start_niri_listener(tx_niri, tx_niri_workspaces) {
             log_to_file(format!("Niri listener error: {:?}", e));
             dbg_println!("{}", format!("Niri listener error: {:?}", e).red().to_string());
         } else {
@@ -397,6 +398,12 @@ fn main() {
             log_to_file(format!("Urgent windows: {:?}", urgent_windows));
             println!("{}", format!("{} urgent windows: {:?}", urgent_windows.len(), urgent_windows).bright_yellow());
             app.update_niri_data(urgent_windows);
+        }
+
+        if let Ok(workspaces) = rx_niri_workspaces.try_recv() {
+            set_workspaces(workspaces.clone());
+            log_to_file(format!("Niri workspaces: {:?}", workspaces));
+            println!("{}", format!("{} workspaces: {:?}", workspaces.len(), workspaces).bright_cyan());
         }
 
         /* match urgent_windows {
