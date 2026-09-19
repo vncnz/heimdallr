@@ -389,13 +389,22 @@ impl HeimdallrLayer {
             cr.show_text(&name).ok(); */
 
             let rect_top = y;
-            let rect_width = 30.0 + 5.0 * (ws.window_count as f64).min(3.0);
+            let rect_width = 20.0 + 5.0 * (ws.window_count as f64).min(3.0);
             let rect_left = (WORKSPACE_SURFACE_WIDTH as f64) - 5.0 - rect_width;
             let rect_height = 4.0;
             let pill_bg_steps = vec![(0.0, color)];
-            let pill_border_color = None; // Some((r,g,b,1.0)); // if ws.is_focused { Some((1.0, 0.4, 0.3, 1.0)) } else { None };
+            let pill_border_color = Some((0.0, 0.0, 0.0, 0.4)); // Some((r,g,b,1.0)); // if ws.is_focused { Some((1.0, 0.4, 0.3, 1.0)) } else { None };
             let radius = 2.0;
             rounded_rect_gradient(&cr, rect_left, rect_top, rect_width, rect_height, radius, pill_bg_steps, crate::utils::GradientDirection::Horizontal, false, pill_border_color);
+
+            /* for i in 0..ws.window_count.min(5) {
+                let circle_x = rect_left - 5.0 - 5.0 * (i as f64);
+                let circle_y = rect_top + rect_height / 2.0;
+                // let (r,g,b,a) = if ws.is_urgent { (1.0, 0.2, 0.2, 0.7) } else { (0.6, 0.6, 0.6, 0.7) };
+                cr.set_source_rgba(color.0,color.1,color.2,color.3);
+                cr.arc(circle_x, circle_y, rect_height / 2.0, 0.0, std::f64::consts::PI * 2.0);
+            }
+            cr.fill().unwrap(); */
 
             y += item_h;
             last_output = Some(ws.output.clone());
