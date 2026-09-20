@@ -313,7 +313,7 @@ Used icon is based on device type and, for several types, bluetooth or wired con
 - ~~Monitor and indicate mic/camera accesses~~ Done!
 - ~~Countdown~~ Done!
 - ~~Listen to Niri events (WindowUrgencyChanged / FocusChanged) and add an indicator for windows in urgency state, something like `󰺁 Firefox`, with a dedicated command to focus the urgent window~~ Done!
-- Workspaces indicator
+- ~~Workspaces indicator~~ Done!
 
 ### New functionalities - ideas
 
