@@ -102,8 +102,8 @@ pub struct HeimdallrLayer {
     pub(crate) pills_are_animating: bool,
 
     pub(crate) workspaces: Vec<WorkspaceInfo>,
-
-    
+    workspaces_opacity: TweenState,
+    workspace_expiration: Option<Instant>
 }
 
 impl HeimdallrLayer {
@@ -143,6 +143,8 @@ impl HeimdallrLayer {
             pills_are_animating: false,
             workspaces: vec![],
             workspace_surface: None,
+            workspaces_opacity: TweenState::new(0.0),
+            workspace_expiration: None,
         }
     }
 
@@ -160,6 +162,8 @@ impl HeimdallrLayer {
 
     pub fn update_workspaces(&mut self, data: Vec<WorkspaceInfo>) {
         self.workspaces = data;
+        self.workspaces_opacity.set_target(1.0);
+        self.workspace_expiration = Some(Instant::now() + Duration::from_millis(2000));
         self.request_redraw("workspaces updated");
     }
 
@@ -224,7 +228,15 @@ impl HeimdallrLayer {
             }
         }
 
-        let animating = self.wob_value.step() || self.pills_are_animating;
+        // Check if workspaces must be closed
+        if let Some(exp) = self.workspace_expiration {
+            if Instant::now() > exp {
+                self.workspaces_opacity.set_target(0.0);
+                self.workspace_expiration = None;
+            }
+        }
+
+        let animating = self.wob_value.step() || self.workspaces_opacity.step() || self.pills_are_animating;
         if !animating { // Now, we skip calling draw only if we are not animating something
 
             if !self.needs_redraw {
@@ -320,6 +332,10 @@ impl HeimdallrLayer {
     }
 
     fn draw_workspaces(&mut self, qh: &QueueHandle<Self>) {
+
+        let opacity = self.workspaces_opacity.value();
+        // if opacity <= 0.0 { return; } // ! To avoid or not to avoid? Ensure surface cleaning (line 366/367) before returning?
+
         // dbg_println!("\n==== DRAW WORKSPACES 1 ====\n");
         let Some(mut surface) = self.workspace_surface.take() else { return; };
         // dbg_println!("\n==== DRAW WORKSPACES 1.0 ==== {} {}\n", surface.configured, surface.waiting_for_frame);
@@ -351,8 +367,8 @@ impl HeimdallrLayer {
         cr.paint().unwrap();
         cr.set_operator(cairo::Operator::Over);
 
-        cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
-        cr.set_font_size(14.0);
+        // cr.select_font_face("", FontSlant::Normal, cairo::FontWeight::Normal);
+        // cr.set_font_size(14.0);
 
         let item_h: f64 = 14.0;
         let count = self.workspaces.len().max(1);
@@ -372,11 +388,13 @@ impl HeimdallrLayer {
             }
             // let circle_x = 12.0;
             // let circle_y = y;
-            let /*(r,g,b,a)*/ color = 
+            let mut /*(r,g,b,a)*/ color = 
                 if ws.is_urgent { (1.0, 0.2, 0.2, 0.7) } else 
                 if ws.is_focused { (0.9, 0.4, 0.3, 0.7) } else 
                 if ws.is_active { (0.8, 0.6, 0.4, 0.7) } else 
                 { (0.6, 0.6, 0.6, 0.7) };
+
+            color.3 *= opacity;
             /* cr.set_source_rgba(r,g,b,a);
             cr.arc(circle_x, circle_y, 6.0, 0.0, std::f64::consts::PI * 2.0);
             cr.fill().unwrap(); */
@@ -393,7 +411,7 @@ impl HeimdallrLayer {
             let rect_left = (WORKSPACE_SURFACE_WIDTH as f64) - 5.0 - rect_width;
             let rect_height = 4.0;
             let pill_bg_steps = vec![(0.0, color)];
-            let pill_border_color = Some((0.0, 0.0, 0.0, 0.4)); // Some((r,g,b,1.0)); // if ws.is_focused { Some((1.0, 0.4, 0.3, 1.0)) } else { None };
+            let pill_border_color = Some((0.0, 0.0, 0.0, 0.4 * opacity)); // Some((r,g,b,1.0)); // if ws.is_focused { Some((1.0, 0.4, 0.3, 1.0)) } else { None };
             let radius = 2.0;
             rounded_rect_gradient(&cr, rect_left, rect_top, rect_width, rect_height, radius, pill_bg_steps, crate::utils::GradientDirection::Horizontal, false, pill_border_color);
 
