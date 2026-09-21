@@ -14,7 +14,7 @@ use std::thread;
 use colored::Colorize;
 
 use crate::{
-    battery::{BatteryState, BatteryStats}, commands::start_command_listener, data::{BatteryDevice, BluetoothStats, IconChange, RatatoskrSocket, UPowerDeviceKind}, niri::{handle_niri_command, set_urgent_windows, set_workspaces, WindowInfo, WorkspaceInfo}, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{get_color_gradient, log_to_file, select_icon}
+    battery::{BatteryState, BatteryStats}, commands::start_command_listener, data::{BatteryDevice, BluetoothStats, IconChange, RatatoskrSocket, UPowerDeviceKind}, niri::{WindowInfo, WorkspaceInfo, handle_niri_command, set_urgent_windows, set_workspaces}, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{Easing, ease, get_color_gradient, log_to_file, select_icon}
 };
 
 mod data;
@@ -56,6 +56,12 @@ struct Args {
 
     #[arg(short = 'V', long, help = "Print version")]
     version: bool,
+
+    #[arg(short = 's', long, help = "Generate spring animation points")]
+    spring: bool,
+
+    #[arg(short = 'b', long, help = "Generate bounce animation points")]
+    bounce: bool
 }
 
 fn choose_output (app: &HeimdallrLayer) -> std::option::Option<WlOutput>{
@@ -85,6 +91,16 @@ fn main() {
 
     if args.version {
         println!("{} {}", crate_name!(), crate_version!());
+        std::process::exit(0);
+    }
+    if args.spring {
+        let res: Vec<(f64, f64)> = (0..101).map(|v| v as f64 / 100.0).map(|v| (v, ease(Easing::Spring, v))).collect();
+        eprintln!("{}", format!("{:?}", res).red());
+        std::process::exit(0);
+    }
+    if args.bounce {
+        let res: Vec<(f64, f64)> = (0..101).map(|v| v as f64 / 100.0).map(|v| (v, ease(Easing::Bounce, v))).collect();
+        eprintln!("{}", format!("{:?}", res).red());
         std::process::exit(0);
     }
 
