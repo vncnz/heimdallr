@@ -134,8 +134,9 @@ pub struct Animation {
     pub duration: Duration,
 }
 
-    */
+*/
 
+#[derive(Clone)]
 pub enum Easing {
     #[allow(unused)]
     Linear,
@@ -707,6 +708,7 @@ pub struct TweenState {
     animation_from: f64,
     animation_start: Option<Instant>,
     animation_duration: Duration,
+    animation_function: Easing
 }
 
 impl TweenState {
@@ -717,17 +719,19 @@ impl TweenState {
             animation_from: v,
             animation_start: None,
             animation_duration: Duration::from_millis(500),
+            animation_function: Easing::SpringStartAtEnd
         }
     }
 
     #[allow(unused)]
-    pub fn new_custom(v: f64, time: u64) -> Self {
+    pub fn new_custom(v: f64, time: u64, animation: Easing) -> Self {
         TweenState {
             current: v,
             target: v,
             animation_from: v,
             animation_start: None,
             animation_duration: Duration::from_millis(time),
+            animation_function: animation
         }
     }
 
@@ -737,7 +741,7 @@ impl TweenState {
             let total = self.animation_duration;
             let ratio = (elapsed.as_secs_f64() / total.as_secs_f64()).min(1.0);
             // let eased = 1.0 - (1.0 - ratio).powi(3);
-            let eased = ease(crate::utils::Easing::SpringStartAtEnd, ratio);
+            let eased = ease(self.animation_function.clone(), ratio);
 
             self.current = self.animation_from + (self.target - self.animation_from) * eased;
 
