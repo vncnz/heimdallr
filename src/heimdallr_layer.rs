@@ -333,7 +333,7 @@ impl HeimdallrLayer {
 
     fn draw_workspaces(&mut self, qh: &QueueHandle<Self>) {
 
-        let opacity = self.workspaces_opacity.value();
+        let opacity = self.workspaces_opacity.value().clamp(0.0, 1.0);
         // if opacity <= 0.0 { return; } // ! To avoid or not to avoid? Ensure surface cleaning (line 366/367) before returning?
 
         // dbg_println!("\n==== DRAW WORKSPACES 1 ====\n");
