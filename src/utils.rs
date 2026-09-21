@@ -146,7 +146,11 @@ pub enum Easing {
     #[allow(unused)]
     EaseOutCubic,
     #[allow(unused)]
-    Spring
+    Spring,
+    #[allow(unused)]
+    SpringStartAtEnd,
+    #[allow(unused)]
+    Bounce
 }
 pub fn ease(e: Easing, t: f64) -> f64 {
     let x = t.clamp(0.0, 1.0);
@@ -155,18 +159,10 @@ pub fn ease(e: Easing, t: f64) -> f64 {
         Easing::Smooth => x * x * (3.0 - 2.0 * x),
         Easing::Smoother => x * x * x * (x * (x * 6.0 - 15.0) + 10.0),
         Easing::EaseOutCubic => 1.0 - (1.0 - x).powi(3),
-        Easing::Spring => {
+        Easing::SpringStartAtEnd => {
             if x == 0.0 || x == 1.0 {
                 x
             } else {
-                /*
-                // Adjust factor for frequency (how many bounces) and decay (how fast it settles)
-                let factor = 1.01;
-                
-                // 2.0 ^ (-10 * x) * sin/cos gives the decay
-                // This formula ensures it starts at 0 and overshoots/settles beautifully at 1
-                1.0 - (2.0f64.powf(-factor * x) * ((x * factor - 0.75) * std::f64::consts::TAU).cos())
-                */
                 let damping = 12.0;   // Higher = less overshoot (smaller peaks). Lower = higher peaks
                 let frequency = 1.15; // Controls the number of bounces
 
@@ -175,123 +171,40 @@ pub fn ease(e: Easing, t: f64) -> f64 {
                 
                 1.0 - (decay * wave)
             }
-        }
-    }
-}
+        },
+        Easing::Spring => {
+            if x <= 0.0 {
+                0.0
+            } else if x >= 1.0 {
+                1.0
+            } else {
+                // Decay is the speed of dampering (higher = less movement in the end)
+                // Frequency is the number of ups/downs
+                let decay = 4.0;
+                let frequency = 7.0;
 
-/*
-
-pub struct Animator {
-    animations: Vec<Animation>,
-}
-
-impl Animator {
-    pub fn new() -> Self {
-        Self { animations: Vec::new() }
-    }
-
-    pub fn step(&mut self, model: &mut FrameModel) -> bool {
-        let now = Instant::now();
-        let mut changed = false;
-
-        self.animations.retain(|a| {
-            let t = now.duration_since(a.start_time);
-            if t >= a.duration {
-                model.set(a.id, a.end);
-                changed = true;
-                return false; // animazione finita
+                1.0 - (-decay * x).exp() * (frequency * x).cos()
+                // Bouncing example: decay = 1.9 and freq = 11
+                // 1.0 - (-decay * x).exp() * (frequency * x * x * x).cos().pow(1.2)
             }
+        },
+        Easing::Bounce => {
+            if x <= 0.0 {
+                0.0
+            } else if x >= 1.0 {
+                1.0
+            } else {
+                // Decay is the speed of dampering (higher = less movement in the end)
+                // Frequency is the number of ups/downs
+                let decay = 1.9;
+                let frequency = 11.0;
 
-            let ratio = t.as_secs_f64() / a.duration.as_secs_f64();
-            
-            // Linear animatioons are no good for eyes!
-            let eased = ease(Easing::EaseOutCubic, ratio);
-            
-            let value = a.start + (a.end - a.start) * eased;// ratio;
-            model.set(a.id, value);
-            changed = true;
-            true
-        });
-
-        changed
+                1.0 - (-decay * x).exp() * (frequency * x * x * x).cos().abs().powf(1.2)
+            }
+        }
     }
-
-    pub fn animate_property(
-        &mut self,
-        model: &FrameModel,
-        id: AnimationKey,
-        to: f64,
-        duration_ms: u64,
-    ) {
-        // rimuovi eventuale animazione su quella proprietà
-        self.animations.retain(|a| a.id != id);
-
-        let start = model.get(id);
-
-        self.animations.push(Animation {
-            id,
-            start,
-            end: to,
-            start_time: Instant::now(),
-            duration: Duration::from_millis(duration_ms),
-        });
-    }
-
 }
 
-pub struct FrameModel {
-    // pub(crate) notif_height_ratio: f64,
-    // pub(crate) icons_ratio: f64,
-    pub(crate) wob_height: f64,
-    // pub(crate) security_height: f64,
-    // pub(crate) batteries_height: f64
-}
-
-impl FrameModel {
-    pub fn new () -> Self {
-        FrameModel {
-            // notif_height_ratio: 0.0,
-            // icons_ratio: 0.0,
-            wob_height: 0.0,
-            // security_height: 0.0,
-            // batteries_height: 0.0
-        }
-    }
-
-    pub fn set(&mut self, id: AnimationKey, val: f64) {
-        match id {
-            // AnimationKey::NotificationHeight => self.notif_height_ratio = val, // TODO: Deprecated
-            // AnimationKey::IconsHeight => self.icons_ratio = val,
-            AnimationKey::WobHeightRatio => self.wob_height = val,
-            // AnimationKey::SecurityNotchRatio => self.security_height = val,
-            // AnimationKey::BatteriesNotchRatio => self.batteries_height = val
-        }
-    }
-
-    pub fn get(&self, id: AnimationKey) -> f64 {
-        match id {
-            // AnimationKey::NotificationHeight => self.notif_height_ratio, // TODO: Deprecated
-            // AnimationKey::IconsHeight => self.icons_ratio,
-            AnimationKey::WobHeightRatio => self.wob_height,
-            // AnimationKey::SecurityNotchRatio => self.security_height,
-            // AnimationKey::BatteriesNotchRatio => self.batteries_height
-        }
-    }
-} */
-
-/* pub fn cr_text_aligned (cr: Context, text: String, x: f64, y: f64, dx: f64, dy: f64) -> (f64, f64) {
-    // if v != 0.0 || h != 0.0 {
-        let mut x1 = x;
-        let mut y1 = y;
-        let extents = cr.text_extents(&text).unwrap();
-        x1 -= extents.width() * dx;
-        y1 -= extents.height() * dy + extents.y_bearing();
-        cr.move_to(x1, y1);
-        // dbg_println!("({},{}) -> ({},{})   {:?}", &x, &y, &x1, &y1, extents);
-    // }
-    cr.show_text(&text).ok();
-    (extents.width(), extents.height())
-} */
 
 use cairo::Error;
 
@@ -489,21 +402,21 @@ pub fn rounded_big_hole (cr: &Context, x: f64, y: f64, w: f64, h: f64, r: f64, r
 // use cairo::Context;
 use std::f64::consts::PI;
 
-#[derive(PartialEq)]
+/* #[derive(PartialEq)]
 pub enum Anchor {
     TopLeft, TopCenter, TopRight,
     RightCenter,
     BottomRight, BottomCenter, BottomLeft,
     LeftCenter,
-}
+} */
 
-pub struct ReservedSpace {
+/* pub struct ReservedSpace {
     pub anchor: Anchor,
     pub width: f64,
     pub height: f64,
-}
+} */
 
-pub enum Side { Top, Bottom, Left, Right }
+// pub enum Side { Top, Bottom, Left, Right }
 
 /// Disegna un notch fluido composto da 4 archi.
 /// - `side`: il lato su cui si trova.
@@ -511,7 +424,7 @@ pub enum Side { Top, Bottom, Left, Right }
 /// - `depth`: quanto rientra verso l'interno dello schermo.
 /// - `width`: la larghezza totale della base del notch.
 /// - `r`: il raggio di curvatura (r2 nel tuo codice originale).
-fn add_notch(cr: &Context, side: Side, center: f64, edge_pos: f64, width: f64, depth: f64, r: f64) {
+/* fn add_notch(cr: &Context, side: Side, center: f64, edge_pos: f64, width: f64, depth: f64, r: f64) {
     let r = r.min(depth / 2.0).min(width / 4.0);
     let half_w = width / 2.0;
 
@@ -565,7 +478,7 @@ fn add_notch(cr: &Context, side: Side, center: f64, edge_pos: f64, width: f64, d
             cr.arc(x_edge + r, y_end - r, r, 0.5 * PI, PI);
         }
     }
-}
+} */
 
 /*pub fn draw_frame(cr: &Context, x: f64, y: f64, w: f64, h: f64, r_base: f64, r_notch: f64, spaces: &[ReservedSpace]) {
     cr.new_sub_path();
@@ -598,7 +511,7 @@ fn add_notch(cr: &Context, side: Side, center: f64, edge_pos: f64, width: f64, d
 }
 */
 
-pub fn draw_smart_border(
+/* pub fn draw_smart_border(
     cr: &Context, 
     x: f64, y: f64, w: f64, h: f64, xc: f64, yc: f64,
     r_base: f64, 
@@ -664,7 +577,7 @@ pub fn draw_smart_border(
     }
 
     cr.close_path();
-}
+} */
 
 
 
@@ -807,13 +720,24 @@ impl TweenState {
         }
     }
 
+    #[allow(unused)]
+    pub fn new_custom(v: f64, time: u64) -> Self {
+        TweenState {
+            current: v,
+            target: v,
+            animation_from: v,
+            animation_start: None,
+            animation_duration: Duration::from_millis(time),
+        }
+    }
+
     pub fn step(&mut self) -> bool {
         if let Some(start) = self.animation_start {
             let elapsed = Instant::now().saturating_duration_since(start);
             let total = self.animation_duration;
             let ratio = (elapsed.as_secs_f64() / total.as_secs_f64()).min(1.0);
             // let eased = 1.0 - (1.0 - ratio).powi(3);
-            let eased = ease(crate::utils::Easing::Spring, ratio);
+            let eased = ease(crate::utils::Easing::SpringStartAtEnd, ratio);
 
             self.current = self.animation_from + (self.target - self.animation_from) * eased;
 

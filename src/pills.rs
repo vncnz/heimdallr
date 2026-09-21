@@ -47,7 +47,7 @@ impl AnimationState {
             let total = self.animation_duration;
             let ratio = (elapsed.as_secs_f64() / total.as_secs_f64()).min(1.0);
             // let eased = 1.0 - (1.0 - ratio).powi(3);
-            let eased = ease(crate::utils::Easing::Spring, ratio);
+            let eased = ease(crate::utils::Easing::SpringStartAtEnd, ratio);
 
             self.current_size = (
                 self.animation_from.0 + (self.target_size.0 - self.animation_from.0) * eased,
