@@ -1,7 +1,8 @@
 # heimdallr - ᚺᛖᛁᛗᛞᚨᛚᚱ
 
-Heimdallr is an adaptive Wayland HUD that surfaces relevant information and lightweight controls without relying on permanent widgets.
-A minimal morphing pill, no noise — just timely information floating on your screen.
+Heimdallr is an adaptive Wayland HUD designed to stay out of the way. It continuously watches the system and surfaces information only when it becomes relevant: warnings, notifications, transient status changes, or other events that need your attention. When everything is normal, Heimdallr stays silent.
+
+No permanent status bar, no constant stream of system metrics — just the information that matters, when it matters.
 
 ## About the name
 
@@ -25,27 +26,21 @@ In this demo:
 
 ## About this project
 
-The aim of this project is to show several kinds of information:
+Heimdallr is designed around a simple principle: the normal state of the system should require no visual feedback.
 
-- simulate rounded corners of the display
-- show which resources are in a worrying state
-- show current time
-- show estimated time to full battery charge/discharge
-- show notifications
+It continuously watches the system, but does not turn that information into a permanent dashboard. When everything is working as expected, there is little or nothing to see. When something changes or requires attention — such as a high temperature, low battery, poor network signal, an incoming notification, or a workspace change — Heimdallr briefly surfaces the relevant information.
 
-After several experiments, I came up with this solution. Using a custom SVG shape, I rounded the screen corners. Inside the pill, every functionality can show its data if needed.
+This makes Heimdallr intentionally passive. It does not try to manage every aspect of the desktop or replace dedicated tools for things like network or Bluetooth management. Its primary role is to watch, filter, and inform.
 
-The clock is a constant presence, the only one for most of the time.
+Some interactions exist where they naturally fit this role: notifications can be dismissed, and timers can be started. Otherwise, Heimdallr is meant to remain in the background rather than become another application you have to interact with.
 
-The second element is an indicator for the battery if you are using a laptop. An icon and a text show the battery’s estimated time to full charge (next to a green bolt) or to full discharge (next to a red skull)
+The clock is the main exception: it can remain visible continuously.
 
-One or more dedicated warning icons appear dynamically only when system resources require attention (e.g., high temperature, low WLAN signal, or low battery). No icons are shown when there are no alarms.
-
-Over the time, more and more features were added.
+Over time, more functionality has been added, but the underlying principle has remained the same: show information when it matters, and stay out of the way when it doesn't.
 
 Resource data (such as CPU, RAM, and disk usage) is retrieved via a Unix socket from another of my projects, Ratatoskr, which is also available on [GitHub](https://github.com/vncnz/ratatoskr).
 
-Ratatoskr is optional: if you choose not to run it, Heimdallr will not display resource warnings (e.g., high CPU/RAM usage).
+Ratatoskr is optional: if you choose not to run it, Heimdallr will not display resource warnings (for example, high CPU/RAM usage).
 
 Battery status, level, and estimated time remaining are collected by Heimdallr itself, so you will always have access to this information.
 
@@ -54,7 +49,7 @@ The impact on average load is around 0.01, so really small. I measured the impac
 
 ---
 
-Oh, if the screen looks too empty, that’s by design: I like minimalism. No (full) status bar, Niri as WM, and this is my daily driver.
+If the screen looks empty, that's by design. Heimdallr is intentionally quiet when everything is working as expected. There is no full status bar: Niri handles the window management, while Heimdallr watches the system and only surfaces information when it becomes relevant. This is also the setup I use as my daily driver.
 
 ## Screenshots
 
