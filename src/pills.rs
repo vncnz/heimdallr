@@ -470,7 +470,7 @@ impl PillModuleTrait for PillModuleSecurity {
     fn draw(&mut self, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64) {
         if self.base.cached_layout.is_some() {
             let r = 2.0;
-            rounded_rect_gradient(&cr, x + PILL_MARGIN / 2.0, y + 3.0, rect_width - PILL_MARGIN, rect_height - 6.0, r, vec![(0.0, (1.0, 0.58, 0.0, 1.0))], crate::utils::GradientDirection::Horizontal, false, None);
+            rounded_rect_gradient(&cr, x + PILL_MARGIN / 2.0, y + 3.0, rect_width - PILL_MARGIN, rect_height - 6.0, r, vec![(0.0, (1.0, 0.58, 0.0, 0.75))], crate::utils::GradientDirection::Horizontal, false, None);
         }
 
         self.base.draw_centered(&cr, rect_width, rect_height, x, y);
