@@ -2,7 +2,8 @@ use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState}, delegate_compositor, delegate_layer, delegate_output, delegate_registry, delegate_shm, output::{OutputHandler, OutputState}, registry::{ProvidesRegistryState, RegistryState}, registry_handlers, shell::wlr_layer::{Anchor, KeyboardInteractivity, Layer, LayerShell, LayerShellHandler, LayerSurface, LayerSurfaceConfigure}, shm::{Shm, ShmHandler, slot::{Buffer, SlotPool}}
 };
 use wayland_client::{Connection, QueueHandle, protocol::{wl_compositor, wl_output::WlOutput, wl_region, wl_shm}};
-use cairo::{Context, Format, ImageSurface, FontSlant};
+use wayland_protocols::ext::background_effect::v1::client::{ext_background_effect_manager_v1, ext_background_effect_surface_v1};
+use cairo::{Context, Format, ImageSurface};
 
 use std::time::{Duration, Instant};
 
@@ -20,6 +21,41 @@ const PILL_SURFACE_WIDTH: u32 = 1200;
 const PILL_SURFACE_HEIGHT: u32 = 128;
 const WORKSPACE_SURFACE_WIDTH: u32 = 60;
 const WORKSPACE_SURFACE_HEIGHT: u32 = 200;
+
+fn add_rounded_rect_region(region: &wl_region::WlRegion, x: i32, y: i32, width: i32, height: i32, radius: i32) {
+    if width <= 0 || height <= 0 {
+        return;
+    }
+
+    let radius = radius.max(0).min(width.min(height) / 2);
+    if radius == 0 {
+        region.add(x, y, width, height);
+        return;
+    }
+
+    let center_w = (width - radius * 2).max(0);
+    let center_h = (height - radius * 2).max(0);
+
+    region.add(x + radius, y, center_w, height);
+    region.add(x, y + radius, width, center_h);
+
+    for row in 0..=radius {
+        let dx = ((radius as f64).powi(2) - (row as f64).powi(2)).sqrt().ceil() as i32;
+        let dx = dx.max(1);
+
+        let top_left_left = x + radius - dx;
+        let top_right_left = x + width - radius;
+        let bottom_left_left = x + radius - dx;
+        let bottom_right_left = x + width - radius;
+        let top = y + row;
+        let bottom = y + height - row - 1;
+
+        region.add(top_left_left.max(x), top, dx, 1);
+        region.add(top_right_left, top, dx, 1);
+        region.add(bottom_left_left.max(x), bottom, dx, 1);
+        region.add(bottom_right_left, bottom, dx, 1);
+    }
+}
 
 #[derive(Clone, Copy)]
 enum Corner {
@@ -78,6 +114,9 @@ pub struct HeimdallrLayer {
     pub(crate) registry_state: RegistryState,
     pub(crate) output_state: OutputState,
     pub(crate) shm: Shm,
+    raw_compositor: Option<wl_compositor::WlCompositor>,
+    background_effect_manager: Option<ext_background_effect_manager_v1::ExtBackgroundEffectManagerV1>,
+    pill_background_effect: Option<ext_background_effect_surface_v1::ExtBackgroundEffectSurfaceV1>,
     pill_surface: Option<RenderSurface>,
     workspace_surface: Option<RenderSurface>,
     corner_surfaces: Vec<RenderSurface>,
@@ -119,6 +158,9 @@ impl HeimdallrLayer {
             registry_state,
             output_state,
             shm,
+            raw_compositor: None,
+            background_effect_manager: None,
+            pill_background_effect: None,
             pill_surface: None,
             corner_surfaces: Vec::new(),
             // input_region: Some(empty_region),
@@ -293,7 +335,25 @@ impl HeimdallrLayer {
         None
     }
 
+    fn apply_pill_blur_region(&mut self, qh: &QueueHandle<Self>) {
+        let (pill_width, pill_height) = self.pill_container.get_current_rect();
+        let Some(_) = self.pill_surface.as_ref() else { return; };
+        let Some(raw_compositor) = self.raw_compositor.as_ref() else { return; };
+        let Some(effect) = self.pill_background_effect.as_ref() else { return; };
+
+        let width = pill_width.max(1.0).round() as i32;
+        let height = pill_height.max(1.0).round() as i32;
+        let x = ((PILL_SURFACE_WIDTH as f64 - pill_width) / 2.0).round() as i32;
+        let y = 2_i32;
+
+        let region = raw_compositor.create_region(qh, ());
+        add_rounded_rect_region(&region, x.max(0), y, width, height, 8);
+        effect.set_blur_region(Some(&region));
+    }
+
     fn draw(&mut self, qh: &QueueHandle<Self>) {
+        self.apply_pill_blur_region(qh);
+
         let Some(mut surface) = self.pill_surface.take() else { return; };
         if !surface.configured || surface.waiting_for_frame {
             self.pill_surface = Some(surface);
@@ -545,6 +605,19 @@ impl HeimdallrLayer {
         output: Option<&WlOutput>,
         raw_compositor: &wl_compositor::WlCompositor,
     ) {
+        self.raw_compositor = Some(raw_compositor.clone());
+
+        if let Some(global) = self.registry_state.globals_by_interface("ext_background_effect_manager_v1").next() {
+            if let Ok(manager) = self.registry_state.bind_specific::<ext_background_effect_manager_v1::ExtBackgroundEffectManagerV1, _, ()>(
+                qh,
+                global.name,
+                1..=1,
+                (),
+            ) {
+                self.background_effect_manager = Some(manager);
+            }
+        }
+
         let empty_region = raw_compositor.create_region(qh, ());
         let corners = [
             (Corner::TopLeft, Anchor::TOP | Anchor::LEFT),
@@ -569,6 +642,23 @@ impl HeimdallrLayer {
         layer.set_size(PILL_SURFACE_WIDTH, PILL_SURFACE_HEIGHT);
         layer.set_keyboard_interactivity(KeyboardInteractivity::None);
         layer.wl_surface().set_input_region(Some(&empty_region));
+
+        if let Some(manager) = self.background_effect_manager.as_ref() {
+            if self.pill_background_effect.is_none() {
+                let effect = manager.get_background_effect(layer.wl_surface(), qh, ());
+                self.pill_background_effect = Some(effect);
+            }
+            if let Some(effect) = self.pill_background_effect.as_ref() {
+                let blur_region = raw_compositor.create_region(qh, ());
+                let (pill_width, pill_height) = self.pill_container.get_current_rect();
+                let width = pill_width.max(1.0).round() as i32;
+                let height = pill_height.max(1.0).round() as i32;
+                let x = ((PILL_SURFACE_WIDTH as f64 - pill_width) / 2.0).round() as i32;
+                add_rounded_rect_region(&blur_region, x.max(0), 2, width, height, 8);
+                effect.set_blur_region(Some(&blur_region));
+            }
+        }
+
         layer.commit();
         self.pill_surface = Some(RenderSurface::new(layer, PILL_SURFACE_WIDTH, PILL_SURFACE_HEIGHT, None));
 
@@ -815,5 +905,31 @@ impl Dispatch<wl_region::WlRegion, ()> for HeimdallrLayer {
         _qh: &wayland_client::QueueHandle<Self>,
     ) {
         dbg_println!("Dispatch wlregion called");
+    }
+}
+
+impl Dispatch<ext_background_effect_manager_v1::ExtBackgroundEffectManagerV1, ()> for HeimdallrLayer {
+    fn event(
+        _state: &mut Self,
+        _proxy: &ext_background_effect_manager_v1::ExtBackgroundEffectManagerV1,
+        _event: ext_background_effect_manager_v1::Event,
+        _data: &(),
+        _conn: &wayland_client::Connection,
+        _qh: &wayland_client::QueueHandle<Self>,
+    ) {
+        dbg_println!("Dispatch ext background effect manager called");
+    }
+}
+
+impl Dispatch<ext_background_effect_surface_v1::ExtBackgroundEffectSurfaceV1, ()> for HeimdallrLayer {
+    fn event(
+        _state: &mut Self,
+        _proxy: &ext_background_effect_surface_v1::ExtBackgroundEffectSurfaceV1,
+        _event: ext_background_effect_surface_v1::Event,
+        _data: &(),
+        _conn: &wayland_client::Connection,
+        _qh: &wayland_client::QueueHandle<Self>,
+    ) {
+        dbg_println!("Dispatch ext background effect surface called");
     }
 }
