@@ -661,6 +661,70 @@ pub fn rounded_rect_gradient(
     }
 }
 
+/// Rounded notch color gradient-colored
+/// 
+/// # Parameters
+/// - cr: Cairo Context
+/// - x, y: position
+/// - w, h: size
+/// - r: border radius
+/// - colors: Color couples for gradient, from bottom to top, format (step_point as decimal, [R, G, B, A])
+pub fn rounded_notch_gradient(
+    cr: &Context,
+    x: f64,
+    y: f64,
+    w: f64,
+    h: f64,
+    r: f64,
+    colors: Vec<(f64, (f64, f64, f64, f64))>,
+    direction: GradientDirection,
+    use_gradient: bool,
+    border_color: Option<(f64,f64,f64,f64)>
+) {
+    if colors.is_empty() {
+        return;
+    }
+
+    let gradient = match direction {
+        GradientDirection::Vertical => cairo::LinearGradient::new(x, y + h, x, y),
+        GradientDirection::Horizontal => cairo::LinearGradient::new(x, y, x + w, y)
+    };
+
+    let mut last_color: Option<(f64, f64, f64, f64)> = None;
+    for (position, color) in colors {
+        if !use_gradient {
+            if let Some((r,g,b,a)) = last_color {
+                gradient.add_color_stop_rgba(position, r, g, b, a);
+            }
+        }
+        let (red, green, blue, alpha) = color;
+        gradient.add_color_stop_rgba(position, red, green, blue, alpha);
+        last_color = Some(color);
+    }
+
+    cr.set_source(gradient).unwrap();
+
+    // Disegnare il rettangolo con bordi arrotondati
+    cr.new_sub_path();
+    cr.arc_negative(x + w + r, y + r, r, -90f64.to_radians(), 180.0f64.to_radians());
+    cr.arc(x + w - r, y + h - r, r, 0.0, 90f64.to_radians());
+    cr.arc(x + r, y + h - r, r, 90f64.to_radians(), 180f64.to_radians());
+    cr.arc_negative(x - r, y + r, r, 0f64.to_radians(), -90f64.to_radians());
+    cr.close_path();
+
+    // Riempire il rettangolo
+    if let Some(c) = border_color {
+        cr.fill_preserve().unwrap();
+
+        let (red, green, blue, alpha) = c;
+        cr.set_source_rgba(red, green, blue, alpha);
+        cr.set_line_width(1.0);
+        cr.stroke().unwrap();
+    } else {
+        cr.fill().unwrap();
+    }
+}
+
 /* pub fn rounded_rect_no_gradient (
     cr: &Context,
     x: f64,

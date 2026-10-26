@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{config::{Config, FrameColor}, data::{AlarmIcon, BatteryDevice, IconChange}, dbg_println, niri::{WindowInfo, WorkspaceInfo}, notifications::Notification, pills::{Pill, PillModuleTrait}, security::MicCameraStatus, utils::{TweenState, log_to_file, mix_color, rounded_rect_gradient}};
+use crate::{config::{Config, FrameColor}, data::{AlarmIcon, BatteryDevice, IconChange}, dbg_println, niri::{WindowInfo, WorkspaceInfo}, notifications::Notification, pills::{Pill, PillModuleTrait}, security::MicCameraStatus, utils::{TweenState, log_to_file, mix_color, rounded_notch_gradient, rounded_rect_gradient}};
 
 const CORNER_SIZE: u32 = 32;
 const PILL_SURFACE_WIDTH: u32 = 1200;
@@ -491,7 +491,9 @@ impl HeimdallrLayer {
             pill_bg_steps = steps;
         }
 
-        rounded_rect_gradient(&cr, rect_left, rect_top, rect_width, rect_height, r, pill_bg_steps, crate::utils::GradientDirection::Horizontal, false, pill_border_color);
+        // TODO: introduce a config prop for choosing between rect and notch?
+        // rounded_rect_gradient(&cr, rect_left, rect_top, rect_width, rect_height, r, pill_bg_steps, crate::utils::GradientDirection::Horizontal, false, pill_border_color);
+        rounded_notch_gradient(&cr, rect_left, rect_top, rect_width, rect_height, r, pill_bg_steps, crate::utils::GradientDirection::Horizontal, false, pill_border_color);
 
         self.pill_container.draw(&cr, rect_width_end, rect_height, rect_left_end, rect_top);
     }

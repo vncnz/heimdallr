@@ -312,6 +312,8 @@ Used icon is based on device type and, for several types, bluetooth or wired con
 
 ### New functionalities - ideas
 
+- Check for external users via ssh (via `who | grep -i "([\(\)]"` or `ss -t -H state established '( dport = :ssh or sport = :ssh )'`, or checking `/proc/net/tcp`)
+- Check for listening servers, using `ss -t -l -p -H` or something like that
 - Add a temporary dedicated icon in the warnings block while system is disconnecting a disk
 - Add output configuration both on config file and as parameter
 - Show a resources resume for some time after receiving a dedicated command (something like [AVG 0.9 1.27 1.41] [MEM 73% / SWP 14%] [DSK 49%] and so on)?
