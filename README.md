@@ -153,11 +153,9 @@ Only one notification can be shown at any given moment, on several lines if need
 
 Normal notifications gets a timeout of 3 seconds, critical notifications lasts until eternity and beyond.
 
-You can ~~browse and~~ remove notifications with following command~~s~~:
+You can remove notifications with following command:
 
-- echo hide_notification > /tmp/heimdallr_cmds
-- ~~echo prev_notification > /tmp/heimdallr_cmds~~ // Deprecated in pill UI
-- ~~echo next_notification > /tmp/heimdallr_cmds~~ // Deprecated in pill UI
+`echo hide_notification > /tmp/heimdallr_cmds`
 
 You don't need to create /tmp/heimdallr_cmds file, it is created automatically by Heimdallr and it is a named pipe (aka a fifo special file): you write in it your command and it's all.
 
@@ -186,19 +184,6 @@ Inspired by the [wob project](https://github.com/francma/wob), I implemented a g
 For example: ```echo "0.35" > /tmp/heimdallr_cmds```
 
 ![Wob-like example](./screenshots/wob_like.png)
-
-## ~~Clock styles~~
-
-~~Now, Heimdallr offers two distinct clock styles to display the current time and the estimated battery charge/discharge time. Both clocks are positioned on the right edge of the screen, ensuring minimal intrusion while providing essential information at a glance.~~
-
-### ~~Available Styles~~
-
-- ~~**Clock1**: a sleek, minimalist design with a linear arrow indicating the current time. The battery status is represented by an icon (a green bolt for charging or a red skull for discharging) integrated into the clock’s layout. Hour numbers are shown to assist with quick time reading and markers are displayed as small triangles every 3 hours, with larger, blue triangles every 6 hours for easier orientation.~~
-- ~~**Clock2**: this clock consists of notches, each representing one hour; every 6 hours, a notch is highlighted in blue for better readability. The current time is indicated by a white (or blue) fill that progresses along the notches. Battery status and eta is shown as a colored fill (green for charging, red for discharging) that extends the time indicator.~~
-
-~~You can choose between these styles, or disable the clock entirely, via the configuration file. This flexibility allows you to tailor Heimdallr’s appearance to your aesthetic preferences or functional needs.~~
-
-~~**For Developers:** The clock system is built around the ClockTrait, making it easy to extend or create custom clock styles. Fork the project and experiment with your own designs!~~
 
 ## Security warning feature
 
