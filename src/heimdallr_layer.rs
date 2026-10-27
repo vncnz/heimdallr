@@ -476,7 +476,6 @@ impl HeimdallrLayer {
         let (rect_width_end, _rect_height_end) = self.pill_container.get_desired_rect();
         let rect_left = (surface_width as f64 - rect_width) / 2.0;
         let rect_left_end = (surface_width as f64 - rect_width_end) / 2.0;
-        let rect_top = 2.0;
 
         let mut pill_bg_steps = vec![(0.0, pill_bg_color)];
 
@@ -491,9 +490,16 @@ impl HeimdallrLayer {
             pill_bg_steps = steps;
         }
 
-        // TODO: introduce a config prop for choosing between rect and notch?
-        // rounded_rect_gradient(&cr, rect_left, rect_top, rect_width, rect_height, r, pill_bg_steps, crate::utils::GradientDirection::Horizontal, false, pill_border_color);
-        rounded_notch_gradient(&cr, rect_left, rect_top, rect_width, rect_height, r, pill_bg_steps, crate::utils::GradientDirection::Horizontal, false, pill_border_color);
+        let rect_top = match self.config.style {
+            crate::config::BoxStyle::Notch => {
+                rounded_notch_gradient(&cr, rect_left, -1.0, rect_width, rect_height, r, pill_bg_steps, crate::utils::GradientDirection::Horizontal, false, pill_border_color);
+                0.0
+            },
+            _ => {
+                rounded_rect_gradient(&cr, rect_left, 2.0, rect_width, rect_height, r, pill_bg_steps, crate::utils::GradientDirection::Horizontal, false, pill_border_color);
+                2.0
+            }
+        };
 
         self.pill_container.draw(&cr, rect_width_end, rect_height, rect_left_end, rect_top);
     }

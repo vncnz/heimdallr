@@ -91,13 +91,14 @@ You can configure frame color and clock presence with a json file in ```~/.confi
 
 ```js
 {
-    "frame_color": [red,green,blue,alpha] | "worst-resource" | "random" | null,
+    // "frame_color": [red,green,blue,alpha] | "worst-resource" | "random" | null,
     "pill_border_color": [red,green,blue,alpha] | "worst-resource" | "random" | null,
     // "show_clock": "clock1" / "clock2" / null, // Deprecated in pill-ui
     // "show_always_bluetooth": true / false, // Deprecated in pill-ui
     "hide_missing_ratatoskr": true / false,
     "show_watts": true / false,
-    "show_devices_battery_max_level": number
+    "show_devices_battery_max_level": number,
+    "style": "pill" | "notch"
 }
 ```
 
@@ -105,17 +106,16 @@ For example:
 
 ```js
 {
-    "frame_color": [0.2, 0.6, 1.0, 1.0],
+    // "frame_color": [0.2, 0.6, 1.0, 1.0],
     "pill_border_color": null,
     // "show_clock": "clock1",
     // "show_always_bluetooth": true,
     "hide_missing_ratatoskr": true,
     "show_watts": true,
-    "show_devices_battery_max_level": 60
+    "show_devices_battery_max_level": 60,
+    "style": "notch"
 }
 ```
-
-- `frame_color`: Accepts RGBA color values or `"worst-resource"`. When set to `"worst-resource"`, the frame border dynamically reflects system status warnings and stays hidden when everything is running normally.
 
 - `pill_border_color`: Accepts RGBA color values or `"worst-resource"`. When set to `"worst-resource"`, the pill border dynamically reflects system status warnings and stays hidden when everything is running normally.
 
@@ -124,6 +124,8 @@ For example:
 - `show_watts`: Set to `true` to show the power flow (in Watts, rounded to the nearest integer) alongside the battery ETA during charging and discharging.
 
 - `show_devices_battery_max_level`: Threshold for displaying connected external devices (such as Bluetooth mice, headsets, or wired phones). A device icon appears only if its battery level is at or below this percentage. Set to `100` or higher to keep all devices visible continuously.
+
+- `style`: Style of the information container: it can be a pill or a notch (respectively, `"pill"` or `"notch"` as a string)
 
 Default values are the following:
 
@@ -135,7 +137,8 @@ Default values are the following:
     // "show_always_bluetooth": true,
     "show_devices_battery_max_level": 80,
     "hide_missing_ratatoskr": false,
-    "show_watts": false
+    "show_watts": false,
+    "style": "pill"
 }
 ```
 
