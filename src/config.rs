@@ -2,182 +2,126 @@ use std::fs;
 use rand::Rng;
 use serde::Deserialize;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BoxStyle {
+    Pill,
+    Notch,
+}
+
+impl Default for BoxStyle {
+    fn default() -> Self {
+        Self::Pill
+    }
+}
+
+impl<'de> Deserialize<'de> for BoxStyle {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = serde_json::Value::deserialize(deserializer)?;
+
+        match value {
+            serde_json::Value::Null => Ok(Self::Pill),
+            serde_json::Value::String(s) if s == "pill" => Ok(Self::Pill),
+            serde_json::Value::String(s) if s == "notch" => Ok(Self::Notch),
+            _ => {
+                eprintln!("Invalid boxstyle in JSON configuration: {:?}; using pill", value);
+                Ok(Self::Pill)
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum FrameColor {
     None,
     Rgba(f64, f64, f64, f64),
-    // Random,
     WorstResource,
 }
 
-/* #[derive(Debug, Clone)]
-pub enum ClockCfg {
-    None,
-    Clock1,
-    Clock2,
-} */
-
-/* #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum LayerBackend {
-    Pills,
-    Legacy,
-} */
-/* impl LayerBackend {
-
-    fn from_json(value: Option<serde_json::Value>) -> Self {
-        match value {
-            Some(serde_json::Value::Null) | Option::None => LayerBackend::Pills,
-
-            Some(serde_json::Value::String(s)) => match s.as_str() {
-                "pills" | "new" => LayerBackend::Pills,
-                "legacy" | "old" => LayerBackend::Legacy,
-                _ => {
-                    eprintln!(
-                        "Unrecognized value in backend config: {:?}. Accepted types are \"pills\", \"legacy\", null",
-                        s
-                    );
-                    LayerBackend::Pills
-                }
-            },
-
-            _ => {
-                eprintln!(
-                    "Invalid backend value in JSON configuration {:?}. Accepted types are \"pills\", \"legacy\", null",
-                    value
-                );
-                LayerBackend::Pills
-            }
-        }
+impl Default for FrameColor {
+    fn default() -> Self {
+        Self::None
     }
-} */
-
-#[derive(Debug, Clone)]
-pub struct Config {
-    pub frame_color: FrameColor,
-    pub pill_border_color: FrameColor,
-    // pub show_clock: ClockCfg,
-    // pub backend: LayerBackend,
-    // pub show_always_bluetooth: bool,
-    pub show_devices_battery_max_level: f64,
-    pub hide_missing_ratatoskr: bool,
-    // pub border_width: u32,
-    pub show_watts: bool
 }
 
-#[derive(Debug, Deserialize)]
-struct RawConfig {
-    frame_color: Option<serde_json::Value>,
-    pill_border_color: Option<serde_json::Value>,
-    // show_clock: Option<serde_json::Value>,
-    // backend: Option<serde_json::Value>,
-    // show_always_bluetooth: Option<bool>,
-    show_devices_battery_max_level: Option<f64>,
-    hide_missing_ratatoskr: Option<bool>,
-    // border_width: Option<u32>,
-    show_watts: Option<bool>,
-}
+impl<'de> Deserialize<'de> for FrameColor {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = serde_json::Value::deserialize(deserializer)?;
 
-impl FrameColor {
-    fn from_json(value: Option<serde_json::Value>) -> Self {
         match value {
-            Some(serde_json::Value::Null) => FrameColor::None,
-            Option::None => FrameColor::None,
-
-            Some(serde_json::Value::String(s)) => match s.as_str() {
+            serde_json::Value::Null => Ok(Self::None),
+            serde_json::Value::String(s) => match s.as_str() {
                 "random" => {
                     let mut rng = rand::rng();
-                    FrameColor::Rgba(
+                    Ok(Self::Rgba(
                         rng.random(),
                         rng.random(),
                         rng.random(),
                         1.0,
-                    )
-                },
-                "worst-resource" => FrameColor::WorstResource,
+                    ))
+                }
+                "worst-resource" => Ok(Self::WorstResource),
                 _ => {
                     eprintln!("Unrecognized value in framecolor config: {:?}", s);
-                    FrameColor::None
+                    Ok(Self::None)
                 }
             },
-
-            Some(serde_json::Value::Array(arr)) if arr.len() == 4 => {
+            serde_json::Value::Array(arr) if arr.len() == 4 => {
                 let vals: Vec<f64> = arr
                     .iter()
                     .filter_map(|v| v.as_f64().map(|x| x as f64))
                     .collect();
                 if vals.len() == 4 {
-                    FrameColor::Rgba(vals[0], vals[1], vals[2], vals[3])
+                    Ok(Self::Rgba(vals[0], vals[1], vals[2], vals[3]))
                 } else {
                     eprintln!("Invalid color array, using None");
-                    FrameColor::None
+                    Ok(Self::None)
                 }
             }
-
             _ => {
                 eprintln!("Invalid color in JSON configuration {:?}", value);
-                FrameColor::None
+                Ok(Self::None)
             }
         }
     }
 }
 
-/* impl ClockCfg {
-    fn from_json(value: Option<serde_json::Value>) -> Self {
-        match value {
-            Some(serde_json::Value::Null) => ClockCfg::None,
-            Option::None => ClockCfg::None,
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct Config {
+    //#[serde(default)]
+    // pub frame_color: FrameColor,
+    #[serde(default)]
+    pub pill_border_color: FrameColor,
+    #[serde(default = "default_show_devices_battery_max_level")]
+    pub show_devices_battery_max_level: f64,
+    #[serde(default)]
+    pub hide_missing_ratatoskr: bool,
+    #[serde(default)]
+    pub show_watts: bool,
+    #[serde(default)]
+    pub style: BoxStyle,
+}
 
-            Some(serde_json::Value::String(s)) => match s.as_str() {
-                "clock1" => { ClockCfg::Clock1 },
-                "clock2" => { ClockCfg::Clock2 },
-                _ => {
-                    eprintln!("Unrecognized value in clock config: {:?}. Accepted types are \"clock1\", \"clock2\", null", s);
-                    ClockCfg::None
-                }
-            },
-
-            _ => {
-                eprintln!("Invalid clock value in JSON configuration {:?}. Accepted types are \"clock1\", \"clock2\", null", value);
-                ClockCfg::None
-            }
-        }
-    }
-} */
+fn default_show_devices_battery_max_level() -> f64 {
+    80.0
+}
 
 impl Config {
     pub fn load_from_file(path: &str) -> Self {
         let expanded_path = shellexpand::tilde(path);
-        let data = fs::read_to_string(expanded_path.as_ref())
-            .unwrap_or_else(|_| {
-                eprintln!("Cannot read configuration file: {}", path);
-                "{}".to_string()
-            });
-
-        let raw: RawConfig = serde_json::from_str(&data).unwrap_or_else(|_| {
-            eprintln!("Config JSON non valido, uso valori di default");
-            RawConfig {
-                frame_color: None,
-                pill_border_color: None,
-                show_devices_battery_max_level: Some(80.0),
-                // show_clock: None,
-                // backend: None,
-                // show_always_bluetooth: None,
-                hide_missing_ratatoskr: None,
-                show_watts: None
-                // border_width: None,
-            }
+        let data = fs::read_to_string(expanded_path.as_ref()).unwrap_or_else(|_| {
+            eprintln!("Cannot read configuration file: {}", path);
+            "{}".to_string()
         });
 
-        Config {
-            frame_color: FrameColor::from_json(raw.frame_color),
-            pill_border_color: FrameColor::from_json(raw.pill_border_color),
-            // show_clock: ClockCfg::from_json(raw.show_clock),
-            // backend: LayerBackend::from_json(raw.backend),
-            // show_always_bluetooth: raw.show_always_bluetooth.unwrap_or(true),
-            show_devices_battery_max_level: raw.show_devices_battery_max_level.unwrap_or(80.0),
-            hide_missing_ratatoskr: raw.hide_missing_ratatoskr.unwrap_or(false),
-            show_watts: raw.show_watts.unwrap_or(false)
-            // border_width: raw.border_width.unwrap_or(2),
-        }
+        serde_json::from_str(&data).unwrap_or_else(|err| {
+            eprintln!("Config JSON invalid, using default values: {err}");
+            Self::default()
+        })
     }
 }
