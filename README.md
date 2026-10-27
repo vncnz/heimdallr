@@ -286,7 +286,6 @@ Used icon is based on device type and, for several types, bluetooth or wired con
 - ~~Make buffer size depending on output size~~ Done!
 - ~~(UI) Different UI for the batteries of the devices?~~ (sorta) done!
 - ~~(performance) Send battery signal only if something is changed~~ Done!
-- (robustness) Check devices on system resume?
 - ~~(code) Evaluate a modular system in which each component keeps a cache and private info~~ Done with new pill UI
 - ~~(UX) Put temporary notification always before important ones (because the latter doesn't expire!)~~ Done!
 - ~~Reduce quantity of damaged surface (wl_surface.damage_buffer only for changed areas)~~ it's not worth it
@@ -300,6 +299,8 @@ Used icon is based on device type and, for several types, bluetooth or wired con
     ~~[09:56:45.839] app_name:nemo summary:External256 unmounted body:Filesystem has been disconnected. timeout:-1 hints:{"desktop-entry": Str(Str(Borrowed("org.Nemo"))), "urgency": U8(1), "image-path": Str(Str(Borrowed("media-removable")))} replaces_id:6~~
 
     Done!
+
+- Improve wob-like drawing in notch mode
 
 ### New functionalities
 
@@ -319,10 +320,7 @@ Used icon is based on device type and, for several types, bluetooth or wired con
 - Check for listening servers, using `ss -t -l -p -H` or something like that
 - Add a temporary dedicated icon in the warnings block while system is disconnecting a disk
 - Add output configuration both on config file and as parameter
-- Show a resources resume for some time after receiving a dedicated command (something like [AVG 0.9 1.27 1.41] [MEM 73% / SWP 14%] [DSK 49%] and so on)?
-- Force a red frame border when battery is low, regardless of the settings?
 - Custom hooks for events?
-- Plugin system?
 - Show again last notification on cmd retrieving?
 - Autohide clock?
 - wob-like functionality: add color or warning (with automatic color selection) in cmd
@@ -331,4 +329,4 @@ Used icon is based on device type and, for several types, bluetooth or wired con
 
 - ~~Sometimes heimdallr terminates itself after system suspension/resume~~ Fixed!
 - ~~Sometimes, closing an urgent notifications doesn't restore normal frame width~~ Fixed!
-- Changing volume disabling mute, the added icon is out of bounds because the width doesn't change
+- Sometimes, changing volume disabling mute, the added icon is out of bounds because the width doesn't change
