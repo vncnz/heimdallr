@@ -277,14 +277,6 @@ Used icon is based on device type and, for several types, bluetooth or wired con
 - ~~Make external batteries information optional~~ Done!
 - ~~Implement a queue logic for notifications~~ Done!
 - ~~Add pause/unpause to timeout~~ Done!
-- ~~Improve notification management on disk removal. The calculation of replace_id is correct but there is no dedicated logic atm and the second notification is ignored.~~
-
-    ~~[09:56:44.373] app_name:nemo summary:Unmounting External256 body:Disconnecting from filesystem. timeout:-1 hints:{"desktop-entry": Str(Str(Borrowed("org.Nemo"))), "image-path": Str(Str(Borrowed("media-removable"))), "urgency": U8(2)} replaces_id:0~~
-
-    ~~[09:56:45.839] app_name:nemo summary:External256 unmounted body:Filesystem has been disconnected. timeout:-1 hints:{"desktop-entry": Str(Str(Borrowed("org.Nemo"))), "urgency": U8(1), "image-path": Str(Str(Borrowed("media-removable")))} replaces_id:6~~
-
-    Done!
-
 - Improve wob-like drawing in notch mode
 
 ### New functionalities
@@ -315,3 +307,8 @@ Used icon is based on device type and, for several types, bluetooth or wired con
 - ~~Sometimes heimdallr terminates itself after system suspension/resume~~ Fixed!
 - ~~Sometimes, closing an urgent notifications doesn't restore normal frame width~~ Fixed!
 - Sometimes, changing volume disabling mute, the added icon is out of bounds because the width doesn't change
+- Improve notification management on disk removal. The calculation of replace_id is correct but the second notification is ignored.
+
+    [09:56:44.373] app_name:nemo summary:Unmounting External256 body:Disconnecting from filesystem. timeout:-1 hints:{"desktop-entry": Str(Str(Borrowed("org.Nemo"))), "image-path": Str(Str(Borrowed("media-removable"))), "urgency": U8(2)} replaces_id:0
+
+    [09:56:45.839] app_name:nemo summary:External256 unmounted body:Filesystem has been disconnected. timeout:-1 hints:{"desktop-entry": Str(Str(Borrowed("org.Nemo"))), "urgency": U8(1), "image-path": Str(Str(Borrowed("media-removable")))} replaces_id:6
